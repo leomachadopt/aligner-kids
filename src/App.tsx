@@ -6,6 +6,20 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
+import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import Dashboard from './pages/Dashboard'
+// Import other pages here as they are created
+// import MyTreatment from './pages/MyTreatment'
+// import Photos from './pages/Photos'
+// import Chat from './pages/Chat'
+// import Education from './pages/Education'
+// import Gamification from './pages/Gamification'
+// import Reports from './pages/Reports'
+// import PatientManagement from './pages/PatientManagement'
+// import Profile from './pages/Profile'
+// import Settings from './pages/Settings'
+// import Help from './pages/Help'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -18,9 +32,13 @@ const App = () => (
       <Toaster />
       <Sonner />
       <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
+          {/* Example: <Route path="/my-treatment" element={<MyTreatment />} /> */}
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
