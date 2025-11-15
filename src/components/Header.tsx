@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, User, Settings, HelpCircle, LogOut, Bell } from 'lucide-react'
+import { Menu, User, Settings, HelpCircle, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { AppSidebar } from '@/components/AppSidebar'
 import { NotificationPanel } from '@/components/NotificationPanel'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
+import { useUserRole } from '@/context/UserRoleContext'
 
 const pageTitles: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
@@ -30,9 +31,23 @@ const pageTitles: { [key: string]: string } = {
   '/help': 'Ajuda',
 }
 
+const childPageTitles: { [key: string]: string } = {
+  '/dashboard': 'Minha Base Secreta',
+  '/my-treatment': 'Jornada do Sorriso',
+  '/photos': 'Fotos Mágicas',
+  '/chat': 'Falar com Doutor(a)',
+  '/education': 'Escola de Heróis',
+  '/gamification': 'Central de Aventuras',
+  '/reports': 'Relatórios do Detetive',
+  '/profile': 'Meu Perfil de Herói',
+  '/settings': 'Ajustes',
+  '/help': 'Ajuda',
+}
+
 export const Header = () => {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
+  const { role, isChild } = useUserRole()
 
   const handleScroll = () => {
     setScrolled(window.scrollY > 10)
@@ -43,25 +58,27 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const pageTitle = pageTitles[location.pathname] || 'App Alinhadores'
+  const titles = isChild ? childPageTitles : pageTitles
+  const pageTitle = titles[location.pathname] || 'App Alinhadores'
 
   return (
     <header
       className={cn(
         'sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-lg transition-all duration-300',
         scrolled ? 'shadow-subtle' : 'border-transparent',
+        isChild && 'bg-background/95',
       )}
     >
       <div className="container flex h-16 items-center justify-between px-4 md:h-20">
         <div className="flex items-center gap-4">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <img
-              src="https://img.usecurling.com/i?q=angel-aligners&color=azure"
-              alt="Logo"
-              className="h-8 w-auto"
-            />
-          </Link>
-          <h1 className="hidden text-xl font-semibold md:block">{pageTitle}</h1>
+          <h1
+            className={cn(
+              'hidden text-xl font-semibold md:block',
+              isChild && 'font-display text-3xl font-extrabold text-primary',
+            )}
+          >
+            {pageTitle}
+          </h1>
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
@@ -72,9 +89,13 @@ export const Header = () => {
                 variant="ghost"
                 className="relative h-10 w-10 rounded-full"
               >
-                <Avatar>
+                <Avatar
+                  className={cn(
+                    isChild && 'h-12 w-12 border-2 border-primary-child',
+                  )}
+                >
                   <AvatarImage
-                    src="https://img.usecurling.com/ppl/thumbnail?gender=female"
+                    src="https://img.usecurling.com/ppl/thumbnail?gender=male&seed=child"
                     alt="User Avatar"
                   />
                   <AvatarFallback>U</AvatarFallback>
@@ -119,7 +140,7 @@ export const Header = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-3/4 p-0">
-                <AppSidebar />
+                <AppSidebar userRole={role} />
               </SheetContent>
             </Sheet>
           </div>

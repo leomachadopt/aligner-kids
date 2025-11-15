@@ -30,7 +30,10 @@ import {
   Award,
   ShieldCheck,
   Star,
+  Rocket,
 } from 'lucide-react'
+import { useUserRole } from '@/context/UserRoleContext'
+import { Link } from 'react-router-dom'
 
 const adhesionData = [
   { name: 'Seg', uso: 90 },
@@ -64,31 +67,32 @@ const badges = [
 ]
 
 const PatientDashboard = () => {
-  const isChild = false // Toggle this to see the child's dashboard
+  const { isChild } = useUserRole()
 
   if (isChild) {
     return (
       <div className="space-y-6 animate-fade-in-up">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-3xl font-extrabold text-primary-child">
+          <h1 className="font-display text-4xl font-extrabold text-primary">
             E aí, Campeão!
           </h1>
           <img
             src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
             alt="Mascote"
-            className="h-20 w-20 animate-float"
+            className="h-24 w-24 animate-float"
           />
         </div>
-        <Card className="border-primary-child border-2 shadow-lg">
+        <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
           <CardHeader>
-            <CardTitle className="font-display text-xl font-bold">
+            <CardTitle className="font-display text-2xl font-bold text-center">
               Próxima Missão: Trocar Alinhador!
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-5xl font-bold text-primary-child">3 dias</p>
-            <p className="text-muted-foreground">Alinhador #5</p>
-            <Button className="mt-4 bg-primary-child hover:bg-primary-child/90">
+            <p className="text-6xl font-bold text-primary-child">3 dias</p>
+            <p className="text-muted-foreground font-semibold">Alinhador #5</p>
+            <Button className="mt-4 bg-primary-child hover:bg-primary-child/90 text-lg font-bold px-8 py-6 rounded-full">
+              <Rocket className="mr-2" />
               Troquei!
             </Button>
           </CardContent>
@@ -102,7 +106,7 @@ const PatientDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Progress value={75} className="[&>*]:bg-primary-child" />
+              <Progress value={75} className="[&>*]:bg-secondary-child h-4" />
               <p className="mt-2 text-sm text-muted-foreground">
                 Recompensa: Selo do Herói
               </p>
@@ -113,9 +117,11 @@ const PatientDashboard = () => {
               <CardTitle>Ranking de Pontos</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>
+              <p className="text-lg">
                 Você está em{' '}
-                <span className="font-bold text-primary-child">2º lugar</span>{' '}
+                <span className="font-bold text-primary-child text-2xl">
+                  2º lugar
+                </span>{' '}
                 na clínica!
               </p>
             </CardContent>
@@ -123,22 +129,25 @@ const PatientDashboard = () => {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Button
+            asChild
             size="lg"
-            className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900"
+            className="h-16 text-base font-bold bg-yellow-400 hover:bg-yellow-500 text-yellow-900"
           >
-            Tirar Fotos Divertidas
+            <Link to="/photos">Tirar Fotos Divertidas</Link>
           </Button>
           <Button
+            asChild
             size="lg"
-            className="bg-pink-400 hover:bg-pink-500 text-pink-900"
+            className="h-16 text-base font-bold bg-pink-400 hover:bg-pink-500 text-pink-900"
           >
-            Falar com a Tia Dentista
+            <Link to="/chat">Falar com a Doutora</Link>
           </Button>
           <Button
+            asChild
             size="lg"
-            className="bg-green-400 hover:bg-green-500 text-green-900"
+            className="h-16 text-base font-bold bg-green-400 hover:bg-green-500 text-green-900"
           >
-            Ver Meus Prêmios
+            <Link to="/gamification">Ver Meus Prêmios</Link>
           </Button>
         </div>
       </div>
@@ -153,22 +162,20 @@ const PatientDashboard = () => {
           <CardHeader>
             <CardTitle>Resumo do Progresso</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={adhesionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis unit="%" />
-                  <Tooltip />
-                  <Bar
-                    dataKey="uso"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={adhesionData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis unit="%" />
+                <Tooltip />
+                <Bar
+                  dataKey="uso"
+                  fill="hsl(var(--primary))"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
         <div className="space-y-6">
@@ -187,17 +194,23 @@ const PatientDashboard = () => {
               <CardTitle>Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-2">
-              <Button variant="outline">
-                <Camera className="mr-2 h-4 w-4" />
-                Enviar Fotos
+              <Button variant="outline" asChild>
+                <Link to="/photos">
+                  <Camera className="mr-2 h-4 w-4" />
+                  Enviar Fotos
+                </Link>
               </Button>
-              <Button variant="outline">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Chat com a Clínica
+              <Button variant="outline" asChild>
+                <Link to="/chat">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Chat com a Clínica
+                </Link>
               </Button>
-              <Button variant="outline">
-                <Calendar className="mr-2 h-4 w-4" />
-                Ver Linha do Tempo
+              <Button variant="outline" asChild>
+                <Link to="/my-treatment">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Ver Linha do Tempo
+                </Link>
               </Button>
             </CardContent>
           </Card>

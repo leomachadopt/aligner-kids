@@ -10,8 +10,7 @@ import {
   Smile,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-type UserRole = 'patient' | 'guardian' | 'orthodontist'
+import { useUserRole, UserRole } from '@/context/UserRoleContext'
 
 const patientMenu = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -20,6 +19,15 @@ const patientMenu = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/education', label: 'Educação', icon: BookOpen },
   { href: '/gamification', label: 'Gamificação', icon: Award },
+]
+
+const childPatientMenu = [
+  { href: '/dashboard', label: 'Minha Base', icon: Home },
+  { href: '/my-treatment', label: 'Minha Jornada', icon: Smile },
+  { href: '/photos', label: 'Fotos Mágicas', icon: Camera },
+  { href: '/chat', label: 'Falar com Doutor(a)', icon: MessageSquare },
+  { href: '/education', label: 'Escola de Heróis', icon: BookOpen },
+  { href: '/gamification', label: 'Aventuras', icon: Award },
 ]
 
 const guardianMenu = [
@@ -37,16 +45,14 @@ const orthodontistMenu = [
 
 const menuItems: Record<UserRole, typeof patientMenu> = {
   patient: patientMenu,
+  'child-patient': childPatientMenu,
   guardian: guardianMenu,
   orthodontist: orthodontistMenu,
 }
 
-export const AppSidebar = ({
-  userRole = 'patient',
-}: {
-  userRole?: UserRole
-}) => {
+export const AppSidebar = ({ userRole }: { userRole: UserRole }) => {
   const location = useLocation()
+  const { isChild } = useUserRole()
   const currentMenu = menuItems[userRole]
 
   return (
@@ -58,7 +64,14 @@ export const AppSidebar = ({
             alt="Logo"
             className="h-8 w-auto"
           />
-          <span className="text-lg font-bold">App Alinhadores</span>
+          <span
+            className={cn(
+              'text-lg font-bold',
+              isChild && 'font-display text-xl',
+            )}
+          >
+            App Alinhadores
+          </span>
         </Link>
       </div>
       <nav className="flex-1 space-y-2 p-4">
@@ -71,6 +84,10 @@ export const AppSidebar = ({
               location.pathname === item.href
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              isChild && 'rounded-xl py-3 text-base font-bold hover:scale-105',
+              isChild &&
+                location.pathname === item.href &&
+                'shadow-lg shadow-primary/30',
             )}
           >
             <item.icon className="h-5 w-5" />

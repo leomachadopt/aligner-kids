@@ -1,16 +1,14 @@
-// This component will act as a router for different dashboards based on user role.
-// For now, we'll just render the PatientDashboard as a default.
-// In a real app, you'd have logic here to determine the user's role.
-
 import PatientDashboard from './dashboard/PatientDashboard'
+import { useUserRole } from '@/context/UserRoleContext'
 // import GuardianDashboard from './dashboard/GuardianDashboard';
 // import ClinicianDashboard from './dashboard/ClinicianDashboard';
 
 const Dashboard = () => {
-  const userRole = 'patient' // This would come from an auth context
+  const { role } = useUserRole()
 
-  switch (userRole) {
+  switch (role) {
     case 'patient':
+    case 'child-patient':
       return <PatientDashboard />
     // case 'guardian':
     //   return <GuardianDashboard />;

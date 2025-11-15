@@ -1,6 +1,6 @@
 /* Global styles - Theme, font, utilities, animations and global components */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@600;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -22,12 +22,14 @@
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 17% 95%;
+    --secondary-child: 145 63% 49%;
     --secondary-foreground: 0 0% 20%;
 
     --muted: 210 17% 95%;
     --muted-foreground: 208 7% 46%; /* #6C757D */
 
     --accent: 210 17% 90%;
+    --accent-child: 45 100% 90%;
     --accent-foreground: 0 0% 20%;
 
     --destructive: 354 70% 54%; /* #DC3545 */
@@ -73,12 +75,14 @@
     --primary-foreground: 222 84% 5%;
 
     --secondary: 222 84% 10%;
+    --secondary-child: 145 63% 59%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 222 84% 10%;
     --muted-foreground: 215 16% 47%;
 
     --accent: 222 84% 10%;
+    --accent-child: 45 100% 15%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 354 70% 54%;
@@ -101,6 +105,40 @@
     --sidebar-ring: 211 100% 55%;
   }
 
+  .child-theme {
+    --background: 200 100% 97%;
+    --foreground: 240 64% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 64% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 64% 25%;
+    --primary: 340 82% 61%;
+    --primary-child: 45 100% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 145 63% 49%;
+    --secondary-child: 195 100% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 100% 92%;
+    --muted-foreground: 240 30% 50%;
+    --accent: 340 82% 90%;
+    --accent-child: 45 100% 90%;
+    --accent-foreground: 340 82% 61%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 340 82% 85%;
+    --input: 0 0% 100%;
+    --ring: 340 82% 61%;
+    --radius: 16px;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 64% 25%;
+    --sidebar-primary: 340 82% 61%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 82% 95%;
+    --sidebar-accent-foreground: 340 82% 61%;
+    --sidebar-border: 340 82% 90%;
+    --sidebar-ring: 340 82% 61%;
+  }
+
   /* NEVER REMOVE THIS */
   section[aria-label='Notifications alt+T'] {
     padding: 0 !important;
@@ -116,6 +154,12 @@
     @apply bg-background text-foreground font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  .child-theme body,
+  .child-theme h1,
+  .child-theme h2,
+  .child-theme h3 {
+    font-family: 'Nunito', sans-serif;
   }
   html {
     scroll-behavior: smooth;

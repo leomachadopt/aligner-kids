@@ -44,6 +44,7 @@ export default {
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
+          child: 'hsl(var(--secondary-child))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -56,6 +57,7 @@ export default {
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
+          child: 'hsl(var(--accent-child))',
         },
         success: 'hsl(var(--success))',
         warning: 'hsl(var(--warning))',
@@ -89,6 +91,7 @@ export default {
         lg: '12px',
         md: '8px',
         sm: '4px',
+        xl: '16px',
         'xl-child': '16px',
       },
       keyframes: {
