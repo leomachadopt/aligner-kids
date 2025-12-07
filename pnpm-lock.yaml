@@ -183,6 +183,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
+      esbuild:
+        specifier: ^0.25.12
+        version: 0.25.12
       eslint:
         specifier: ^9.39.1
         version: 9.39.1(jiti@1.21.7)
@@ -4266,7 +4269,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.25.12
       '@esbuild/win32-ia32': 0.25.12
       '@esbuild/win32-x64': 0.25.12
-    optional: true
 
   escalade@3.2.0: {}
 
