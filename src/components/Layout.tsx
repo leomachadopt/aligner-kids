@@ -3,6 +3,7 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useUserRole } from '@/context/UserRoleContext'
+import { AlignerProvider } from '@/context/AlignerContext'
 import { useEffect } from 'react'
 
 const noLayoutRoutes = [
@@ -25,16 +26,21 @@ export default function Layout() {
     return <Outlet />
   }
 
+  // Mock patient ID - in production, get from auth context
+  const patientId = 'patient-1'
+
   return (
-    <div className="flex min-h-screen bg-muted/40">
-      <AppSidebar userRole={role} />
-      <div className="flex flex-1 flex-col">
-        <Header />
-        <main className="flex-1 p-4 sm:p-6">
-          <Outlet />
-        </main>
-        <Footer />
+    <AlignerProvider patientId={patientId}>
+      <div className="flex min-h-screen bg-muted/40">
+        <AppSidebar userRole={role} />
+        <div className="flex flex-1 flex-col">
+          <Header />
+          <main className="flex-1 p-4 sm:p-6">
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
       </div>
-    </div>
+    </AlignerProvider>
   )
 }

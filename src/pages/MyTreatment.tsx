@@ -2,21 +2,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2, Circle, MapPin, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const treatmentSteps = [
-  { name: 'Início da Aventura', completed: true },
-  { name: 'Alinhador #5', completed: true },
-  { name: 'Alinhador #10', completed: true },
-  { name: 'Metade do Caminho!', completed: false },
-  { name: 'Alinhador #15', completed: false },
-  { name: 'Alinhador #20', completed: false },
-  { name: 'Fim da Jornada!', completed: false },
-]
+import { useTreatment, useCurrentAligner, useAligners } from '@/context/AlignerContext'
+import { calculateTreatmentProgress } from '@/utils/alignerCalculations'
+import { TreatmentTimeline } from '@/components/TreatmentTimeline'
 
 const MyTreatment = () => {
-  const currentAligner = 5
-  const totalAligners = 24
-  const progressPercentage = (currentAligner / totalAligners) * 100
+  const treatment = useTreatment()
+  const currentAligner = useCurrentAligner()
+  const { aligners } = useAligners()
+  
+  const currentAlignerNumber = currentAligner?.number || 0
+  const totalAligners = treatment?.totalAligners || 24
+  const progressPercentage = calculateTreatmentProgress(treatment)
+
+  // Generate treatment steps based on milestones
+  const milestones = [
+    { name: 'Início da Aventura', alignerNumber: 1 },
+    { name: `Alinhador #${Math.floor(totalAligners * 0.25)}`, alignerNumber: Math.floor(totalAligners * 0.25) },
+    { name: `Alinhador #${Math.floor(totalAligners * 0.5)}`, alignerNumber: Math.floor(totalAligners * 0.5) },
+    { name: `Alinhador #${Math.floor(totalAligners * 0.75)}`, alignerNumber: Math.floor(totalAligners * 0.75) },
+    { name: 'Fim da Jornada!', alignerNumber: totalAligners },
+  ]
+
+  const treatmentSteps = milestones.map((milestone) => ({
+    name: milestone.name,
+    completed: currentAlignerNumber >= milestone.alignerNumber,
+  }))
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -43,7 +54,7 @@ const MyTreatment = () => {
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <span className="font-bold text-primary-child">Alinhador {currentAligner}</span>
+            <span className="font-bold text-primary-child">Alinhador {currentAlignerNumber}</span>
             <Progress
               value={progressPercentage}
               className="h-4 flex-1 [&>*]:bg-gradient-to-r [&>*]:from-green-400 [&>*]:via-blue-400 [&>*]:to-purple-400"
@@ -59,6 +70,8 @@ const MyTreatment = () => {
           </p>
         </CardContent>
       </Card>
+
+      <TreatmentTimeline aligners={aligners} currentAlignerNumber={currentAlignerNumber} />
 
       <Card className="border-2 border-purple-400 hover-scale">
         <CardHeader className="bg-gradient-to-r from-purple-400 to-pink-400">

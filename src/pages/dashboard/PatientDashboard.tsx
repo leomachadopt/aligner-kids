@@ -33,11 +33,13 @@ import {
   Rocket,
 } from 'lucide-react'
 import { useUserRole } from '@/context/UserRoleContext'
-import { useGamification } from '@/context/GamificationContext'
+import { useCurrentAligner, useTreatment } from '@/context/AlignerContext'
+import { AlignerTracker } from '@/components/AlignerTracker'
+import {
+  calculateDaysUntilChange,
+  calculateTreatmentProgress,
+} from '@/utils/alignerCalculations'
 import { Link } from 'react-router-dom'
-import { GamificationStats } from '@/components/GamificationStats'
-import { DailyMissions } from '@/components/DailyMissions'
-import { Celebration } from '@/components/Confetti'
 
 const adhesionData = [
   { name: 'Seg', uso: 90 },
@@ -72,53 +74,57 @@ const badges = [
 
 const PatientDashboard = () => {
   const { isChild } = useUserRole()
-  const { showCelebration, celebrationMessage, checkIn } = useGamification()
+  const currentAligner = useCurrentAligner()
+  const treatment = useTreatment()
+  const daysUntilChange = currentAligner
+    ? calculateDaysUntilChange(currentAligner)
+    : 0
+  const progress = calculateTreatmentProgress(treatment)
 
   if (isChild) {
     return (
-      <>
-        <Celebration show={showCelebration} message={celebrationMessage} />
-        <div className="space-y-6 animate-fade-in-up">
-          <div className="flex items-center justify-between">
-            <h1 className="font-display text-4xl font-extrabold text-primary">
-              E aí, Campeão!
-            </h1>
-            <img
-              src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
-              alt="Mascote"
-              className="h-24 w-24 animate-float hover-wiggle"
-            />
-          </div>
+      <div className="space-y-6 animate-fade-in-up">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-4xl font-extrabold text-primary">
+            E aí, Campeão!
+          </h1>
+          <img
+            src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
+            alt="Mascote"
+            className="h-24 w-24 animate-float"
+          />
+        </div>
 
-          {/* Estatísticas de Gamificação */}
-          <GamificationStats />
-
-          <Card className="border-primary-child border-2 shadow-lg bg-gradient-to-br from-sky-50 to-blue-100 hover-scale">
-            <CardHeader>
-              <CardTitle className="font-display text-2xl font-bold text-center">
-                Próxima Missão: Trocar Alinhador!
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-6xl font-bold text-primary-child animate-bounce-slow">
-                3 dias
-              </p>
-              <p className="text-muted-foreground font-semibold">Alinhador #5</p>
+        <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
+          <CardHeader>
+            <CardTitle className="font-display text-2xl font-bold text-center">
+              Próxima Missão: Trocar Alinhador!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-6xl font-bold text-primary-child">
+              {daysUntilChange} {daysUntilChange === 1 ? 'dia' : 'dias'}
+            </p>
+            <p className="text-muted-foreground font-semibold">
+              Alinhador #{currentAligner?.number || 'N/A'}
+              {treatment && ` de ${treatment.totalAligners}`}
+            </p>
+            {currentAligner && (
               <Button
-                onClick={checkIn}
-                className="mt-4 bg-gradient-to-r from-primary-child to-blue-500 hover:scale-105 text-lg font-bold px-8 py-6 rounded-full shadow-lg hover-bounce"
+                onClick={() => {
+                  // TODO: Implement confirm change logic
+                }}
+                className="mt-4 bg-primary-child hover:bg-primary-child/90 text-lg font-bold px-8 py-6 rounded-full"
               >
-                <Rocket className="mr-2 h-6 w-6" />
+                <Rocket className="mr-2" />
                 Troquei!
               </Button>
-            </CardContent>
-          </Card>
-
-          {/* Missões Diárias */}
-          <DailyMissions />
+            )}
+          </CardContent>
+        </Card>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <Card className="hover-scale">
+            <Card>
               <CardHeader>
                 <CardTitle>Progresso da Missão</CardTitle>
                 <CardDescription>
@@ -126,9 +132,12 @@ const PatientDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Progress value={75} className="[&>*]:bg-secondary-child h-4" />
+                <Progress
+                  value={progress}
+                  className="[&>*]:bg-secondary-child h-4"
+                />
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Recompensa: Selo do Herói 🏆
+                  {progress.toFixed(0)}% do tratamento completo
                 </p>
               </CardContent>
             </Card>
@@ -187,7 +196,6 @@ const PatientDashboard = () => {
             </Button>
           </div>
         </div>
-      </>
     )
   }
 
@@ -195,35 +203,32 @@ const PatientDashboard = () => {
     <div className="space-y-6 animate-fade-in-up">
       <h1 className="text-3xl font-bold">Olá, Paciente!</h1>
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Resumo do Progresso</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={adhesionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis unit="%" />
-                <Tooltip />
-                <Bar
-                  dataKey="uso"
-                  fill="hsl(var(--primary))"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <AlignerTracker />
+        </div>
         <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Próxima Troca</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-5xl font-bold text-primary">3 dias</p>
-              <p className="text-muted-foreground">Alinhador #5 de 24</p>
-              <Button className="mt-4 w-full">Confirmar Troca</Button>
+              <p className="text-5xl font-bold text-primary">
+                {daysUntilChange} {daysUntilChange === 1 ? 'dia' : 'dias'}
+              </p>
+              <p className="text-muted-foreground">
+                Alinhador #{currentAligner?.number || 'N/A'}
+                {treatment && ` de ${treatment.totalAligners}`}
+              </p>
+              {currentAligner && (
+                <Button
+                  className="mt-4 w-full"
+                  onClick={() => {
+                    // TODO: Implement confirm change logic
+                  }}
+                >
+                  Confirmar Troca
+                </Button>
+              )}
             </CardContent>
           </Card>
           <Card>

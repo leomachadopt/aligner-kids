@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Celebration } from './Confetti'
 import { useGamification } from '@/context/GamificationContext'
+import { useTreatment, useCurrentAligner, useAligners } from '@/context/AlignerContext'
 
 const TOTAL_ALIGNERS = 24
 
@@ -27,16 +28,34 @@ const JOURNEY_THEMES = [
 ]
 
 export const AdventureJourney = () => {
-  const [currentAligner, setCurrentAligner] = useState(5)
-  const [showCelebration, setShowCelebration] = useState(false)
+  const treatment = useTreatment()
+  const currentAlignerData = useCurrentAligner()
+  const { confirmAlignerChange } = useAligners()
   const { addCoins, addXP } = useGamification()
+  
+  const totalAligners = treatment?.totalAligners || TOTAL_ALIGNERS
+  const currentAligner = currentAlignerData?.number || 1
+  const [showCelebration, setShowCelebration] = useState(false)
 
-  const handleNextAligner = () => {
-    if (currentAligner < TOTAL_ALIGNERS) {
-      setCurrentAligner((prev) => prev + 1)
-      setShowCelebration(true)
-      addCoins(50)
-      addXP(25)
+  const { aligners } = useAligners()
+  
+  const handleNextAligner = async () => {
+    if (currentAligner < totalAligners) {
+      // Find next aligner
+      const nextAligner = aligners.find(
+        (a) => a.number === currentAligner + 1 && a.status === 'pending'
+      )
+      
+      if (nextAligner) {
+        try {
+          await confirmAlignerChange(nextAligner.id)
+          setShowCelebration(true)
+          addCoins(50)
+          addXP(25)
+        } catch (error) {
+          console.error('Error confirming aligner change:', error)
+        }
+      }
     }
   }
 
@@ -148,7 +167,7 @@ export const AdventureJourney = () => {
                 <div
                   className={cn(
                     'relative flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-yellow-500 bg-gradient-to-br from-yellow-200 to-yellow-400 shadow-xl transition-all duration-300',
-                    currentAligner >= TOTAL_ALIGNERS &&
+                    currentAligner >= totalAligners &&
                       'scale-150 animate-bounce-slow shadow-2xl shadow-yellow-400/50',
                   )}
                 >
@@ -167,20 +186,20 @@ export const AdventureJourney = () => {
                 <span className="text-3xl font-extrabold text-primary-child drop-shadow-md">
                   {currentAligner}
                 </span>{' '}
-                de {TOTAL_ALIGNERS}!
+                de {totalAligners}!
               </p>
               <div className="mx-auto h-3 w-full max-w-md overflow-hidden rounded-full bg-gray-200">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 transition-all duration-500"
-                  style={{ width: `${(currentAligner / TOTAL_ALIGNERS) * 100}%` }}
+                  style={{ width: `${(currentAligner / totalAligners) * 100}%` }}
                 />
               </div>
               <p className="mt-2 text-sm font-medium text-gray-600">
-                {Math.round((currentAligner / TOTAL_ALIGNERS) * 100)}% completo
+                {Math.round((currentAligner / totalAligners) * 100)}% completo
               </p>
             </div>
 
-            {currentAligner < TOTAL_ALIGNERS ? (
+            {currentAligner < totalAligners ? (
               <Button
                 onClick={handleNextAligner}
                 size="lg"

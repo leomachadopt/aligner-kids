@@ -1,13 +1,19 @@
 import { Award, ShieldCheck, Star, Trophy, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdventureJourney } from '@/components/AdventureJourney'
-import { GamificationStats, StreakCounter } from '@/components/GamificationStats'
-import { DailyMissions } from '@/components/DailyMissions'
-import { useGamification } from '@/context/GamificationContext'
+import { StoryUnlock } from '@/components/StoryUnlock'
+import { useTreatment } from '@/context/AlignerContext'
 import { cn } from '@/lib/utils'
 
+const badges = [
+  { id: '1', name: 'Mês de Ouro', icon: '🏆', earned: true, description: 'Um mês completo de uso', earnedDate: '2024-01-15' },
+  { id: '2', name: 'Paciente Assíduo', icon: '🛡️', earned: true, description: 'Alta aderência', earnedDate: '2024-01-20' },
+  { id: '3', name: 'Super Sorriso', icon: '⭐', earned: true, description: 'Progresso excelente', earnedDate: '2024-02-01' },
+  { id: '4', name: 'Fotógrafo Pro', icon: '📸', earned: false, description: 'Envie 10 fotos', earnedDate: null },
+]
+
 const Gamification = () => {
-  const { badges } = useGamification()
+  const treatment = useTreatment()
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -27,20 +33,14 @@ const Gamification = () => {
         />
       </div>
 
-      {/* Estatísticas de Gamificação */}
-      <GamificationStats />
-
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AdventureJourney />
         </div>
         <div>
-          <StreakCounter />
+          <StoryUnlock />
         </div>
       </div>
-
-      {/* Missões Diárias */}
-      <DailyMissions />
 
       {/* Coleção de Badges */}
       <Card className="border-2 border-purple-400 shadow-lg hover-scale">

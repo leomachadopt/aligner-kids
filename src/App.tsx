@@ -22,6 +22,9 @@ import Settings from './pages/Settings'
 import Help from './pages/Help'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
+import PatientManagement from './pages/PatientManagement'
+import PatientDetail from './pages/PatientDetail'
+import AlignerManagement from './pages/AlignerManagement'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -41,18 +44,21 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/my-treatment" element={<MyTreatment />} />
-              <Route path="/photos" element={<Photos />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/education" element={<Education />} />
-              <Route path="/gamification" element={<Gamification />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/help" element={<Help />} />
-            </Route>
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/my-treatment" element={<MyTreatment />} />
+            <Route path="/photos" element={<Photos />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/education" element={<Education />} />
+            <Route path="/gamification" element={<Gamification />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/patient-management" element={<PatientManagement />} />
+            <Route path="/patient/:id" element={<PatientDetail />} />
+            <Route path="/aligner-management" element={<AlignerManagement />} />
+          </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
