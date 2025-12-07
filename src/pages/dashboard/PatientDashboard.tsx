@@ -33,7 +33,11 @@ import {
   Rocket,
 } from 'lucide-react'
 import { useUserRole } from '@/context/UserRoleContext'
+import { useGamification } from '@/context/GamificationContext'
 import { Link } from 'react-router-dom'
+import { GamificationStats } from '@/components/GamificationStats'
+import { DailyMissions } from '@/components/DailyMissions'
+import { Celebration } from '@/components/Confetti'
 
 const adhesionData = [
   { name: 'Seg', uso: 90 },
@@ -68,89 +72,122 @@ const badges = [
 
 const PatientDashboard = () => {
   const { isChild } = useUserRole()
+  const { showCelebration, celebrationMessage, checkIn } = useGamification()
 
   if (isChild) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-4xl font-extrabold text-primary">
-            E aí, Campeão!
-          </h1>
-          <img
-            src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
-            alt="Mascote"
-            className="h-24 w-24 animate-float"
-          />
-        </div>
-        <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
-          <CardHeader>
-            <CardTitle className="font-display text-2xl font-bold text-center">
-              Próxima Missão: Trocar Alinhador!
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-6xl font-bold text-primary-child">3 dias</p>
-            <p className="text-muted-foreground font-semibold">Alinhador #5</p>
-            <Button className="mt-4 bg-primary-child hover:bg-primary-child/90 text-lg font-bold px-8 py-6 rounded-full">
-              <Rocket className="mr-2" />
-              Troquei!
+      <>
+        <Celebration show={showCelebration} message={celebrationMessage} />
+        <div className="space-y-6 animate-fade-in-up">
+          <div className="flex items-center justify-between">
+            <h1 className="font-display text-4xl font-extrabold text-primary">
+              E aí, Campeão!
+            </h1>
+            <img
+              src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
+              alt="Mascote"
+              className="h-24 w-24 animate-float hover-wiggle"
+            />
+          </div>
+
+          {/* Estatísticas de Gamificação */}
+          <GamificationStats />
+
+          <Card className="border-primary-child border-2 shadow-lg bg-gradient-to-br from-sky-50 to-blue-100 hover-scale">
+            <CardHeader>
+              <CardTitle className="font-display text-2xl font-bold text-center">
+                Próxima Missão: Trocar Alinhador!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-6xl font-bold text-primary-child animate-bounce-slow">
+                3 dias
+              </p>
+              <p className="text-muted-foreground font-semibold">Alinhador #5</p>
+              <Button
+                onClick={checkIn}
+                className="mt-4 bg-gradient-to-r from-primary-child to-blue-500 hover:scale-105 text-lg font-bold px-8 py-6 rounded-full shadow-lg hover-bounce"
+              >
+                <Rocket className="mr-2 h-6 w-6" />
+                Troquei!
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Missões Diárias */}
+          <DailyMissions />
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="hover-scale">
+              <CardHeader>
+                <CardTitle>Progresso da Missão</CardTitle>
+                <CardDescription>
+                  Use o alinhador por 2 semanas sem esquecer!
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Progress value={75} className="[&>*]:bg-secondary-child h-4" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Recompensa: Selo do Herói 🏆
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 hover-scale">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-6 w-6 text-yellow-500 animate-wiggle-slow" />
+                  Ranking de Pontos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Você está em{' '}
+                  <span className="font-bold text-orange-600 text-3xl animate-pulse">
+                    2º lugar
+                  </span>{' '}
+                  na clínica!
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Continue assim para alcançar o 1º lugar! 🚀
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-16 text-base font-bold bg-gradient-to-r from-yellow-400 to-orange-400 hover:scale-105 text-yellow-900 shadow-lg hover-bounce"
+            >
+              <Link to="/photos">
+                <Camera className="mr-2 h-5 w-5" />
+                Tirar Fotos Divertidas
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Progresso da Missão</CardTitle>
-              <CardDescription>
-                Use o alinhador por 2 semanas sem esquecer!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Progress value={75} className="[&>*]:bg-secondary-child h-4" />
-              <p className="mt-2 text-sm text-muted-foreground">
-                Recompensa: Selo do Herói
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Ranking de Pontos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Você está em{' '}
-                <span className="font-bold text-primary-child text-2xl">
-                  2º lugar
-                </span>{' '}
-                na clínica!
-              </p>
-            </CardContent>
-          </Card>
+            <Button
+              asChild
+              size="lg"
+              className="h-16 text-base font-bold bg-gradient-to-r from-pink-400 to-purple-400 hover:scale-105 text-pink-900 shadow-lg hover-bounce"
+            >
+              <Link to="/chat">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                Falar com a Doutora
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              className="h-16 text-base font-bold bg-gradient-to-r from-green-400 to-teal-400 hover:scale-105 text-green-900 shadow-lg hover-bounce"
+            >
+              <Link to="/gamification">
+                <Award className="mr-2 h-5 w-5" />
+                Ver Meus Prêmios
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Button
-            asChild
-            size="lg"
-            className="h-16 text-base font-bold bg-yellow-400 hover:bg-yellow-500 text-yellow-900"
-          >
-            <Link to="/photos">Tirar Fotos Divertidas</Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            className="h-16 text-base font-bold bg-pink-400 hover:bg-pink-500 text-pink-900"
-          >
-            <Link to="/chat">Falar com a Doutora</Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            className="h-16 text-base font-bold bg-green-400 hover:bg-green-500 text-green-900"
-          >
-            <Link to="/gamification">Ver Meus Prêmios</Link>
-          </Button>
-        </div>
-      </div>
+      </>
     )
   }
 

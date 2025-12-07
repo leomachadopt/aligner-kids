@@ -1,25 +1,14 @@
-import { Award, ShieldCheck, Star, Trophy } from 'lucide-react'
+import { Award, ShieldCheck, Star, Trophy, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdventureJourney } from '@/components/AdventureJourney'
-
-const badges = [
-  { name: 'Mês de Ouro', icon: Award, color: 'text-yellow-500', earned: true },
-  {
-    name: 'Paciente Assíduo',
-    icon: ShieldCheck,
-    color: 'text-green-500',
-    earned: true,
-  },
-  { name: 'Super Sorriso', icon: Star, color: 'text-blue-500', earned: true },
-  {
-    name: 'Fotógrafo Pro',
-    icon: Trophy,
-    color: 'text-purple-500',
-    earned: false,
-  },
-]
+import { GamificationStats, StreakCounter } from '@/components/GamificationStats'
+import { DailyMissions } from '@/components/DailyMissions'
+import { useGamification } from '@/context/GamificationContext'
+import { cn } from '@/lib/utils'
 
 const Gamification = () => {
+  const { badges } = useGamification()
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
@@ -34,30 +23,71 @@ const Gamification = () => {
         <img
           src="https://img.usecurling.com/p/120/120?q=happy%20robot%20mascot"
           alt="Mascote"
-          className="animate-float"
+          className="animate-float hover-wiggle"
         />
       </div>
 
-      <AdventureJourney />
+      {/* Estatísticas de Gamificação */}
+      <GamificationStats />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Coleção de Selos</CardTitle>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <AdventureJourney />
+        </div>
+        <div>
+          <StreakCounter />
+        </div>
+      </div>
+
+      {/* Missões Diárias */}
+      <DailyMissions />
+
+      {/* Coleção de Badges */}
+      <Card className="border-2 border-purple-400 shadow-lg hover-scale">
+        <CardHeader className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
+          <CardTitle className="flex items-center gap-2 font-display text-2xl text-white drop-shadow-lg">
+            <Sparkles className="h-6 w-6 animate-wiggle-slow" />
+            Coleção de Selos
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
+        <CardContent className="grid grid-cols-2 gap-4 p-6 text-center md:grid-cols-4">
           {badges.map((badge) => (
             <div
-              key={badge.name}
-              className={`flex flex-col items-center gap-2 rounded-lg p-4 ${
-                badge.earned ? 'bg-green-100' : 'bg-muted'
-              }`}
+              key={badge.id}
+              className={cn(
+                'group flex flex-col items-center gap-3 rounded-xl border-2 p-4 transition-all duration-300 hover-scale',
+                badge.earned
+                  ? 'border-green-400 bg-gradient-to-br from-green-50 to-green-100 shadow-md hover:shadow-lg'
+                  : 'border-gray-300 bg-gray-50',
+              )}
             >
-              <badge.icon
-                className={`h-16 w-16 ${
-                  badge.earned ? badge.color : 'text-gray-400'
-                }`}
-              />
-              <span className="font-semibold">{badge.name}</span>
+              <div
+                className={cn(
+                  'text-6xl transition-transform duration-300',
+                  badge.earned && 'group-hover:scale-110 animate-bounce-slow',
+                  !badge.earned && 'grayscale opacity-40',
+                )}
+              >
+                {badge.icon}
+              </div>
+              <div>
+                <p
+                  className={cn(
+                    'font-semibold',
+                    badge.earned ? 'text-green-700' : 'text-gray-500',
+                  )}
+                >
+                  {badge.name}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {badge.description}
+                </p>
+                {badge.earned && badge.earnedDate && (
+                  <p className="mt-2 text-xs font-medium text-green-600">
+                    ✓ Conquistado
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </CardContent>

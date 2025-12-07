@@ -29,3 +29,7 @@ screenshot.png
 
 # Environment variables
 .env*
+
+# Vercel
+.vercel
+.vercel.json

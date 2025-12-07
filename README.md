@@ -1,4 +1,6 @@
-# Projeto Criado com o Skip
+# Kids Aligner - Aplicativo Gamificado para Ortodontia Infantil 🦷✨
+
+Aplicativo gamificado projetado para engajar crianças durante o tratamento ortodôntico com alinhadores invisíveis.
 
 Este projeto foi criado de ponta a ponta com o [Skip](https://goskip.dev).
 
@@ -121,7 +123,34 @@ Este template inclui uma biblioteca completa de componentes Shadcn UI baseados e
 6. Crie a build: `npm run build`
 7. Visualize a build: `npm run preview`
 
+## 🎮 Features de Gamificação
+
+### Sistema de Recompensas
+- 🪙 **Moedas Virtuais**: Ganhe moedas por ações (check-in diário, fotos, conteúdo educativo)
+- ⭐ **Sistema de XP e Níveis**: Progrida através de níveis com experiência acumulada
+- 🔥 **Streak Counter**: Contador de dias consecutivos com recompensas especiais
+- 🏆 **Badges e Conquistas**: Coleção de selos personalizados por marcos importantes
+
+### Jornada Interativa
+- 🗺️ **Mapa Temático**: 4 temas visuais ao longo da jornada (Floresta, Montanhas, Reino Mágico, Céu Estrelado)
+- 🎯 **Missões Diárias**: Desafios diários com recompensas em moedas
+- 📊 **Progresso Visual**: Acompanhamento detalhado da evolução do tratamento
+- 🎉 **Celebrações**: Confetes e animações ao completar marcos importantes
+
+### Conteúdo Educacional Gamificado
+- 📚 Vídeos, artigos e quizzes interativos
+- 🎁 Recompensas por cada conteúdo completado
+- 🏫 "Escola de Heróis do Sorriso" - ambiente lúdico de aprendizado
+
+### Animações e Efeitos Visuais
+- ✨ Micro-animações em botões e cards (bounce, wiggle, shake, glow)
+- 🎊 Sistema de confetes para celebrações
+- 🌈 Gradientes coloridos e vibrantes
+- 🎨 Design adaptado para público infantil
+
 ## 📦 Build e Deploy
+
+### Build Local
 
 Para criar uma build otimizada para produção:
 
@@ -130,3 +159,34 @@ npm run build
 ```
 
 Os arquivos otimizados serão gerados na pasta `dist/` e estarão prontos para deploy.
+
+### Deploy no Vercel 🚀
+
+Este projeto está otimizado para deploy no Vercel com configurações pré-definidas.
+
+**Método Rápido via CLI:**
+```bash
+# Instalar Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel --prod
+```
+
+**Método via Dashboard:**
+1. Acesse [vercel.com/new](https://vercel.com/new)
+2. Importe o repositório
+3. Configure:
+   - Framework: Vite
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+4. Deploy!
+
+📖 **Guia Completo**: Veja [DEPLOY.md](./DEPLOY.md) para instruções detalhadas.
+
+### Otimizações de Build
+- ✅ Code splitting automático
+- ✅ Minificação com esbuild
+- ✅ Chunks otimizados por vendor
+- ✅ Cache agressivo de assets
+- ✅ Compressão Brotli no Vercel

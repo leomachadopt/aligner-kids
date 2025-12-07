@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppSidebar } from '@/components/AppSidebar'
 import { NotificationPanel } from '@/components/NotificationPanel'
+import { GamificationStats } from '@/components/GamificationStats'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { useUserRole } from '@/context/UserRoleContext'
@@ -82,6 +83,11 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {isChild && (
+            <div className="hidden md:block">
+              <GamificationStats compact />
+            </div>
+          )}
           <NotificationPanel />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

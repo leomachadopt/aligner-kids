@@ -13,14 +13,32 @@ export default defineConfig(({ mode }) => ({
     enableNativePlugin: true
   },
   build: {
-    minify: mode !== 'development',
+    minify: mode !== 'development' ? 'esbuild' : false,
     sourcemap: mode === 'development',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       onwarn(warning, warn) {
         if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
           return
         }
         warn(warning)
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor'
+            }
+            if (id.includes('@radix-ui')) {
+              return 'ui-vendor'
+            }
+            if (id.includes('recharts')) {
+              return 'chart-vendor'
+            }
+          }
+        },
       },
     },
   },
