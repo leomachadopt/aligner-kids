@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -48,14 +49,26 @@ export const AlignerForm = ({
           wearTime: aligner.wearTime,
           notes: aligner.notes || '',
         }
-      : defaultValues || {
-          number: 1,
-          patientId: '',
-          changeInterval: 14,
-          wearTime: 22,
-          notes: '',
+      : {
+          number: defaultValues?.number ?? 1,
+          patientId: defaultValues?.patientId ?? '',
+          changeInterval: defaultValues?.changeInterval ?? 14,
+          wearTime: defaultValues?.wearTime ?? 22,
+          notes: defaultValues?.notes ?? '',
         },
   })
+
+  // Atualizar patientId e number quando defaultValues mudarem
+  useEffect(() => {
+    if (!aligner) {
+      if (defaultValues?.patientId) {
+        form.setValue('patientId', defaultValues.patientId)
+      }
+      if (defaultValues?.number) {
+        form.setValue('number', defaultValues.number)
+      }
+    }
+  }, [defaultValues?.patientId, defaultValues?.number, aligner, form])
 
   return (
     <Form {...form}>
@@ -82,22 +95,24 @@ export const AlignerForm = ({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="patientId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ID do Paciente</FormLabel>
-              <FormControl>
-                <Input {...field} disabled={!!aligner} />
-              </FormControl>
-              <FormDescription>
-                Identificador único do paciente
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {!defaultValues?.patientId && (
+          <FormField
+            control={form.control}
+            name="patientId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ID do Paciente</FormLabel>
+                <FormControl>
+                  <Input {...field} disabled={!!aligner} />
+                </FormControl>
+                <FormDescription>
+                  Identificador único do paciente
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

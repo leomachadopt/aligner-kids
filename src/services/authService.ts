@@ -204,8 +204,10 @@ seedSuperAdmins()
 export class AuthService {
   /**
    * Registrar novo usuário
+   * @param input - Dados do usuário
+   * @param createSession - Se true, cria sessão e faz login automático (padrão: true)
    */
-  static async register(input: RegisterInput): Promise<AuthResponse> {
+  static async register(input: RegisterInput, createSession = true): Promise<AuthResponse> {
     // Validações
     if (!isValidEmail(input.email)) {
       throw new Error('Email inválido')
@@ -219,8 +221,12 @@ export class AuthService {
       throw new Error('A senha deve ter no mínimo 6 caracteres')
     }
 
-    if (input.cpf && !isValidCPF(input.cpf)) {
-      throw new Error('CPF inválido')
+    // Validar CPF apenas para Brasil (não validar para Portugal/NIF)
+    if (input.cpf && input.cpf.includes('.')) {
+      // Tem pontos = formato brasileiro
+      if (!isValidCPF(input.cpf)) {
+        throw new Error('CPF inválido')
+      }
     }
 
     // Verificar duplicatas
@@ -231,7 +237,7 @@ export class AuthService {
     }
 
     if (input.cpf && users.some((u) => u.cpf === input.cpf)) {
-      throw new Error('CPF já cadastrado')
+      throw new Error('CPF/NIF já cadastrado')
     }
 
     if (input.cro && users.some((u) => u.cro === input.cro)) {
@@ -250,7 +256,7 @@ export class AuthService {
       email: input.email, // Email dos PAIS se for child-patient
       role: input.role,
       fullName: input.fullName, // Nome da CRIANÇA ou PACIENTE
-      cpf: input.cpf ? formatCPF(input.cpf) : undefined,
+      cpf: input.cpf && input.cpf.includes('.') ? formatCPF(input.cpf) : input.cpf, // Formatar apenas CPF brasileiro
       birthDate: input.birthDate,
       phone: input.phone,
 
@@ -279,7 +285,7 @@ export class AuthService {
     users.push({ ...newUser, password_hash: passwordHash })
     saveUsers(users)
 
-    // Criar sessão
+    // Criar sessão (apenas se solicitado)
     const token = generateToken(userId)
     const expiresAt = new Date(
       Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
@@ -291,7 +297,9 @@ export class AuthService {
       expiresAt,
     }
 
-    saveSession(session)
+    if (createSession) {
+      saveSession(session)
+    }
 
     console.log('✅ Usuário registrado:', newUser.email)
 

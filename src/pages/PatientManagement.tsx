@@ -2,14 +2,26 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Link } from 'react-router-dom'
-import { Search, Users, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Search, Users, TrendingUp, AlertTriangle, UserPlus } from 'lucide-react'
 import { alignerService } from '@/services/alignerService'
 import { AuthService } from '@/services/authService'
+import { ClinicService } from '@/services/clinicService'
 import { useAuth } from '@/context/AuthContext'
 import type { Treatment, Aligner } from '@/types/aligner'
-import type { User } from '@/types/user'
+import type { User, UserRole } from '@/types/user'
+import type { Clinic } from '@/types/clinic'
+import { COUNTRY_INFO } from '@/types/clinic'
 import { isAlignerOverdue } from '@/utils/alignerCalculations'
 import { toast } from 'sonner'
 
@@ -22,6 +34,24 @@ const PatientManagement = () => {
   const [aligners, setAligners] = useState<Aligner[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [clinic, setClinic] = useState<Clinic | null>(null)
+
+  // Estados do diálogo de cadastro
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [patientType, setPatientType] = useState<'patient' | 'child-patient'>('patient')
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    cpf: '',
+    birthDate: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    // Dados do responsável (apenas para child-patient)
+    guardianName: '',
+    guardianCpf: '',
+    guardianPhone: '',
+  })
 
   useEffect(() => {
     if (!user || !user.clinicId) {
@@ -39,8 +69,15 @@ const PatientManagement = () => {
     try {
       setLoading(true)
 
-      // Buscar pacientes da clínica do ortodontista
-      const clinicPatients = AuthService.getUsersByClinic(user.clinicId)
+      // Buscar dados da clínica
+      const clinicData = await ClinicService.getClinicById(user.clinicId)
+      setClinic(clinicData)
+
+      // Buscar TODOS os pacientes da clínica (filtrar apenas patients e child-patients)
+      const allUsers = AuthService.getUsersByClinic(user.clinicId)
+      const clinicPatients = allUsers.filter(
+        (u) => u.role === 'patient' || u.role === 'child-patient'
+      )
       setPatients(clinicPatients)
 
       // Buscar tratamentos e alinhadores para cada paciente
@@ -67,14 +104,86 @@ const PatientManagement = () => {
     }
   }
 
-  const filteredTreatments = treatments.filter((treatment) =>
-    treatment.patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    treatment.patient.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleCreatePatient = () => {
+    setFormData({
+      fullName: '',
+      email: '',
+      cpf: '',
+      birthDate: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      guardianName: '',
+      guardianCpf: '',
+      guardianPhone: '',
+    })
+    setPatientType('patient')
+    setIsCreateOpen(true)
+  }
+
+  const handleSavePatient = async () => {
+    try {
+      if (!user?.clinicId) {
+        toast.error('Usuário não está vinculado a nenhuma clínica')
+        return
+      }
+
+      // Validações básicas
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.password) {
+        toast.error('Preencha todos os campos obrigatórios')
+        return
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('As senhas não coincidem')
+        return
+      }
+
+      // Se for child-patient, validar dados do responsável
+      if (patientType === 'child-patient' && !formData.guardianName) {
+        toast.error('Preencha os dados do responsável')
+        return
+      }
+
+      // Registrar paciente (sem criar sessão para não deslogar o ortodontista)
+      await AuthService.register({
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: patientType,
+        fullName: formData.fullName,
+        cpf: formData.cpf || undefined,
+        birthDate: formData.birthDate || undefined,
+        phone: formData.phone,
+        guardianName: patientType === 'child-patient' ? formData.guardianName : undefined,
+        guardianCpf: patientType === 'child-patient' ? formData.guardianCpf : undefined,
+        guardianPhone: patientType === 'child-patient' ? formData.guardianPhone : undefined,
+        clinicId: user.clinicId,
+      }, false) // false = não criar sessão
+
+      toast.success('Paciente cadastrado com sucesso!')
+      setIsCreateOpen(false)
+      loadData()
+    } catch (error) {
+      console.error('Error creating patient:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao cadastrar paciente')
+    }
+  }
+
+  const filteredPatients = patients.filter((patient) =>
+    patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const getPatientStatus = (treatment: Treatment) => {
+  const getPatientStatus = (patientId: string) => {
+    const treatment = treatments.find((t) => t.patientId === patientId)
+
+    if (!treatment) {
+      return { label: 'Sem Tratamento', variant: 'secondary' as const }
+    }
+
     const patientAligners = aligners.filter(
-      (a) => a.patientId === treatment.patientId,
+      (a) => a.patientId === patientId,
     )
     const hasOverdue = patientAligners.some((a) => isAlignerOverdue(a))
     const activeAligner = patientAligners.find((a) => a.status === 'active')
@@ -109,9 +218,15 @@ const PatientManagement = () => {
             Visualize e gerencie todos os pacientes
           </p>
         </div>
-        <Button asChild>
-          <Link to="/aligner-management">Cadastrar Alinhador</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/aligner-management">Cadastrar Alinhador</Link>
+          </Button>
+          <Button onClick={handleCreatePatient}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Cadastrar Paciente
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -132,7 +247,7 @@ const PatientManagement = () => {
       </Card>
 
       <div className="grid gap-4">
-        {filteredTreatments.length === 0 ? (
+        {filteredPatients.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -144,56 +259,68 @@ const PatientManagement = () => {
             </CardContent>
           </Card>
         ) : (
-          filteredTreatments.map((treatment) => {
+          filteredPatients.map((patient) => {
+            const treatment = treatments.find((t) => t.patientId === patient.id)
             const patientAligners = aligners.filter(
-              (a) => a.patientId === treatment.patientId,
+              (a) => a.patientId === patient.id,
             )
-            const progress =
-              (treatment.currentAlignerNumber / treatment.totalAligners) * 100
-            const status = getPatientStatus(treatment)
+            const status = getPatientStatus(patient.id)
+
+            const progress = treatment
+              ? (treatment.currentAlignerNumber / treatment.totalAligners) * 100
+              : 0
 
             return (
-              <Card key={treatment.id} className="hover:shadow-md transition-shadow">
+              <Card key={patient.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="text-xl font-semibold">
-                          {treatment.patient.fullName}
+                          {patient.fullName}
                         </h3>
                         <Badge variant={status.variant}>{status.label}</Badge>
+                        {patient.role === 'child-patient' && (
+                          <Badge variant="outline">Criança</Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {treatment.patient.email}
+                        {patient.email}
                       </p>
-                      <div className="flex items-center gap-4 mt-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Progresso
-                          </p>
-                          <p className="text-lg font-semibold">
-                            {treatment.currentAlignerNumber} /{' '}
-                            {treatment.totalAligners} alinhadores
-                          </p>
-                        </div>
-                        <div className="flex-1">
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{ width: `${progress}%` }}
-                            />
+                      {treatment ? (
+                        <div className="flex items-center gap-4 mt-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Progresso
+                            </p>
+                            <p className="text-lg font-semibold">
+                              {treatment.currentAlignerNumber} /{' '}
+                              {treatment.totalAligners} alinhadores
+                            </p>
+                          </div>
+                          <div className="flex-1">
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                              {progress.toFixed(0)}%
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">
-                            {progress.toFixed(0)}%
-                          </p>
-                        </div>
-                      </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-4">
+                          Nenhum tratamento iniciado ainda
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2 ml-4">
                       <Button variant="outline" asChild>
-                        <Link to={`/patient/${treatment.patientId}`}>
+                        <Link to={`/patient/${patient.id}`}>
                           Ver Detalhes
                         </Link>
                       </Button>
@@ -205,6 +332,235 @@ const PatientManagement = () => {
           })
         )}
       </div>
+
+      {/* Dialog: Cadastrar Paciente */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cadastrar Novo Paciente</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do paciente que será vinculado à sua clínica
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const countryInfo = COUNTRY_INFO[clinic?.country || 'BR']
+            return (
+              <div className="space-y-4">
+                {/* Seleção de Tipo de Paciente */}
+                <div>
+                  <Label htmlFor="patient-type">Tipo de Paciente *</Label>
+                  <select
+                    id="patient-type"
+                    value={patientType}
+                    onChange={(e) =>
+                      setPatientType(e.target.value as 'patient' | 'child-patient')
+                    }
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="patient">Adulto</option>
+                    <option value="child-patient">Criança</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {patientType === 'child-patient'
+                      ? 'Para pacientes menores de idade (será solicitado dados do responsável)'
+                      : 'Para pacientes adultos'}
+                  </p>
+                </div>
+
+                {/* Dados do Paciente */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">
+                    {patientType === 'child-patient'
+                      ? 'Dados da Criança'
+                      : 'Dados do Paciente'}
+                  </h3>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="fullName">Nome Completo *</Label>
+                      <Input
+                        id="fullName"
+                        value={formData.fullName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fullName: e.target.value })
+                        }
+                        placeholder={
+                          patientType === 'child-patient'
+                            ? 'Nome da criança'
+                            : 'Nome completo'
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="birthDate">Data de Nascimento</Label>
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={formData.birthDate}
+                        onChange={(e) =>
+                          setFormData({ ...formData, birthDate: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 mt-4">
+                    <div>
+                      <Label htmlFor="email">
+                        {patientType === 'child-patient'
+                          ? 'Email do Responsável *'
+                          : 'Email *'}
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        placeholder={
+                          patientType === 'child-patient'
+                            ? 'email@responsavel.com'
+                            : 'email@exemplo.com'
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="phone">{countryInfo.phoneLabel} *</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder={countryInfo.phoneFormat}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <Label htmlFor="cpf">{countryInfo.documentLabel}</Label>
+                    <Input
+                      id="cpf"
+                      value={formData.cpf}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cpf: e.target.value })
+                      }
+                      placeholder={countryInfo.documentPlaceholder}
+                    />
+                  </div>
+                </div>
+
+                {/* Dados do Responsável (apenas para child-patient) */}
+                {patientType === 'child-patient' && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">
+                      Dados do Responsável
+                    </h3>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="guardianName">Nome do Responsável *</Label>
+                        <Input
+                          id="guardianName"
+                          value={formData.guardianName}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              guardianName: e.target.value,
+                            })
+                          }
+                          placeholder="Nome do pai/mãe ou responsável"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="guardianCpf">
+                          {countryInfo.documentLabel} do Responsável
+                        </Label>
+                        <Input
+                          id="guardianCpf"
+                          value={formData.guardianCpf}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              guardianCpf: e.target.value,
+                            })
+                          }
+                          placeholder={countryInfo.documentPlaceholder}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Label htmlFor="guardianPhone">
+                        {countryInfo.phoneLabel} do Responsável
+                      </Label>
+                      <Input
+                        id="guardianPhone"
+                        value={formData.guardianPhone}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            guardianPhone: e.target.value,
+                          })
+                        }
+                        placeholder={countryInfo.phoneFormat}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Senha */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Senha de Acesso</h3>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="password">Senha *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            confirmPassword: e.target.value,
+                          })
+                        }
+                        placeholder="Repita a senha"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePatient}>Cadastrar Paciente</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

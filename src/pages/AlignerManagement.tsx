@@ -4,23 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlignerForm, type AlignerFormValues } from '@/components/AlignerForm'
 import { alignerService } from '@/services/alignerService'
+import { AuthService } from '@/services/authService'
+import { useAuth } from '@/context/AuthContext'
 import type { Aligner, Treatment } from '@/types/aligner'
+import type { User } from '@/types/user'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-// Mock patient data
-const mockPatients = [
-  { id: 'patient-1', name: 'João Silva', email: 'joao@example.com' },
-  { id: 'patient-2', name: 'Maria Santos', email: 'maria@example.com' },
-  { id: 'patient-3', name: 'Pedro Costa', email: 'pedro@example.com' },
-]
 
 const AlignerManagement = () => {
   const [searchParams] = useSearchParams()
   const patientIdParam = searchParams.get('patientId')
+  const { user: currentUser } = useAuth()
   const [selectedPatientId, setSelectedPatientId] = useState(
     patientIdParam || '',
   )
+  const [patients, setPatients] = useState<User[]>([])
   const [treatments, setTreatments] = useState<Treatment[]>([])
   const [aligners, setAligners] = useState<Aligner[]>([])
   const [editingAligner, setEditingAligner] = useState<Aligner | null>(null)
@@ -29,11 +27,20 @@ const AlignerManagement = () => {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!currentUser?.clinicId) return
+
       try {
+        // Buscar pacientes reais da clínica
+        const allUsers = AuthService.getUsersByClinic(currentUser.clinicId)
+        const clinicPatients = allUsers.filter(
+          (u) => u.role === 'patient' || u.role === 'child-patient'
+        )
+        setPatients(clinicPatients)
+
         const allTreatments: Treatment[] = []
         const allAligners: Aligner[] = []
 
-        for (const patient of mockPatients) {
+        for (const patient of clinicPatients) {
           const treatment = await alignerService.getTreatmentByPatient(patient.id)
           const patientAligners = await alignerService.getAlignersByPatient(
             patient.id,
@@ -58,7 +65,7 @@ const AlignerManagement = () => {
     }
 
     loadData()
-  }, [toast])
+  }, [currentUser, toast])
 
   const handleSubmit = async (data: AlignerFormValues) => {
     setIsLoading(true)
@@ -77,9 +84,31 @@ const AlignerManagement = () => {
         setEditingAligner(null)
       } else {
         // Create new aligner
-        const treatment = treatments.find((t) => t.patientId === data.patientId)
+        let treatment = treatments.find((t) => t.patientId === data.patientId)
+
+        // Se não existe tratamento, criar automaticamente
         if (!treatment) {
-          throw new Error('Tratamento não encontrado para este paciente')
+          const patient = patients.find((p) => p.id === data.patientId)
+          if (!patient) {
+            throw new Error('Paciente não encontrado')
+          }
+
+          // Criar tratamento inicial (assumindo que terá múltiplos alinhadores)
+          treatment = await alignerService.createTreatment({
+            patientId: data.patientId,
+            startDate: new Date().toISOString(),
+            totalAligners: data.number, // Será atualizado conforme novos alinhadores forem adicionados
+            currentAlignerNumber: data.number === 1 ? 1 : 0, // Se for o alinhador #1, já marcar como atual
+            status: 'active',
+          })
+
+          // Atualizar lista de tratamentos
+          setTreatments([...treatments, treatment])
+
+          toast({
+            title: 'Tratamento criado',
+            description: `Tratamento iniciado para ${patient.fullName}`,
+          })
         }
 
         const expectedEndDate = new Date()
@@ -93,11 +122,18 @@ const AlignerManagement = () => {
           startDate: new Date().toISOString(),
           expectedEndDate: expectedEndDate.toISOString(),
           actualEndDate: null,
-          status: 'pending',
+          status: data.number === 1 ? 'active' : 'pending',
           changeInterval: data.changeInterval,
           wearTime: data.wearTime,
           notes: data.notes,
         })
+
+        // Atualizar tratamento se necessário
+        if (data.number > treatment.totalAligners) {
+          await alignerService.updateTreatment(treatment.id, {
+            totalAligners: data.number,
+          })
+        }
 
         toast({
           title: 'Sucesso',
@@ -113,6 +149,18 @@ const AlignerManagement = () => {
         selectedPatientId || patientIdParam || '',
       )
       setAligners(patientAligners)
+
+      // Reload treatments
+      if (!editingAligner && currentUser?.clinicId) {
+        const allTreatments: Treatment[] = []
+        for (const patient of patients) {
+          const t = await alignerService.getTreatmentByPatient(patient.id)
+          if (t) {
+            allTreatments.push(t)
+          }
+        }
+        setTreatments(allTreatments)
+      }
     } catch (error) {
       console.error('Error saving aligner:', error)
       toast({
@@ -174,11 +222,43 @@ const AlignerManagement = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {!patientIdParam && !selectedPatientId && !editingAligner && (
+              <div className="mb-6">
+                <label htmlFor="patient-select" className="text-sm font-medium mb-2 block">
+                  Selecione o Paciente *
+                </label>
+                <select
+                  id="patient-select"
+                  value={selectedPatientId}
+                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="">-- Escolha um paciente --</option>
+                  {patients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.fullName} - {patient.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(selectedPatientId || patientIdParam) && (
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">
+                  Paciente selecionado: {
+                    patients.find((p) => p.id === (selectedPatientId || patientIdParam))?.fullName
+                  }
+                </p>
+              </div>
+            )}
+
             <AlignerForm
               onSubmit={handleSubmit}
               aligner={editingAligner || undefined}
               defaultValues={{
                 patientId: selectedPatientId || patientIdParam || '',
+                number: patientAligners.length + 1,
               }}
               isLoading={isLoading}
             />

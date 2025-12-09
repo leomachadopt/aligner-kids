@@ -10,6 +10,7 @@ import {
   Smile,
   Settings,
   Shield,
+  Trophy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/user'
@@ -38,6 +39,7 @@ const orthodontistMenu = [
   { href: '/patient-management', label: 'Pacientes', icon: Users },
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/reports', label: 'Relatórios', icon: BarChart2 },
+  { href: '/mission-config', label: 'Configurar Missões', icon: Trophy },
 ]
 
 const superAdminMenu = [
@@ -45,6 +47,7 @@ const superAdminMenu = [
   { href: '/admin/clinics', label: 'Gerenciar Clínicas', icon: Shield },
   { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
   { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
+  { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
 ]
 
 const menuItems: Record<UserRole, typeof patientMenu> = {

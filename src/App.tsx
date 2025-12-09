@@ -31,6 +31,8 @@ import StoryReader from './pages/StoryReader'
 import AdminPrompts from './pages/AdminPrompts'
 import AdminClinics from './pages/AdminClinics'
 import AdminOrthodontists from './pages/AdminOrthodontists'
+import AdminMissions from './pages/AdminMissions'
+import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
@@ -80,6 +82,7 @@ const App = () => (
                 <Route path="/patient-management" element={<PatientManagement />} />
                 <Route path="/patient/:id" element={<PatientDetail />} />
                 <Route path="/aligner-management" element={<AlignerManagement />} />
+                <Route path="/mission-config" element={<MissionConfig />} />
               </Route>
             </Route>
 
@@ -89,6 +92,7 @@ const App = () => (
                 <Route path="/admin/clinics" element={<AdminClinics />} />
                 <Route path="/admin/orthodontists" element={<AdminOrthodontists />} />
                 <Route path="/admin/prompts" element={<AdminPrompts />} />
+                <Route path="/admin/missions" element={<AdminMissions />} />
               </Route>
             </Route>
 

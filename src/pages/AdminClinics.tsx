@@ -165,7 +165,7 @@ const AdminClinics = () => {
       // 1. Criar a clínica
       const newClinic = await ClinicService.createClinic(formData)
 
-      // 2. Criar o ortodontista vinculado à clínica
+      // 2. Criar o ortodontista vinculado à clínica (sem criar sessão)
       try {
         const orthodontistResponse = await AuthService.register({
           email: orthodontistData.email,
@@ -176,7 +176,7 @@ const AdminClinics = () => {
           cro: orthodontistData.cro,
           phone: orthodontistData.phone,
           clinicId: newClinic.id,
-        })
+        }, false) // false = não criar sessão
 
         // 3. Aprovar automaticamente (pois foi criado pelo super-admin)
         if (currentUser?.id && orthodontistResponse.user.id) {
@@ -527,129 +527,137 @@ const AdminClinics = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="name">Nome da Clínica *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => {
-                    const name = e.target.value
-                    setFormData({
-                      ...formData,
-                      name,
-                      slug: generateSlug(name),
-                    })
-                  }}
-                  placeholder="Ex: Odonto Excellence"
-                />
-              </div>
+            {(() => {
+              const countryInfo = COUNTRY_INFO[formData.country || 'BR']
 
-              <div>
-                <Label htmlFor="slug">Slug (URL) *</Label>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) =>
-                    setFormData({ ...formData, slug: e.target.value })
-                  }
-                  placeholder="odonto-excellence"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Será usado na URL: /clinicas/{formData.slug}
-                </p>
-              </div>
-            </div>
+              return (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="name">Nome da Clínica *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => {
+                          const name = e.target.value
+                          setFormData({
+                            ...formData,
+                            name,
+                            slug: generateSlug(name),
+                          })
+                        }}
+                        placeholder="Ex: Odonto Excellence"
+                      />
+                    </div>
 
-            <div>
-              <Label htmlFor="country">País *</Label>
-              <select
-                id="country"
-                value={formData.country || 'BR'}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    country: e.target.value as Country,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                {Object.entries(COUNTRY_INFO).map(([code, info]) => (
-                  <option key={code} value={code}>
-                    {info.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Define formato de documentos, telefones e outros campos
-              </p>
-            </div>
+                    <div>
+                      <Label htmlFor="slug">Slug (URL) *</Label>
+                      <Input
+                        id="slug"
+                        value={formData.slug}
+                        onChange={(e) =>
+                          setFormData({ ...formData, slug: e.target.value })
+                        }
+                        placeholder="odonto-excellence"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Será usado na URL: /clinicas/{formData.slug}
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="contato@clinica.com"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="country">País *</Label>
+                    <select
+                      id="country"
+                      value={formData.country || 'BR'}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          country: e.target.value as Country,
+                        })
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    >
+                      {Object.entries(COUNTRY_INFO).map(([code, info]) => (
+                        <option key={code} value={code}>
+                          {info.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Define formato de documentos, telefones e outros campos
+                    </p>
+                  </div>
 
-              <div>
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="(11) 98765-4321"
-                />
-              </div>
-            </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        placeholder="contato@clinica.com"
+                      />
+                    </div>
 
-            <div>
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) =>
-                  setFormData({ ...formData, website: e.target.value })
-                }
-                placeholder="https://clinica.com"
-              />
-            </div>
+                    <div>
+                      <Label htmlFor="phone">{countryInfo.phoneLabel}</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder={countryInfo.phoneFormat}
+                      />
+                    </div>
+                  </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="city">Cidade</Label>
-                <Input
-                  id="city"
-                  value={formData.addressCity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, addressCity: e.target.value })
-                  }
-                  placeholder="São Paulo"
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      value={formData.website}
+                      onChange={(e) =>
+                        setFormData({ ...formData, website: e.target.value })
+                      }
+                      placeholder="https://clinica.com"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="state">Estado</Label>
-                <Input
-                  id="state"
-                  value={formData.addressState}
-                  onChange={(e) =>
-                    setFormData({ ...formData, addressState: e.target.value.toUpperCase() })
-                  }
-                  placeholder="SP"
-                  maxLength={2}
-                />
-              </div>
-            </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="city">{countryInfo.cityLabel}</Label>
+                      <Input
+                        id="city"
+                        value={formData.addressCity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, addressCity: e.target.value })
+                        }
+                        placeholder={countryInfo.cityLabel === 'Cidade' ? 'São Paulo' : 'Lisboa'}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="state">{countryInfo.stateLabel}</Label>
+                      <Input
+                        id="state"
+                        value={formData.addressState}
+                        onChange={(e) =>
+                          setFormData({ ...formData, addressState: e.target.value.toUpperCase() })
+                        }
+                        placeholder={countryInfo.stateLabel === 'Estado' ? 'SP' : 'Porto'}
+                        maxLength={countryInfo.stateLabel === 'Estado' ? 2 : 20}
+                      />
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
 
             <div>
               <Label htmlFor="tier">Plano de Assinatura</Label>
@@ -673,113 +681,122 @@ const AdminClinics = () => {
             <Separator className="my-6" />
 
             {/* Seção: Primeiro Ortodontista (Dono da Clínica) */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Primeiro Ortodontista</h3>
-                <p className="text-sm text-muted-foreground">
-                  Crie o primeiro usuário ortodontista que será o gestor/dono desta clínica
-                </p>
-              </div>
+            {(() => {
+              const countryInfo = COUNTRY_INFO[formData.country || 'BR']
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Primeiro Ortodontista</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Crie o primeiro usuário ortodontista que será o gestor/dono desta clínica
+                    </p>
+                  </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="ortho-name">Nome Completo *</Label>
-                  <Input
-                    id="ortho-name"
-                    value={orthodontistData.fullName}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        fullName: e.target.value,
-                      })
-                    }
-                    placeholder="Dr. João Silva"
-                  />
-                </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="ortho-name">Nome Completo *</Label>
+                      <Input
+                        id="ortho-name"
+                        value={orthodontistData.fullName}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            fullName: e.target.value,
+                          })
+                        }
+                        placeholder="Dr. João Silva"
+                      />
+                    </div>
 
-                <div>
-                  <Label htmlFor="ortho-cro">CRO *</Label>
-                  <Input
-                    id="ortho-cro"
-                    value={orthodontistData.cro}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        cro: e.target.value,
-                      })
-                    }
-                    placeholder="CRO/SP 12345"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <Label htmlFor="ortho-cro">{countryInfo.croLabel} *</Label>
+                      <Input
+                        id="ortho-cro"
+                        value={orthodontistData.cro}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            cro: e.target.value,
+                          })
+                        }
+                        placeholder={
+                          countryInfo.croLabel === 'CRO'
+                            ? 'CRO/SP 12345'
+                            : '12345'
+                        }
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="ortho-email">Email *</Label>
-                  <Input
-                    id="ortho-email"
-                    type="email"
-                    value={orthodontistData.email}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="ortodontista@clinica.com"
-                  />
-                </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="ortho-email">Email *</Label>
+                      <Input
+                        id="ortho-email"
+                        type="email"
+                        value={orthodontistData.email}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            email: e.target.value,
+                          })
+                        }
+                        placeholder="ortodontista@clinica.com"
+                      />
+                    </div>
 
-                <div>
-                  <Label htmlFor="ortho-phone">Telefone</Label>
-                  <Input
-                    id="ortho-phone"
-                    value={orthodontistData.phone}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        phone: e.target.value,
-                      })
-                    }
-                    placeholder="(11) 98765-4321"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <Label htmlFor="ortho-phone">{countryInfo.phoneLabel}</Label>
+                      <Input
+                        id="ortho-phone"
+                        value={orthodontistData.phone}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            phone: e.target.value,
+                          })
+                        }
+                        placeholder={countryInfo.phoneFormat}
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="ortho-password">Senha *</Label>
-                  <Input
-                    id="ortho-password"
-                    type="password"
-                    value={orthodontistData.password}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="ortho-password">Senha *</Label>
+                      <Input
+                        id="ortho-password"
+                        type="password"
+                        value={orthodontistData.password}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            password: e.target.value,
+                          })
+                        }
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
 
-                <div>
-                  <Label htmlFor="ortho-confirm-password">Confirmar Senha *</Label>
-                  <Input
-                    id="ortho-confirm-password"
-                    type="password"
-                    value={orthodontistData.confirmPassword}
-                    onChange={(e) =>
-                      setOrthodontistData({
-                        ...orthodontistData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    placeholder="Repita a senha"
-                  />
+                    <div>
+                      <Label htmlFor="ortho-confirm-password">Confirmar Senha *</Label>
+                      <Input
+                        id="ortho-confirm-password"
+                        type="password"
+                        value={orthodontistData.confirmPassword}
+                        onChange={(e) =>
+                          setOrthodontistData({
+                            ...orthodontistData,
+                            confirmPassword: e.target.value,
+                          })
+                        }
+                        placeholder="Repita a senha"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )
+            })()}
           </div>
 
           <DialogFooter>
@@ -801,119 +818,139 @@ const AdminClinics = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Nome da Clínica *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
+          {(() => {
+            const countryInfo = COUNTRY_INFO[formData.country || 'BR']
+            return (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Nome da Clínica *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
 
-            <div>
-              <Label htmlFor="edit-country">País *</Label>
-              <select
-                id="edit-country"
-                value={formData.country || 'BR'}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    country: e.target.value as Country,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                {Object.entries(COUNTRY_INFO).map(([code, info]) => (
-                  <option key={code} value={code}>
-                    {info.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <Label htmlFor="edit-country">País *</Label>
+                  <select
+                    id="edit-country"
+                    value={formData.country || 'BR'}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        country: e.target.value as Country,
+                      })
+                    }
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    {Object.entries(COUNTRY_INFO).map(([code, info]) => (
+                      <option key={code} value={code}>
+                        {info.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="edit-email">Email *</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="edit-email">Email *</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-phone">{countryInfo.phoneLabel}</Label>
+                    <Input
+                      id="edit-phone"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      placeholder={countryInfo.phoneFormat}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-website">Website</Label>
+                  <Input
+                    id="edit-website"
+                    value={formData.website}
+                    onChange={(e) =>
+                      setFormData({ ...formData, website: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="edit-city">{countryInfo.cityLabel}</Label>
+                    <Input
+                      id="edit-city"
+                      value={formData.addressCity}
+                      onChange={(e) =>
+                        setFormData({ ...formData, addressCity: e.target.value })
+                      }
+                      placeholder={
+                        countryInfo.cityLabel === 'Cidade'
+                          ? 'São Paulo'
+                          : 'Lisboa'
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-state">{countryInfo.stateLabel}</Label>
+                    <Input
+                      id="edit-state"
+                      value={formData.addressState}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          addressState:
+                            countryInfo.stateLabel === 'Estado'
+                              ? e.target.value.toUpperCase()
+                              : e.target.value,
+                        })
+                      }
+                      maxLength={countryInfo.stateLabel === 'Estado' ? 2 : 20}
+                      placeholder={
+                        countryInfo.stateLabel === 'Estado' ? 'SP' : 'Porto'
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-tier">Plano de Assinatura</Label>
+                  <select
+                    id="edit-tier"
+                    value={formData.subscriptionTier}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        subscriptionTier: e.target.value as any,
+                      })
+                    }
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="basic">Basic</option>
+                    <option value="pro">Pro</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
+                </div>
               </div>
-
-              <div>
-                <Label htmlFor="edit-phone">Telefone</Label>
-                <Input
-                  id="edit-phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-website">Website</Label>
-              <Input
-                id="edit-website"
-                value={formData.website}
-                onChange={(e) =>
-                  setFormData({ ...formData, website: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="edit-city">Cidade</Label>
-                <Input
-                  id="edit-city"
-                  value={formData.addressCity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, addressCity: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="edit-state">Estado</Label>
-                <Input
-                  id="edit-state"
-                  value={formData.addressState}
-                  onChange={(e) =>
-                    setFormData({ ...formData, addressState: e.target.value.toUpperCase() })
-                  }
-                  maxLength={2}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-tier">Plano de Assinatura</Label>
-              <select
-                id="edit-tier"
-                value={formData.subscriptionTier}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    subscriptionTier: e.target.value as any,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="basic">Basic</option>
-                <option value="pro">Pro</option>
-                <option value="enterprise">Enterprise</option>
-              </select>
-            </div>
-          </div>
+            )
+          })()}
 
           <DialogFooter>
             <Button
