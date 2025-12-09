@@ -45,6 +45,7 @@ export class ClinicService {
       id: `clinic-${Date.now()}`,
       name: input.name,
       slug: input.slug,
+      country: input.country,
       email: input.email,
       phone: input.phone,
       website: input.website,
@@ -159,18 +160,34 @@ export class ClinicService {
   }
 
   /**
-   * Deletar clínica (cuidado!)
+   * Deletar clínica permanentemente (com exclusão em cascata)
+   * ATENÇÃO: Também deleta todos os usuários vinculados (ortodontistas e pacientes)
    */
   static async deleteClinic(clinicId: string): Promise<void> {
     const clinics = getAllClinics()
-    const filtered = clinics.filter((c) => c.id !== clinicId)
+    const clinic = clinics.find((c) => c.id === clinicId)
 
-    if (filtered.length === clinics.length) {
+    if (!clinic) {
       throw new Error('Clínica não encontrada')
     }
 
+    // 1. Deletar todos os usuários vinculados a esta clínica
+    const users = JSON.parse(
+      localStorage.getItem('auth_users') || '[]'
+    ) as any[]
+
+    const usersToDelete = users.filter((u) => u.clinicId === clinicId)
+    const remainingUsers = users.filter((u) => u.clinicId !== clinicId)
+
+    localStorage.setItem('auth_users', JSON.stringify(remainingUsers))
+
+    console.log(`🗑️  Deletados ${usersToDelete.length} usuários vinculados à clínica`)
+
+    // 2. Deletar a clínica
+    const filtered = clinics.filter((c) => c.id !== clinicId)
     saveClinics(filtered)
-    console.log('🗑️  Clínica deletada')
+
+    console.log('🗑️  Clínica deletada:', clinic.name)
   }
 
   /**
@@ -227,6 +244,7 @@ export async function seedDemoClinic(): Promise<Clinic> {
   const demoClinic = await ClinicService.createClinic({
     name: 'Clínica Demo Kids Aligner',
     slug: 'clinica-demo',
+    country: 'BR',
     email: 'contato@demo.com',
     phone: '(11) 99999-9999',
     addressCity: 'São Paulo',

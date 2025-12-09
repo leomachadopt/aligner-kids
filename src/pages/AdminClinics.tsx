@@ -28,10 +28,12 @@ import {
   Mail,
   Phone,
   Globe,
+  Trash2,
 } from 'lucide-react'
 import { ClinicService } from '@/services/clinicService'
 import { AuthService } from '@/services/authService'
-import type { Clinic, ClinicInput } from '@/types/clinic'
+import type { Clinic, ClinicInput, Country } from '@/types/clinic'
+import { COUNTRY_INFO } from '@/types/clinic'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
@@ -52,6 +54,7 @@ const AdminClinics = () => {
   const [formData, setFormData] = useState<ClinicInput>({
     name: '',
     slug: '',
+    country: 'BR',
     email: '',
     phone: '',
     website: '',
@@ -99,6 +102,7 @@ const AdminClinics = () => {
     setFormData({
       name: '',
       slug: '',
+      country: 'BR',
       email: '',
       phone: '',
       website: '',
@@ -122,6 +126,7 @@ const AdminClinics = () => {
     setFormData({
       name: clinic.name,
       slug: clinic.slug,
+      country: clinic.country,
       email: clinic.email,
       phone: clinic.phone || '',
       website: clinic.website || '',
@@ -223,6 +228,27 @@ const AdminClinics = () => {
       loadClinics()
     } catch (error) {
       toast.error('Erro ao alterar status da clínica')
+    }
+  }
+
+  const handleDelete = async (clinic: Clinic) => {
+    const confirmMessage = `ATENÇÃO: Esta ação é irreversível!\n\nAo deletar a clínica "${clinic.name}", todos os ortodontistas e pacientes vinculados também serão excluídos permanentemente.\n\nDigite o nome da clínica para confirmar a exclusão.`
+
+    const userInput = prompt(confirmMessage)
+
+    if (userInput !== clinic.name) {
+      if (userInput !== null) {
+        toast.error('Nome da clínica não confere. Exclusão cancelada.')
+      }
+      return
+    }
+
+    try {
+      await ClinicService.deleteClinic(clinic.id)
+      toast.success('Clínica e todos os dados vinculados foram excluídos')
+      loadClinics()
+    } catch (error) {
+      toast.error('Erro ao deletar clínica')
     }
   }
 
@@ -392,6 +418,9 @@ const AdminClinics = () => {
                       <Badge variant="outline" className="capitalize">
                         {clinic.subscriptionTier}
                       </Badge>
+                      <Badge variant="outline">
+                        {COUNTRY_INFO[clinic.country].name}
+                      </Badge>
                     </div>
 
                     {/* Info */}
@@ -450,24 +479,35 @@ const AdminClinics = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex gap-2">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => handleEdit(clinic)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant={clinic.isActive ? 'destructive' : 'default'}
+                        onClick={() => handleToggleActive(clinic)}
+                      >
+                        {clinic.isActive ? (
+                          <PowerOff className="h-4 w-4" />
+                        ) : (
+                          <Power className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                     <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => handleEdit(clinic)}
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(clinic)}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant={clinic.isActive ? 'destructive' : 'default'}
-                      onClick={() => handleToggleActive(clinic)}
-                    >
-                      {clinic.isActive ? (
-                        <PowerOff className="h-4 w-4" />
-                      ) : (
-                        <Power className="h-4 w-4" />
-                      )}
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
                     </Button>
                   </div>
                 </div>
@@ -520,6 +560,30 @@ const AdminClinics = () => {
                   Será usado na URL: /clinicas/{formData.slug}
                 </p>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="country">País *</Label>
+              <select
+                id="country"
+                value={formData.country}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    country: e.target.value as Country,
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                {Object.entries(COUNTRY_INFO).map(([code, info]) => (
+                  <option key={code} value={code}>
+                    {info.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Define formato de documentos, telefones e outros campos
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -748,6 +812,27 @@ const AdminClinics = () => {
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-country">País *</Label>
+              <select
+                id="edit-country"
+                value={formData.country}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    country: e.target.value as Country,
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                {Object.entries(COUNTRY_INFO).map(([code, info]) => (
+                  <option key={code} value={code}>
+                    {info.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
