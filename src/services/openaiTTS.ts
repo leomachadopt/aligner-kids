@@ -10,10 +10,28 @@ import OpenAI from 'openai'
 // CONFIGURAÇÃO
 // ============================================
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Para desenvolvimento - em produção usar backend
-})
+// Cliente OpenAI (inicializado sob demanda)
+let openai: OpenAI | null = null
+
+// Função para obter o cliente OpenAI (lazy initialization)
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+
+    if (!apiKey) {
+      throw new Error(
+        'OpenAI API key não configurada. Configure VITE_OPENAI_API_KEY nas variáveis de ambiente.'
+      )
+    }
+
+    openai = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true, // Para desenvolvimento - em produção usar backend
+    })
+  }
+
+  return openai
+}
 
 // Vozes disponíveis da OpenAI (suportam PT-BR)
 const VOICE_IDS = {
@@ -71,7 +89,8 @@ export class OpenAITTSService {
       const startTime = Date.now()
 
       // Fazer requisição para OpenAI TTS
-      const response = await openai.audio.speech.create({
+      const client = getOpenAIClient()
+      const response = await client.audio.speech.create({
         model: model,
         voice: voice,
         input: text,

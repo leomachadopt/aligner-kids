@@ -16,10 +16,28 @@ import {
 // CONFIGURAÇÃO
 // ============================================
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Para desenvolvimento
-})
+// Cliente OpenAI (inicializado sob demanda)
+let openai: OpenAI | null = null
+
+// Função para obter o cliente OpenAI (lazy initialization)
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+
+    if (!apiKey) {
+      throw new Error(
+        'OpenAI API key não configurada. Configure VITE_OPENAI_API_KEY nas variáveis de ambiente.'
+      )
+    }
+
+    openai = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true, // Para desenvolvimento
+    })
+  }
+
+  return openai
+}
 
 const MODEL = 'gpt-4o-mini'
 const MAX_TOKENS = 12000 // Para histórias longas com múltiplos capítulos
@@ -73,7 +91,8 @@ export class StorySeriesAIService {
       console.log('📝 Enviando requisição para OpenAI...')
 
       // Fazer requisição
-      const response = await openai.chat.completions.create({
+      const client = getOpenAIClient()
+      const response = await client.chat.completions.create({
         model: MODEL,
         messages: [
           { role: 'system', content: systemPrompt },

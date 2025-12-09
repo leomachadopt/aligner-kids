@@ -21,10 +21,28 @@ import {
 // CONFIGURAÇÃO DO CLIENTE OPENAI
 // ============================================
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Para desenvolvimento - em produção usar backend
-})
+// Cliente OpenAI (inicializado sob demanda)
+let openai: OpenAI | null = null
+
+// Função para obter o cliente OpenAI (lazy initialization)
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+
+    if (!apiKey) {
+      throw new Error(
+        'OpenAI API key não configurada. Configure VITE_OPENAI_API_KEY nas variáveis de ambiente.'
+      )
+    }
+
+    openai = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true, // Para desenvolvimento - em produção usar backend
+    })
+  }
+
+  return openai
+}
 
 // ============================================
 // CONSTANTES
@@ -102,7 +120,8 @@ export class StoryAIService {
       })
 
       // Fazer requisição para OpenAI
-      const response = await openai.chat.completions.create({
+      const client = getOpenAIClient()
+      const response = await client.chat.completions.create({
         model: DEFAULT_MODEL,
         messages: [
           {
@@ -322,7 +341,8 @@ NÃO use formatação markdown além do título em negrito. Comece agora:`
    */
   static async testConnection(): Promise<boolean> {
     try {
-      await openai.models.list()
+      const client = getOpenAIClient()
+      await client.models.list()
       return true
     } catch {
       return false
