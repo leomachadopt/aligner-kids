@@ -1,41 +1,8 @@
-# Dependencies
 node_modules
-
-# Build output (will be rebuilt by Vercel)
-dist
-dist-ssr
-
-# Development files
-*.local
-.vscode
-.idea
-.DS_Store
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Testing
-coverage
-.nyc_output
-
-# Environment variables (should be set in Vercel dashboard)
+.git
 .env
 .env.local
-.env.development
-.env.test
-.env.production
-
-# Cache
-.eslintcache
-.cache
-
-# Screenshots and temp files
-screenshot.png
-*.tmp
-*.temp
+*.log
+.DS_Store
+pnpm-workspace.yaml.backup
+server/db/migrations
