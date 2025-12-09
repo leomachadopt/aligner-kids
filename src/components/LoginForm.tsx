@@ -1,27 +1,43 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { useAuth } from '@/context/AuthContext'
+import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 
 export const LoginForm = () => {
   const navigate = useNavigate()
+  const { login, isLoading } = useAuth()
+  const [credential, setCredential] = useState('')
+  const [password, setPassword] = useState('')
 
-  const handleLogin = (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
-    // Mock login logic
-    navigate('/dashboard')
+
+    try {
+      await login({ credential, password })
+      toast.success('Login realizado com sucesso!')
+      navigate('/dashboard')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao fazer login')
+    }
   }
 
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">E-mail / CPF / Registro Profissional</Label>
+        <Label htmlFor="credential">E-mail / CPF / Registro Profissional</Label>
         <Input
-          id="email"
+          id="credential"
           type="text"
           placeholder="Digite sua credencial"
+          value={credential}
+          onChange={(e) => setCredential(e.target.value)}
           required
+          disabled={isLoading}
         />
       </div>
       <div className="space-y-2">
@@ -34,10 +50,24 @@ export const LoginForm = () => {
             Esqueceu sua senha?
           </Link>
         </div>
-        <Input id="password" type="password" required />
+        <Input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={isLoading}
+        />
       </div>
-      <Button type="submit" className="w-full">
-        Entrar
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Entrando...
+          </>
+        ) : (
+          'Entrar'
+        )}
       </Button>
       <div className="relative my-4">
         <Separator />

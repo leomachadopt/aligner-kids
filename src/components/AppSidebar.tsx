@@ -8,9 +8,12 @@ import {
   Award,
   Users,
   Smile,
+  Settings,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useUserRole, UserRole } from '@/context/UserRoleContext'
+import type { UserRole } from '@/types/user'
+import { useUserRole } from '@/context/UserRoleContext'
 
 const patientMenu = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -30,12 +33,6 @@ const childPatientMenu = [
   { href: '/gamification', label: 'Aventuras', icon: Award },
 ]
 
-const guardianMenu = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/reports', label: 'Relatórios', icon: BarChart2 },
-  { href: '/chat', label: 'Chat', icon: MessageSquare },
-]
-
 const orthodontistMenu = [
   { href: '/dashboard', label: 'Dashboard Clínico', icon: Home },
   { href: '/patient-management', label: 'Pacientes', icon: Users },
@@ -43,17 +40,26 @@ const orthodontistMenu = [
   { href: '/reports', label: 'Relatórios', icon: BarChart2 },
 ]
 
+const superAdminMenu = [
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/admin/clinics', label: 'Gerenciar Clínicas', icon: Shield },
+  { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
+  { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
+]
+
 const menuItems: Record<UserRole, typeof patientMenu> = {
   patient: patientMenu,
   'child-patient': childPatientMenu,
-  guardian: guardianMenu,
   orthodontist: orthodontistMenu,
+  'super-admin': superAdminMenu,
 }
 
-export const AppSidebar = ({ userRole }: { userRole: UserRole }) => {
+export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
   const location = useLocation()
   const { isChild } = useUserRole()
-  const currentMenu = menuItems[userRole]
+
+  // Se não tem role, usar menu de paciente como fallback
+  const currentMenu = userRole ? (menuItems[userRole] || patientMenu) : patientMenu
 
   return (
     <aside className="hidden h-screen w-64 flex-col border-r bg-card md:flex">

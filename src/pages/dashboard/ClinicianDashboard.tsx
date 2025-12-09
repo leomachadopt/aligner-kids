@@ -10,29 +10,38 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { alignerService } from '@/services/alignerService'
+import { AuthService } from '@/services/authService'
+import { useAuth } from '@/context/AuthContext'
 import { useEffect, useState } from 'react'
 import type { Treatment, Aligner } from '@/types/aligner'
+import type { User } from '@/types/user'
 import { isAlignerOverdue, calculateDaysUntilChange } from '@/utils/alignerCalculations'
-
-// Mock patient data - in production, get from API
-const mockPatients = [
-  { id: 'patient-1', name: 'João Silva', email: 'joao@example.com' },
-  { id: 'patient-2', name: 'Maria Santos', email: 'maria@example.com' },
-  { id: 'patient-3', name: 'Pedro Costa', email: 'pedro@example.com' },
-]
+import { toast } from 'sonner'
 
 const ClinicianDashboard = () => {
+  const { user } = useAuth()
+  const [patients, setPatients] = useState<User[]>([])
   const [treatments, setTreatments] = useState<Treatment[]>([])
   const [aligners, setAligners] = useState<Aligner[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user || !user.clinicId) {
+        toast.error('Usuário não está vinculado a nenhuma clínica')
+        setLoading(false)
+        return
+      }
+
       try {
+        // Buscar pacientes da clínica do ortodontista
+        const clinicPatients = AuthService.getUsersByClinic(user.clinicId)
+        setPatients(clinicPatients)
+
         const allAligners: Aligner[] = []
         const allTreatments: Treatment[] = []
 
-        for (const patient of mockPatients) {
+        for (const patient of clinicPatients) {
           const patientAligners = await alignerService.getAlignersByPatient(
             patient.id,
           )
@@ -48,13 +57,14 @@ const ClinicianDashboard = () => {
         setTreatments(allTreatments)
       } catch (error) {
         console.error('Error loading data:', error)
+        toast.error('Erro ao carregar dados do dashboard')
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [])
+  }, [user])
 
   const activeTreatments = treatments.filter((t) => t.status === 'active')
   const overdueAligners = aligners.filter((a) => isAlignerOverdue(a))
@@ -139,7 +149,7 @@ const ClinicianDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {overdueAligners.map((aligner) => {
-                  const patient = mockPatients.find(
+                  const patient = patients.find(
                     (p) => p.id === aligner.patientId,
                   )
                   return (
@@ -149,7 +159,7 @@ const ClinicianDashboard = () => {
                     >
                       <div>
                         <p className="font-semibold">
-                          {patient?.name || 'Paciente desconhecido'}
+                          {patient?.fullName || 'Paciente desconhecido'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Alinhador #{aligner.number}
@@ -179,7 +189,7 @@ const ClinicianDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {atRiskAligners.map((aligner) => {
-                  const patient = mockPatients.find(
+                  const patient = patients.find(
                     (p) => p.id === aligner.patientId,
                   )
                   const daysUntil = calculateDaysUntilChange(aligner)
@@ -190,7 +200,7 @@ const ClinicianDashboard = () => {
                     >
                       <div>
                         <p className="font-semibold">
-                          {patient?.name || 'Paciente desconhecido'}
+                          {patient?.fullName || 'Paciente desconhecido'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Alinhador #{aligner.number} - {daysUntil} dias restantes
@@ -220,7 +230,7 @@ const ClinicianDashboard = () => {
         <CardContent>
           <div className="space-y-3">
             {activeTreatments.slice(0, 5).map((treatment) => {
-              const patient = mockPatients.find(
+              const patient = patients.find(
                 (p) => p.id === treatment.patientId,
               )
               const patientAligners = aligners.filter(
@@ -238,7 +248,7 @@ const ClinicianDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="font-semibold">
-                        {patient?.name || 'Paciente desconhecido'}
+                        {patient?.fullName || 'Paciente desconhecido'}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Alinhador {treatment.currentAlignerNumber} de{' '}

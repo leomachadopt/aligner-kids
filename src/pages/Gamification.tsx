@@ -1,9 +1,14 @@
-import { Award, ShieldCheck, Star, Trophy, Sparkles } from 'lucide-react'
+import { Award, ShieldCheck, Star, Trophy, Sparkles, Wand2, BookOpen, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
 import { AdventureJourney } from '@/components/AdventureJourney'
 import { StoryUnlock } from '@/components/StoryUnlock'
-import { useTreatment } from '@/context/AlignerContext'
+import { useTreatment, useCurrentAligner } from '@/context/AlignerContext'
+import { StorySeriesService } from '@/services/storySeriesService'
 import { cn } from '@/lib/utils'
+import { useNavigate } from 'react-router-dom'
 
 const badges = [
   { id: '1', name: 'Mês de Ouro', icon: '🏆', earned: true, description: 'Um mês completo de uso', earnedDate: '2024-01-15' },
@@ -14,6 +19,27 @@ const badges = [
 
 const Gamification = () => {
   const treatment = useTreatment()
+  const currentAligner = useCurrentAligner()
+  const navigate = useNavigate()
+
+  const patientId = 'current-patient' // TODO: Pegar do contexto de autenticação
+  const hasStory = StorySeriesService.hasStory(patientId)
+  const series = hasStory ? StorySeriesService.getPatientSeries(patientId) : null
+  const currentAlignerNumber = currentAligner?.number || 1
+
+  // Calcular progresso da história
+  let storyProgress = 0
+  let unlockedCount = 0
+  let totalChapters = 0
+
+  if (series) {
+    const chapters = StorySeriesService.getSeriesChapters(series.id)
+    totalChapters = chapters.length
+    unlockedCount = chapters.filter(
+      (ch) => ch.requiredAlignerNumber <= currentAlignerNumber
+    ).length
+    storyProgress = totalChapters > 0 ? (unlockedCount / totalChapters) * 100 : 0
+  }
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -32,6 +58,79 @@ const Gamification = () => {
           className="animate-float hover-wiggle"
         />
       </div>
+
+      {/* Card de História - Criar ou Ver */}
+      {!hasStory ? (
+        // Card "Criar História" (quando ainda não tem história)
+        <Card className="border-2 border-primary-child shadow-xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 hover:shadow-2xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-br from-primary-child to-purple-500 p-4 rounded-full shadow-lg animate-bounce-slow">
+                  <Wand2 className="h-10 w-10 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl font-bold text-primary-child mb-1">
+                    Diretor de Histórias
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Crie sua própria história mágica personalizada! Você escolhe o ambiente, personagens e tema.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="lg"
+                onClick={() => navigate('/story-director')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform min-w-[200px]"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                Criar História
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        // Card "Minha História" (quando já tem história)
+        <Card className="border-2 border-green-500 shadow-xl bg-gradient-to-r from-green-50 via-blue-50 to-purple-50 hover:shadow-2xl transition-shadow cursor-pointer" onClick={() => navigate('/my-story')}>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="bg-gradient-to-br from-green-500 to-blue-500 p-4 rounded-full shadow-lg">
+                  <BookOpen className="h-10 w-10 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-display text-2xl font-bold text-green-700">
+                      {series?.title || 'Minha História'}
+                    </h3>
+                    <Badge variant="default" className="bg-green-600">
+                      Ativa
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mb-3">
+                    Continue sua aventura mágica! {unlockedCount} de {totalChapters} capítulos disponíveis.
+                  </p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-semibold">Progresso</span>
+                      <span className="text-green-700 font-bold">{Math.round(storyProgress)}%</span>
+                    </div>
+                    <Progress value={storyProgress} className="h-2" />
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform min-w-[200px]"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Ver Capítulos
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">

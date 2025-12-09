@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
 import { alignerService } from '@/services/alignerService'
+import { AuthService } from '@/services/authService'
+import { useAuth } from '@/context/AuthContext'
 import type { Treatment, Aligner } from '@/types/aligner'
+import type { User } from '@/types/user'
 import { TreatmentTimeline } from '@/components/TreatmentTimeline'
 import {
   calculateTreatmentProgress,
@@ -21,25 +24,33 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-
-// Mock patient data
-const mockPatients: Record<string, { name: string; email: string }> = {
-  'patient-1': { name: 'João Silva', email: 'joao@example.com' },
-  'patient-2': { name: 'Maria Santos', email: 'maria@example.com' },
-  'patient-3': { name: 'Pedro Costa', email: 'pedro@example.com' },
-}
+import { toast } from 'sonner'
 
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>()
+  const { user: currentUser } = useAuth()
+  const [patient, setPatient] = useState<User | null>(null)
   const [treatment, setTreatment] = useState<Treatment | null>(null)
   const [aligners, setAligners] = useState<Aligner[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
-      if (!id) return
+      if (!id || !currentUser) return
 
       try {
+        // Buscar paciente
+        const patientData = AuthService.getUserById(id)
+
+        // Validar que o paciente pertence à mesma clínica do ortodontista
+        if (currentUser.role === 'orthodontist' && patientData?.clinicId !== currentUser.clinicId) {
+          toast.error('Você não tem permissão para acessar este paciente')
+          setLoading(false)
+          return
+        }
+
+        setPatient(patientData)
+
         const patientTreatment = await alignerService.getTreatmentByPatient(id)
         const patientAligners = await alignerService.getAlignersByPatient(id)
 
@@ -47,13 +58,14 @@ const PatientDetail = () => {
         setAligners(patientAligners)
       } catch (error) {
         console.error('Error loading patient data:', error)
+        toast.error('Erro ao carregar dados do paciente')
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [id])
+  }, [id, currentUser])
 
   if (loading) {
     return (
@@ -64,7 +76,7 @@ const PatientDetail = () => {
     )
   }
 
-  if (!treatment || !id) {
+  if (!patient || !treatment || !id) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Paciente não encontrado</h1>
@@ -75,7 +87,6 @@ const PatientDetail = () => {
     )
   }
 
-  const patient = mockPatients[id]
   const currentAligner = aligners.find((a) => a.status === 'active')
   const progress = calculateTreatmentProgress(treatment)
   const isOverdue = currentAligner ? isAlignerOverdue(currentAligner) : false
@@ -99,9 +110,9 @@ const PatientDetail = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">
-            {patient?.name || 'Paciente Desconhecido'}
+            {patient.fullName}
           </h1>
-          <p className="text-muted-foreground">{patient?.email}</p>
+          <p className="text-muted-foreground">{patient.email}</p>
         </div>
       </div>
 

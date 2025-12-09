@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/context/AuthContext'
 import { UserRoleProvider } from '@/context/UserRoleContext'
 import { GamificationProvider } from '@/context/GamificationContext'
 import Index from './pages/Index'
@@ -25,6 +26,13 @@ import Privacy from './pages/Privacy'
 import PatientManagement from './pages/PatientManagement'
 import PatientDetail from './pages/PatientDetail'
 import AlignerManagement from './pages/AlignerManagement'
+import StoryDirector from './pages/StoryDirector'
+import StoryReader from './pages/StoryReader'
+import AdminPrompts from './pages/AdminPrompts'
+import AdminClinics from './pages/AdminClinics'
+import AdminOrthodontists from './pages/AdminOrthodontists'
+import MyStory from './pages/MyStory'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -33,37 +41,64 @@ const App = () => (
   <BrowserRouter
     future={{ v7_startTransition: false, v7_relativeSplatPath: false }}
   >
-    <UserRoleProvider>
-      <GamificationProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
+    <AuthProvider>
+      <UserRoleProvider>
+        <GamificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+            {/* Rotas Públicas */}
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/my-treatment" element={<MyTreatment />} />
-            <Route path="/photos" element={<Photos />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/education" element={<Education />} />
-            <Route path="/gamification" element={<Gamification />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/patient-management" element={<PatientManagement />} />
-            <Route path="/patient/:id" element={<PatientDetail />} />
-            <Route path="/aligner-management" element={<AlignerManagement />} />
-          </Route>
+
+            {/* Rotas Protegidas (Requer Autenticação) */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/my-treatment" element={<MyTreatment />} />
+                <Route path="/photos" element={<Photos />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/education" element={<Education />} />
+                <Route path="/gamification" element={<Gamification />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="/story-director" element={<StoryDirector />} />
+                <Route path="/story-reader/:storyId" element={<StoryReader />} />
+                <Route path="/my-story" element={<MyStory />} />
+              </Route>
+            </Route>
+
+            {/* Rotas Apenas para Ortodontistas e Super-Admin */}
+            <Route element={<ProtectedRoute allowedRoles={['orthodontist', 'super-admin']} />}>
+              <Route element={<Layout />}>
+                <Route path="/patient-management" element={<PatientManagement />} />
+                <Route path="/patient/:id" element={<PatientDetail />} />
+                <Route path="/aligner-management" element={<AlignerManagement />} />
+              </Route>
+            </Route>
+
+            {/* Rotas Apenas para Super-Admin */}
+            <Route element={<ProtectedRoute allowedRoles={['super-admin']} />}>
+              <Route element={<Layout />}>
+                <Route path="/admin/clinics" element={<AdminClinics />} />
+                <Route path="/admin/orthodontists" element={<AdminOrthodontists />} />
+                <Route path="/admin/prompts" element={<AdminPrompts />} />
+              </Route>
+            </Route>
+
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
       </GamificationProvider>
     </UserRoleProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 

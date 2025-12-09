@@ -1,0 +1,562 @@
+/**
+ * Story Director - Página onde a criança cria sua história personalizada
+ * Wizard multi-step para selecionar ambiente, personagens e tema
+ */
+
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
+import {
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  Wand2,
+  Loader2,
+} from 'lucide-react'
+import type {
+  StoryPreferencesInput,
+  StoryEnvironment,
+  StoryCharacter,
+  StoryTheme,
+} from '@/types/story'
+import {
+  STORY_ENVIRONMENTS,
+  STORY_CHARACTERS,
+  STORY_THEMES,
+  getRandomGenerationMessage,
+} from '@/config/storyOptions'
+import { StorySeriesService } from '@/services/storySeriesService'
+import { useTreatment } from '@/context/AlignerContext'
+import { toast } from 'sonner'
+
+const StoryDirector = () => {
+  const navigate = useNavigate()
+  const treatment = useTreatment()
+  const [currentStep, setCurrentStep] = useState(1)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationMessage, setGenerationMessage] = useState('')
+  const [generationProgress, setGenerationProgress] = useState(0)
+
+  // Estado das preferências
+  const [preferences, setPreferences] = useState<Partial<StoryPreferencesInput>>({
+    ageGroup: 8, // Padrão
+  })
+
+  const patientId = 'current-patient' // TODO: Pegar do contexto de autenticação
+  const totalAligners = treatment?.totalAligners || 24
+
+  const totalSteps = 5
+  const progress = (currentStep / totalSteps) * 100
+
+  // ============================================
+  // NAVEGAÇÃO
+  // ============================================
+
+  const goToNext = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const goToPrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return !!preferences.environment
+      case 2:
+        return !!preferences.mainCharacter
+      case 3:
+        return true // Sidekick é opcional
+      case 4:
+        return !!preferences.theme
+      case 5:
+        return true // Nome é opcional
+      default:
+        return false
+    }
+  }
+
+  // ============================================
+  // GERAÇÃO DE HISTÓRIA
+  // ============================================
+
+  const handleGenerateStory = async () => {
+    if (!preferences.environment || !preferences.mainCharacter || !preferences.theme) {
+      toast.error('Por favor, complete todas as etapas obrigatórias!')
+      return
+    }
+
+    // Verificar se já tem história
+    if (StorySeriesService.hasStory(patientId)) {
+      toast.error('Você já tem uma história! Veja em "Minha História"')
+      navigate('/my-story')
+      return
+    }
+
+    setIsGenerating(true)
+    setGenerationProgress(0)
+
+    try {
+      const fullPreferences: StoryPreferencesInput = {
+        environment: preferences.environment,
+        mainCharacter: preferences.mainCharacter,
+        sidekick: preferences.sidekick,
+        theme: preferences.theme,
+        ageGroup: preferences.ageGroup || 8,
+        mainCharacterName: preferences.mainCharacterName,
+      }
+
+      console.log('Gerando história completa com preferências:', fullPreferences)
+      console.log('Total de capítulos (alinhadores):', totalAligners)
+
+      // Criar história completa com capítulos e áudio
+      await StorySeriesService.createStorySeries(
+        patientId,
+        {
+          preferences: fullPreferences,
+          totalAligners: totalAligners,
+        },
+        (message, progress) => {
+          setGenerationMessage(message)
+          setGenerationProgress(progress)
+        },
+      )
+
+      toast.success('✨ Sua história foi criada com sucesso!')
+
+      // Navegar para "Minha História"
+      navigate('/my-story')
+    } catch (error) {
+      console.error('Erro ao gerar história:', error)
+      toast.error(
+        error instanceof Error ? error.message : 'Erro ao gerar história. Tente novamente!',
+      )
+    } finally {
+      setIsGenerating(false)
+      setGenerationMessage('')
+      setGenerationProgress(0)
+    }
+  }
+
+  // ============================================
+  // RENDER DOS STEPS
+  // ============================================
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <StepEnvironment
+            selected={preferences.environment}
+            onSelect={(env) => setPreferences({ ...preferences, environment: env })}
+          />
+        )
+      case 2:
+        return (
+          <StepCharacter
+            selected={preferences.mainCharacter}
+            onSelect={(char) =>
+              setPreferences({ ...preferences, mainCharacter: char })
+            }
+          />
+        )
+      case 3:
+        return (
+          <StepSidekick
+            selected={preferences.sidekick}
+            onSelect={(sidekick) =>
+              setPreferences({ ...preferences, sidekick })
+            }
+            onSkip={() => {
+              setPreferences({ ...preferences, sidekick: undefined })
+              goToNext()
+            }}
+          />
+        )
+      case 4:
+        return (
+          <StepTheme
+            selected={preferences.theme}
+            onSelect={(theme) => setPreferences({ ...preferences, theme })}
+          />
+        )
+      case 5:
+        return (
+          <StepPersonalize
+            characterName={preferences.mainCharacterName}
+            ageGroup={preferences.ageGroup || 8}
+            onChangeName={(name) =>
+              setPreferences({ ...preferences, mainCharacterName: name })
+            }
+            onChangeAge={(age) =>
+              setPreferences({ ...preferences, ageGroup: age })
+            }
+          />
+        )
+      default:
+        return null
+    }
+  }
+
+  // ============================================
+  // RENDER PRINCIPAL
+  // ============================================
+
+  if (isGenerating) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-400 via-pink-400 to-orange-400 p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-8">
+            <Loader2 className="mx-auto h-20 w-20 animate-spin text-primary-child mb-6" />
+            <h2 className="font-display text-3xl font-bold text-primary-child mb-4">
+              Criando Sua História Mágica!
+            </h2>
+            <p className="text-xl text-muted-foreground animate-pulse mb-6">
+              {generationMessage || 'Iniciando...'}
+            </p>
+            <div className="space-y-2">
+              <Progress value={generationProgress} className="h-3" />
+              <p className="text-sm text-muted-foreground font-semibold">
+                {Math.round(generationProgress)}% concluído
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground mt-6">
+              Isso pode levar 1-2 minutos. Estamos criando {totalAligners} capítulos com narração!
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-orange-400 p-4 py-8">
+      <div className="mx-auto max-w-4xl">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="font-display text-5xl font-extrabold text-white drop-shadow-lg mb-4 flex items-center justify-center gap-3">
+            <Wand2 className="h-12 w-12 animate-bounce" />
+            Diretor de Histórias
+          </h1>
+          <p className="text-xl text-white/90">
+            Você é o diretor! Escolha como será sua aventura mágica
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="mb-2 flex items-center justify-between text-white">
+            <span className="font-semibold">Passo {currentStep} de {totalSteps}</span>
+            <span className="font-semibold">{Math.round(progress)}%</span>
+          </div>
+          <Progress value={progress} className="h-3 bg-white/30" />
+        </div>
+
+        {/* Card Principal */}
+        <Card className="shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-primary-child to-purple-500 text-white">
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Sparkles className="h-6 w-6 animate-pulse" />
+              {getStepTitle(currentStep)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8">{renderStep()}</CardContent>
+        </Card>
+
+        {/* Botões de Navegação */}
+        <div className="mt-6 flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={goToPrevious}
+            disabled={currentStep === 1}
+            className="min-w-[120px]"
+          >
+            <ChevronLeft className="mr-2 h-5 w-5" />
+            Voltar
+          </Button>
+
+          {currentStep < totalSteps ? (
+            <Button
+              size="lg"
+              onClick={goToNext}
+              disabled={!canProceed()}
+              className="min-w-[120px] bg-primary-child hover:bg-primary-child/90"
+            >
+              Próximo
+              <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={handleGenerateStory}
+              disabled={!canProceed()}
+              className="min-w-[180px] bg-gradient-to-r from-green-500 to-blue-500 text-lg font-bold hover:scale-105 transition-transform"
+            >
+              <Sparkles className="mr-2 h-6 w-6" />
+              Criar Minha História!
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function getStepTitle(step: number): string {
+  const titles = [
+    '',
+    'Escolha o Ambiente',
+    'Escolha Seu Personagem Principal',
+    'Escolha um Ajudante (Opcional)',
+    'Escolha o Tema da Aventura',
+    'Personalize Sua História',
+  ]
+  return titles[step] || ''
+}
+
+// ============================================
+// STEP COMPONENTS
+// ============================================
+
+interface StepEnvironmentProps {
+  selected?: StoryEnvironment
+  onSelect: (env: StoryEnvironment) => void
+}
+
+function StepEnvironment({ selected, onSelect }: StepEnvironmentProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {STORY_ENVIRONMENTS.map((env) => (
+        <button
+          key={env.id}
+          onClick={() => onSelect(env.id)}
+          className={cn(
+            'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
+            selected === env.id
+              ? 'border-primary-child bg-primary-child/10 shadow-lg'
+              : 'border-gray-300 hover:border-primary-child/50',
+          )}
+        >
+          <div
+            className={cn(
+              'text-6xl transition-transform group-hover:scale-110',
+              selected === env.id && 'animate-bounce',
+            )}
+          >
+            {env.icon}
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-lg">{env.name}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {env.description}
+            </p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+interface StepCharacterProps {
+  selected?: StoryCharacter
+  onSelect: (char: StoryCharacter) => void
+}
+
+function StepCharacter({ selected, onSelect }: StepCharacterProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {STORY_CHARACTERS.map((char) => (
+        <button
+          key={char.id}
+          onClick={() => onSelect(char.id)}
+          className={cn(
+            'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
+            selected === char.id
+              ? 'border-primary-child bg-primary-child/10 shadow-lg'
+              : 'border-gray-300 hover:border-primary-child/50',
+          )}
+        >
+          <div
+            className={cn(
+              'text-6xl transition-transform group-hover:scale-110',
+              selected === char.id && 'animate-bounce',
+            )}
+          >
+            {char.icon}
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-lg">{char.name}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {char.description}
+            </p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+interface StepSidekickProps {
+  selected?: StoryCharacter
+  onSelect: (char?: StoryCharacter) => void
+  onSkip: () => void
+}
+
+function StepSidekick({ selected, onSelect, onSkip }: StepSidekickProps) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <p className="text-muted-foreground">
+          Escolha um companheiro para ajudar na aventura, ou pule esta etapa
+        </p>
+        <Button variant="outline" onClick={onSkip} className="mt-4">
+          Pular esta etapa
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {STORY_CHARACTERS.map((char) => (
+          <button
+            key={char.id}
+            onClick={() => onSelect(char.id)}
+            className={cn(
+              'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
+              selected === char.id
+                ? 'border-primary-child bg-primary-child/10 shadow-lg'
+                : 'border-gray-300 hover:border-primary-child/50',
+            )}
+          >
+            <div
+              className={cn(
+                'text-6xl transition-transform group-hover:scale-110',
+                selected === char.id && 'animate-bounce',
+              )}
+            >
+              {char.icon}
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-lg">{char.name}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {char.description}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface StepThemeProps {
+  selected?: StoryTheme
+  onSelect: (theme: StoryTheme) => void
+}
+
+function StepTheme({ selected, onSelect }: StepThemeProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {STORY_THEMES.map((theme) => (
+        <button
+          key={theme.id}
+          onClick={() => onSelect(theme.id)}
+          className={cn(
+            'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
+            selected === theme.id
+              ? 'border-primary-child bg-primary-child/10 shadow-lg'
+              : 'border-gray-300 hover:border-primary-child/50',
+          )}
+        >
+          <div
+            className={cn(
+              'text-6xl transition-transform group-hover:scale-110',
+              selected === theme.id && 'animate-bounce',
+            )}
+          >
+            {theme.icon}
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-lg">{theme.name}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {theme.description}
+            </p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+interface StepPersonalizeProps {
+  characterName?: string
+  ageGroup: number
+  onChangeName: (name: string) => void
+  onChangeAge: (age: number) => void
+}
+
+function StepPersonalize({
+  characterName,
+  ageGroup,
+  onChangeName,
+  onChangeAge,
+}: StepPersonalizeProps) {
+  return (
+    <div className="space-y-6 max-w-md mx-auto">
+      <div className="space-y-2">
+        <Label htmlFor="characterName" className="text-lg">
+          Como se chama seu personagem? (Opcional)
+        </Label>
+        <Input
+          id="characterName"
+          placeholder="Ex: Luna, Max, Sofia..."
+          value={characterName || ''}
+          onChange={(e) => onChangeName(e.target.value)}
+          className="text-lg p-6"
+        />
+        <p className="text-sm text-muted-foreground">
+          Deixe em branco para usar o nome padrão
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ageGroup" className="text-lg">
+          Qual é a sua idade?
+        </Label>
+        <Input
+          id="ageGroup"
+          type="number"
+          min={3}
+          max={12}
+          value={ageGroup}
+          onChange={(e) => onChangeAge(parseInt(e.target.value) || 8)}
+          className="text-lg p-6"
+        />
+        <p className="text-sm text-muted-foreground">
+          Isso ajuda a criar uma história perfeita para você!
+        </p>
+      </div>
+
+      <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
+        <p className="text-center text-lg font-semibold text-green-800">
+          ✨ Tudo pronto! Clique em "Criar Minha História" para começar a magia!
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default StoryDirector

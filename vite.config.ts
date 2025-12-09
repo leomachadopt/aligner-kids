@@ -49,8 +49,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Resolve zod/v4/core para zod (compatibilidade com @hookform/resolvers)
-      'zod/v4/core': path.resolve(__dirname, './node_modules/zod'),
     },
   },
 }))

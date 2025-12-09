@@ -6,58 +6,70 @@ import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 import { Search, Users, TrendingUp, AlertTriangle } from 'lucide-react'
 import { alignerService } from '@/services/alignerService'
+import { AuthService } from '@/services/authService'
+import { useAuth } from '@/context/AuthContext'
 import type { Treatment, Aligner } from '@/types/aligner'
+import type { User } from '@/types/user'
 import { isAlignerOverdue } from '@/utils/alignerCalculations'
-
-// Mock patient data
-const mockPatients = [
-  { id: 'patient-1', name: 'João Silva', email: 'joao@example.com' },
-  { id: 'patient-2', name: 'Maria Santos', email: 'maria@example.com' },
-  { id: 'patient-3', name: 'Pedro Costa', email: 'pedro@example.com' },
-]
+import { toast } from 'sonner'
 
 const PatientManagement = () => {
+  const { user } = useAuth()
+  const [patients, setPatients] = useState<User[]>([])
   const [treatments, setTreatments] = useState<
-    Array<Treatment & { patient: typeof mockPatients[0] }>
+    Array<Treatment & { patient: User }>
   >([])
   const [aligners, setAligners] = useState<Aligner[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const allAligners: Aligner[] = []
-        const treatmentsWithPatients: Array<
-          Treatment & { patient: typeof mockPatients[0] }
-        > = []
-
-        for (const patient of mockPatients) {
-          const patientAligners = await alignerService.getAlignersByPatient(
-            patient.id,
-          )
-          const treatment = await alignerService.getTreatmentByPatient(patient.id)
-
-          allAligners.push(...patientAligners)
-          if (treatment) {
-            treatmentsWithPatients.push({ ...treatment, patient })
-          }
-        }
-
-        setAligners(allAligners)
-        setTreatments(treatmentsWithPatients)
-      } catch (error) {
-        console.error('Error loading data:', error)
-      } finally {
-        setLoading(false)
-      }
+    if (!user || !user.clinicId) {
+      toast.error('Usuário não está vinculado a nenhuma clínica')
+      setLoading(false)
+      return
     }
 
     loadData()
-  }, [])
+  }, [user])
+
+  const loadData = async () => {
+    if (!user?.clinicId) return
+
+    try {
+      setLoading(true)
+
+      // Buscar pacientes da clínica do ortodontista
+      const clinicPatients = AuthService.getUsersByClinic(user.clinicId)
+      setPatients(clinicPatients)
+
+      // Buscar tratamentos e alinhadores para cada paciente
+      const allAligners: Aligner[] = []
+      const treatmentsWithPatients: Array<Treatment & { patient: User }> = []
+
+      for (const patient of clinicPatients) {
+        const patientAligners = await alignerService.getAlignersByPatient(patient.id)
+        const treatment = await alignerService.getTreatmentByPatient(patient.id)
+
+        allAligners.push(...patientAligners)
+        if (treatment) {
+          treatmentsWithPatients.push({ ...treatment, patient })
+        }
+      }
+
+      setAligners(allAligners)
+      setTreatments(treatmentsWithPatients)
+    } catch (error) {
+      console.error('Error loading data:', error)
+      toast.error('Erro ao carregar pacientes')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredTreatments = treatments.filter((treatment) =>
-    treatment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    treatment.patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    treatment.patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const getPatientStatus = (treatment: Treatment) => {
@@ -147,7 +159,7 @@ const PatientManagement = () => {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="text-xl font-semibold">
-                          {treatment.patient.name}
+                          {treatment.patient.fullName}
                         </h3>
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </div>

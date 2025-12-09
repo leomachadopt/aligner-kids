@@ -1,11 +1,12 @@
-import { createContext, useState, useContext, ReactNode, useMemo } from 'react'
-
-export type UserRole = 'patient' | 'child-patient' | 'guardian' | 'orthodontist'
+import { createContext, useContext, ReactNode, useMemo } from 'react'
+import { useAuth } from './AuthContext'
+import type { UserRole } from '@/types/user'
 
 interface UserRoleContextType {
-  role: UserRole
-  setRole: (role: UserRole) => void
+  role: UserRole | null
   isChild: boolean
+  isAdmin: boolean
+  isDentist: boolean
 }
 
 const UserRoleContext = createContext<UserRoleContextType | undefined>(
@@ -13,12 +14,15 @@ const UserRoleContext = createContext<UserRoleContextType | undefined>(
 )
 
 export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<UserRole>('child-patient') // Default to child for the story
+  const { user } = useAuth()
 
   const contextValue = useMemo(() => {
+    const role = user?.role || null
     const isChild = role === 'child-patient'
-    return { role, setRole, isChild }
-  }, [role])
+    const isAdmin = role === 'super-admin'
+    const isDentist = role === 'orthodontist'
+    return { role, isChild, isAdmin, isDentist }
+  }, [user])
 
   return (
     <UserRoleContext.Provider value={contextValue}>
