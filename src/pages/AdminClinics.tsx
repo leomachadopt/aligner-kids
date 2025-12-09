@@ -30,11 +30,15 @@ import {
   Globe,
 } from 'lucide-react'
 import { ClinicService } from '@/services/clinicService'
+import { AuthService } from '@/services/authService'
 import type { Clinic, ClinicInput } from '@/types/clinic'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Separator } from '@/components/ui/separator'
+import { useAuth } from '@/context/AuthContext'
 
 const AdminClinics = () => {
+  const { user: currentUser } = useAuth()
   const [clinics, setClinics] = useState<Clinic[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -44,7 +48,7 @@ const AdminClinics = () => {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null)
 
-  // Form state
+  // Form state (clínica + primeiro ortodontista)
   const [formData, setFormData] = useState<ClinicInput>({
     name: '',
     slug: '',
@@ -54,6 +58,16 @@ const AdminClinics = () => {
     addressCity: '',
     addressState: '',
     subscriptionTier: 'basic',
+  })
+
+  // Dados do primeiro ortodontista (dono da clínica)
+  const [orthodontistData, setOrthodontistData] = useState({
+    fullName: '',
+    email: '',
+    cro: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
   })
 
   // ============================================
@@ -92,6 +106,14 @@ const AdminClinics = () => {
       addressState: '',
       subscriptionTier: 'basic',
     })
+    setOrthodontistData({
+      fullName: '',
+      email: '',
+      cro: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+    })
     setIsCreateOpen(true)
   }
 
@@ -112,14 +134,61 @@ const AdminClinics = () => {
 
   const handleSaveCreate = async () => {
     try {
-      // Validações
+      // Validações da clínica
       if (!formData.name || !formData.slug || !formData.email) {
-        toast.error('Preencha todos os campos obrigatórios')
+        toast.error('Preencha todos os campos obrigatórios da clínica')
         return
       }
 
-      await ClinicService.createClinic(formData)
-      toast.success('Clínica criada com sucesso!')
+      // Validações do ortodontista
+      if (!orthodontistData.fullName || !orthodontistData.email ||
+          !orthodontistData.cro || !orthodontistData.password) {
+        toast.error('Preencha todos os campos obrigatórios do ortodontista')
+        return
+      }
+
+      if (orthodontistData.password !== orthodontistData.confirmPassword) {
+        toast.error('As senhas não coincidem')
+        return
+      }
+
+      if (orthodontistData.password.length < 6) {
+        toast.error('A senha deve ter no mínimo 6 caracteres')
+        return
+      }
+
+      // 1. Criar a clínica
+      const newClinic = await ClinicService.createClinic(formData)
+
+      // 2. Criar o ortodontista vinculado à clínica
+      try {
+        const orthodontistResponse = await AuthService.register({
+          email: orthodontistData.email,
+          password: orthodontistData.password,
+          confirmPassword: orthodontistData.confirmPassword,
+          role: 'orthodontist',
+          fullName: orthodontistData.fullName,
+          cro: orthodontistData.cro,
+          phone: orthodontistData.phone,
+          clinicId: newClinic.id,
+        })
+
+        // 3. Aprovar automaticamente (pois foi criado pelo super-admin)
+        if (currentUser?.id && orthodontistResponse.user.id) {
+          await AuthService.approveOrthodontist(
+            currentUser.id,
+            orthodontistResponse.user.id
+          )
+        }
+
+        toast.success('Clínica e ortodontista criados e aprovados com sucesso!')
+        toast.info(`Email do ortodontista: ${orthodontistData.email}`)
+      } catch (orthodontistError) {
+        // Se falhar ao criar ortodontista, avisar mas manter clínica
+        toast.warning('Clínica criada, mas houve erro ao criar o ortodontista')
+        console.error('Erro ao criar ortodontista:', orthodontistError)
+      }
+
       setIsCreateOpen(false)
       loadClinics()
     } catch (error) {
@@ -414,7 +483,7 @@ const AdminClinics = () => {
           <DialogHeader>
             <DialogTitle>Criar Nova Clínica</DialogTitle>
             <DialogDescription>
-              Preencha as informações da nova clínica
+              Preencha as informações da clínica e do primeiro ortodontista (gestor/dono)
             </DialogDescription>
           </DialogHeader>
 
@@ -537,13 +606,124 @@ const AdminClinics = () => {
                 <option value="enterprise">Enterprise</option>
               </select>
             </div>
+
+            <Separator className="my-6" />
+
+            {/* Seção: Primeiro Ortodontista (Dono da Clínica) */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Primeiro Ortodontista</h3>
+                <p className="text-sm text-muted-foreground">
+                  Crie o primeiro usuário ortodontista que será o gestor/dono desta clínica
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="ortho-name">Nome Completo *</Label>
+                  <Input
+                    id="ortho-name"
+                    value={orthodontistData.fullName}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        fullName: e.target.value,
+                      })
+                    }
+                    placeholder="Dr. João Silva"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ortho-cro">CRO *</Label>
+                  <Input
+                    id="ortho-cro"
+                    value={orthodontistData.cro}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        cro: e.target.value,
+                      })
+                    }
+                    placeholder="CRO/SP 12345"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="ortho-email">Email *</Label>
+                  <Input
+                    id="ortho-email"
+                    type="email"
+                    value={orthodontistData.email}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        email: e.target.value,
+                      })
+                    }
+                    placeholder="ortodontista@clinica.com"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ortho-phone">Telefone</Label>
+                  <Input
+                    id="ortho-phone"
+                    value={orthodontistData.phone}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        phone: e.target.value,
+                      })
+                    }
+                    placeholder="(11) 98765-4321"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="ortho-password">Senha *</Label>
+                  <Input
+                    id="ortho-password"
+                    type="password"
+                    value={orthodontistData.password}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        password: e.target.value,
+                      })
+                    }
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ortho-confirm-password">Confirmar Senha *</Label>
+                  <Input
+                    id="ortho-confirm-password"
+                    type="password"
+                    value={orthodontistData.confirmPassword}
+                    onChange={(e) =>
+                      setOrthodontistData({
+                        ...orthodontistData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    placeholder="Repita a senha"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveCreate}>Criar Clínica</Button>
+            <Button onClick={handleSaveCreate}>Criar Clínica e Ortodontista</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
