@@ -35,7 +35,9 @@ import AdminMissions from './pages/AdminMissions'
 import AdminDataManagement from './pages/AdminDataManagement'
 import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
+import DebugAuth from './pages/DebugAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import '@/utils/debugAuth' // Debug helper para testar autenticação
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -57,6 +59,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/debug-auth" element={<DebugAuth />} />
 
             {/* Rotas Protegidas (Requer Autenticação) */}
             <Route element={<ProtectedRoute />}>
