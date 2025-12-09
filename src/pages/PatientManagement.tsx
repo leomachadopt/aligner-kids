@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Link } from 'react-router-dom'
-import { Search, Users, TrendingUp, AlertTriangle, UserPlus } from 'lucide-react'
+import { Search, Users, TrendingUp, AlertTriangle, UserPlus, Trash2 } from 'lucide-react'
 import { alignerService } from '@/services/alignerService'
 import { AuthService } from '@/services/authService'
 import { ClinicService } from '@/services/clinicService'
@@ -52,6 +52,10 @@ const PatientManagement = () => {
     guardianCpf: '',
     guardianPhone: '',
   })
+
+  // Estados do diálogo de exclusão
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [patientToDelete, setPatientToDelete] = useState<User | null>(null)
 
   useEffect(() => {
     if (!user || !user.clinicId) {
@@ -167,6 +171,26 @@ const PatientManagement = () => {
     } catch (error) {
       console.error('Error creating patient:', error)
       toast.error(error instanceof Error ? error.message : 'Erro ao cadastrar paciente')
+    }
+  }
+
+  const handleDeleteClick = (patient: User) => {
+    setPatientToDelete(patient)
+    setIsDeleteOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!patientToDelete) return
+
+    try {
+      await AuthService.deleteUser(patientToDelete.id)
+      toast.success(`Paciente ${patientToDelete.fullName} foi excluído com sucesso`)
+      setIsDeleteOpen(false)
+      setPatientToDelete(null)
+      loadData()
+    } catch (error) {
+      console.error('Error deleting patient:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao excluir paciente')
     }
   }
 
@@ -323,6 +347,14 @@ const PatientManagement = () => {
                         <Link to={`/patient/${patient.id}`}>
                           Ver Detalhes
                         </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDeleteClick(patient)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -558,6 +590,60 @@ const PatientManagement = () => {
               Cancelar
             </Button>
             <Button onClick={handleSavePatient}>Cadastrar Paciente</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirmar Exclusão */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>irreversível</strong> e irá excluir permanentemente:
+            </DialogDescription>
+          </DialogHeader>
+
+          {patientToDelete && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted rounded-lg p-4">
+                <p className="font-semibold">{patientToDelete.fullName}</p>
+                <p className="text-sm text-muted-foreground">{patientToDelete.email}</p>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <p className="font-semibold text-destructive">Serão excluídos:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Cadastro do paciente</li>
+                  <li>Todos os alinhadores e tratamentos</li>
+                  <li>Histórias geradas</li>
+                  <li>Missões e pontuação</li>
+                  <li>Preferências e configurações</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-muted-foreground border-t pt-4">
+                Tem certeza que deseja continuar?
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteOpen(false)
+                setPatientToDelete(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Sim, Excluir Permanentemente
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

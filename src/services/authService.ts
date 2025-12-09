@@ -631,6 +631,108 @@ export class AuthService {
     saveUsers(users)
     console.log('⚠️  Usuário desativado:', users[userIndex].email)
   }
+
+  /**
+   * Excluir usuário/paciente permanentemente
+   * ATENÇÃO: Remove TODOS os dados relacionados (alinhadores, histórias, missões, etc.)
+   */
+  static async deleteUser(targetUserId: string): Promise<void> {
+    const currentUser = this.getCurrentUser()
+
+    // Verificar permissões (ortodontista pode excluir seus pacientes, super-admin pode excluir qualquer um)
+    if (!currentUser) {
+      throw new Error('Usuário não autenticado')
+    }
+
+    if (currentUser.id === targetUserId) {
+      throw new Error('Você não pode excluir sua própria conta')
+    }
+
+    const users = getAllUsers() as any[]
+    const userIndex = users.findIndex((u) => u.id === targetUserId)
+
+    if (userIndex === -1) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    const targetUser = users[userIndex]
+
+    // Verificar permissões específicas
+    if (currentUser.role === 'orthodontist') {
+      // Ortodontista só pode excluir pacientes da própria clínica
+      if (targetUser.clinicId !== currentUser.clinicId) {
+        throw new Error('Você não pode excluir pacientes de outra clínica')
+      }
+      if (targetUser.role !== 'patient' && targetUser.role !== 'child-patient') {
+        throw new Error('Você só pode excluir pacientes')
+      }
+    } else if (currentUser.role !== 'super-admin') {
+      throw new Error('Acesso negado')
+    }
+
+    // EXCLUIR DADOS RELACIONADOS
+    console.log(`🗑️ Excluindo usuário: ${targetUser.email} e todos os dados relacionados...`)
+
+    // 1. Excluir alinhadores
+    const aligners = localStorage.getItem('aligners')
+    if (aligners) {
+      const alignerData = JSON.parse(aligners)
+      const filtered = alignerData.filter((a: any) => a.patientId !== targetUserId)
+      localStorage.setItem('aligners', JSON.stringify(filtered))
+      console.log(`  ✓ ${alignerData.length - filtered.length} alinhador(es) excluído(s)`)
+    }
+
+    // 2. Excluir tratamentos
+    const treatments = localStorage.getItem('treatments')
+    if (treatments) {
+      const treatmentData = JSON.parse(treatments)
+      const filtered = treatmentData.filter((t: any) => t.patientId !== targetUserId)
+      localStorage.setItem('treatments', JSON.stringify(filtered))
+      console.log(`  ✓ ${treatmentData.length - filtered.length} tratamento(s) excluído(s)`)
+    }
+
+    // 3. Excluir histórias
+    const stories = localStorage.getItem('stories')
+    if (stories) {
+      const storyData = JSON.parse(stories)
+      const filtered = storyData.filter((s: any) => s.patientId !== targetUserId)
+      localStorage.setItem('stories', JSON.stringify(filtered))
+      console.log(`  ✓ ${storyData.length - filtered.length} história(s) excluída(s)`)
+    }
+
+    // 4. Excluir preferências de história
+    const storyPreferences = localStorage.getItem('story_preferences')
+    if (storyPreferences) {
+      const prefData = JSON.parse(storyPreferences)
+      const filtered = prefData.filter((p: any) => p.patientId !== targetUserId)
+      localStorage.setItem('story_preferences', JSON.stringify(filtered))
+      console.log(`  ✓ ${prefData.length - filtered.length} preferência(s) excluída(s)`)
+    }
+
+    // 5. Excluir missões do paciente
+    const patientMissions = localStorage.getItem('patient_missions')
+    if (patientMissions) {
+      const missionData = JSON.parse(patientMissions)
+      const filtered = missionData.filter((m: any) => m.patientId !== targetUserId)
+      localStorage.setItem('patient_missions', JSON.stringify(filtered))
+      console.log(`  ✓ ${missionData.length - filtered.length} missão(ões) excluída(s)`)
+    }
+
+    // 6. Excluir pontos do paciente
+    const patientPoints = localStorage.getItem('patient_points')
+    if (patientPoints) {
+      const pointsData = JSON.parse(patientPoints)
+      const filtered = pointsData.filter((p: any) => p.patientId !== targetUserId)
+      localStorage.setItem('patient_points', JSON.stringify(filtered))
+      console.log(`  ✓ Pontos excluídos`)
+    }
+
+    // 7. Excluir usuário
+    users.splice(userIndex, 1)
+    saveUsers(users)
+
+    console.log(`✅ Usuário ${targetUser.email} e todos os dados relacionados foram excluídos permanentemente`)
+  }
 }
 
 export default AuthService
