@@ -245,7 +245,15 @@ export class AuthService {
     }
 
     // Hash da senha
+    console.log('🔐 Criando hash da senha...', {
+      passwordLength: input.password.length,
+      email: input.email,
+    })
     const passwordHash = await hashPassword(input.password)
+    console.log('✅ Hash criado:', {
+      hashLength: passwordHash.length,
+      hashPreview: passwordHash.substring(0, 20) + '...',
+    })
 
     // Criar usuário
     const userId = `user-${Date.now()}`
@@ -282,8 +290,23 @@ export class AuthService {
       updatedAt: now,
     }
 
-    users.push({ ...newUser, password_hash: passwordHash })
+    const userToSave = { ...newUser, password_hash: passwordHash }
+    users.push(userToSave)
     saveUsers(users)
+
+    console.log('✅ Usuário salvo no localStorage:', {
+      email: newUser.email,
+      hasHash: !!userToSave.password_hash,
+      hashLength: userToSave.password_hash?.length,
+    })
+
+    // Verificar se foi realmente salvo
+    const savedUsers = getAllUsers() as any[]
+    const verifyUser = savedUsers.find((u) => u.email === input.email)
+    console.log('🔍 Verificação após salvar:', {
+      userFound: !!verifyUser,
+      hasHash: !!verifyUser?.password_hash,
+    })
 
     // Criar sessão (apenas se solicitado)
     const token = generateToken(userId)
@@ -312,6 +335,11 @@ export class AuthService {
   static async login(input: LoginInput): Promise<AuthResponse> {
     const users = getAllUsers() as any[]
 
+    console.log('🔐 Tentativa de login:', {
+      credential: input.credential,
+      totalUsers: users.length,
+    })
+
     // Buscar usuário por email, CPF ou CRO
     const user = users.find(
       (u) =>
@@ -321,8 +349,17 @@ export class AuthService {
     )
 
     if (!user) {
+      console.error('❌ Usuário não encontrado:', input.credential)
+      console.log('Usuários disponíveis:', users.map((u) => u.email))
       throw new Error('Credenciais inválidas')
     }
+
+    console.log('👤 Usuário encontrado:', {
+      email: user.email,
+      role: user.role,
+      hasPasswordHash: !!user.password_hash,
+      hashLength: user.password_hash?.length,
+    })
 
     // Verificar senha
     const isPasswordValid = await comparePassword(
@@ -330,7 +367,14 @@ export class AuthService {
       user.password_hash,
     )
 
+    console.log('🔑 Verificação de senha:', {
+      isValid: isPasswordValid,
+      passwordLength: input.password.length,
+      hashExists: !!user.password_hash,
+    })
+
     if (!isPasswordValid) {
+      console.error('❌ Senha inválida para:', user.email)
       throw new Error('Credenciais inválidas')
     }
 

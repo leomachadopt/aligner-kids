@@ -13,7 +13,9 @@ import { AuthService } from '@/services/authService'
 import bcrypt from 'bcryptjs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, RefreshCw, Play } from 'lucide-react'
+import { testAuthFlow } from '@/utils/testAuth'
+import { toast } from 'sonner'
 
 const DebugAuth = () => {
   const [users, setUsers] = useState<any[]>([])
@@ -106,13 +108,33 @@ const DebugAuth = () => {
     window.location.reload()
   }
 
+  const handleRunFullTest = async () => {
+    toast.info('Executando teste completo... Veja o console (F12)')
+    try {
+      await testAuthFlow()
+      toast.success('Teste concluído! Verifique o console para detalhes.')
+      loadUsers()
+    } catch (error) {
+      toast.error('Erro no teste. Verifique o console.')
+      console.error(error)
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Debug de Autenticação</h1>
-        <p className="text-muted-foreground mt-2">
-          Ferramentas para testar e depurar o sistema de autenticação
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Debug de Autenticação</h1>
+            <p className="text-muted-foreground mt-2">
+              Ferramentas para testar e depurar o sistema de autenticação
+            </p>
+          </div>
+          <Button onClick={handleRunFullTest} size="lg" className="gap-2">
+            <Play className="h-4 w-4" />
+            Executar Teste Completo
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

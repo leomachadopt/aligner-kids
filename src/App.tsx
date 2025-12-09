@@ -38,6 +38,7 @@ import MyStory from './pages/MyStory'
 import DebugAuth from './pages/DebugAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import '@/utils/debugAuth' // Debug helper para testar autenticação
+import '@/utils/testAuth' // Test auth flow
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
