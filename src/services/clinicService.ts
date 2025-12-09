@@ -1,24 +1,11 @@
 /**
  * Clinic Service - Gerenciamento de Clínicas
  * Apenas super-admin pode gerenciar clínicas
+ * v2.0 - Migrado para API backend com Neon PostgreSQL
  */
 
 import type { Clinic, ClinicInput, ClinicStats, UpdateClinicInput } from '@/types/clinic'
-
-const STORAGE_KEY = 'clinics'
-
-// ============================================
-// HELPERS PRIVADOS
-// ============================================
-
-function getAllClinics(): Clinic[] {
-  const data = localStorage.getItem(STORAGE_KEY)
-  return data ? JSON.parse(data) : []
-}
-
-function saveClinics(clinics: Clinic[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clinics))
-}
+import { apiClient } from '@/utils/apiClient'
 
 // ============================================
 // CLINIC SERVICE
@@ -29,73 +16,67 @@ export class ClinicService {
    * Criar nova clínica (apenas super-admin)
    */
   static async createClinic(input: ClinicInput): Promise<Clinic> {
-    const clinics = getAllClinics()
-
-    // Validar slug único
-    if (clinics.some((c) => c.slug === input.slug)) {
-      throw new Error('Slug já está em uso')
+    try {
+      const response = await apiClient.post<{ clinic: Clinic }>('/clinics', input)
+      console.log('✅ Clínica criada:', response.clinic.name)
+      return response.clinic
+    } catch (error) {
+      console.error('Erro ao criar clínica:', error)
+      throw error
     }
-
-    // Validar email único
-    if (clinics.some((c) => c.email === input.email)) {
-      throw new Error('Email já está em uso')
-    }
-
-    const newClinic: Clinic = {
-      id: `clinic-${Date.now()}`,
-      name: input.name,
-      slug: input.slug,
-      country: input.country || 'BR', // Fallback para Brasil se não especificado
-      email: input.email,
-      phone: input.phone,
-      website: input.website,
-      addressCity: input.addressCity,
-      addressState: input.addressState,
-      primaryColor: input.primaryColor || '#3B82F6',
-      timezone: 'America/Sao_Paulo',
-      gamificationConfig: {},
-      isActive: true,
-      subscriptionTier: input.subscriptionTier || 'basic',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    clinics.push(newClinic)
-    saveClinics(clinics)
-
-    console.log('✅ Clínica criada:', newClinic.name)
-    return newClinic
   }
 
   /**
    * Listar todas as clínicas (apenas super-admin)
    */
   static async getAllClinics(): Promise<Clinic[]> {
-    return getAllClinics()
+    try {
+      const response = await apiClient.get<{ clinics: Clinic[] }>('/clinics')
+      return response.clinics
+    } catch (error) {
+      console.error('Erro ao listar clínicas:', error)
+      throw error
+    }
   }
 
   /**
    * Listar apenas clínicas ativas
    */
   static async getActiveClinics(): Promise<Clinic[]> {
-    const clinics = getAllClinics()
-    return clinics.filter((c) => c.isActive)
+    try {
+      const response = await apiClient.get<{ clinics: Clinic[] }>('/clinics')
+      return response.clinics.filter((c) => c.isActive)
+    } catch (error) {
+      console.error('Erro ao listar clínicas ativas:', error)
+      throw error
+    }
   }
 
   /**
    * Obter clínica por ID
    */
   static async getClinicById(clinicId: string): Promise<Clinic | null> {
-    const clinics = getAllClinics()
-    return clinics.find((c) => c.id === clinicId) || null
+    try {
+      const response = await apiClient.get<{ clinic: Clinic }>(`/clinics/${clinicId}`)
+      return response.clinic
+    } catch (error) {
+      console.error('Erro ao obter clínica:', error)
+      return null
+    }
   }
 
   /**
    * Obter clínica por slug
    */
   static async getClinicBySlug(slug: string): Promise<Clinic | null> {
-    const clinics = getAllClinics()
-    return clinics.find((c) => c.slug === slug) || null
+    try {
+      // This endpoint doesn't exist yet - we'll get all and filter
+      const response = await apiClient.get<{ clinics: Clinic[] }>('/clinics')
+      return response.clinics.find((c) => c.slug === slug) || null
+    } catch (error) {
+      console.error('Erro ao obter clínica por slug:', error)
+      return null
+    }
   }
 
   /**
@@ -105,58 +86,40 @@ export class ClinicService {
     clinicId: string,
     updates: UpdateClinicInput,
   ): Promise<Clinic> {
-    const clinics = getAllClinics()
-    const index = clinics.findIndex((c) => c.id === clinicId)
-
-    if (index === -1) {
-      throw new Error('Clínica não encontrada')
+    try {
+      const response = await apiClient.put<{ clinic: Clinic }>(`/clinics/${clinicId}`, updates)
+      console.log('✅ Clínica atualizada:', response.clinic.name)
+      return response.clinic
+    } catch (error) {
+      console.error('Erro ao atualizar clínica:', error)
+      throw error
     }
-
-    clinics[index] = {
-      ...clinics[index],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }
-
-    saveClinics(clinics)
-    console.log('✅ Clínica atualizada:', clinics[index].name)
-    return clinics[index]
   }
 
   /**
    * Desativar clínica
    */
   static async deactivateClinic(clinicId: string): Promise<void> {
-    const clinics = getAllClinics()
-    const index = clinics.findIndex((c) => c.id === clinicId)
-
-    if (index === -1) {
-      throw new Error('Clínica não encontrada')
+    try {
+      await this.updateClinic(clinicId, { isActive: false })
+      console.log('⚠️  Clínica desativada')
+    } catch (error) {
+      console.error('Erro ao desativar clínica:', error)
+      throw error
     }
-
-    clinics[index].isActive = false
-    clinics[index].updatedAt = new Date().toISOString()
-
-    saveClinics(clinics)
-    console.log('⚠️  Clínica desativada:', clinics[index].name)
   }
 
   /**
    * Reativar clínica
    */
   static async activateClinic(clinicId: string): Promise<void> {
-    const clinics = getAllClinics()
-    const index = clinics.findIndex((c) => c.id === clinicId)
-
-    if (index === -1) {
-      throw new Error('Clínica não encontrada')
+    try {
+      await this.updateClinic(clinicId, { isActive: true })
+      console.log('✅ Clínica reativada')
+    } catch (error) {
+      console.error('Erro ao reativar clínica:', error)
+      throw error
     }
-
-    clinics[index].isActive = true
-    clinics[index].updatedAt = new Date().toISOString()
-
-    saveClinics(clinics)
-    console.log('✅ Clínica reativada:', clinics[index].name)
   }
 
   /**
@@ -164,53 +127,42 @@ export class ClinicService {
    * ATENÇÃO: Também deleta todos os usuários vinculados (ortodontistas e pacientes)
    */
   static async deleteClinic(clinicId: string): Promise<void> {
-    const clinics = getAllClinics()
-    const clinic = clinics.find((c) => c.id === clinicId)
-
-    if (!clinic) {
-      throw new Error('Clínica não encontrada')
+    try {
+      await apiClient.delete(`/clinics/${clinicId}`)
+      console.log('🗑️  Clínica deletada')
+    } catch (error) {
+      console.error('Erro ao deletar clínica:', error)
+      throw error
     }
-
-    // 1. Deletar todos os usuários vinculados a esta clínica
-    const users = JSON.parse(
-      localStorage.getItem('auth_users') || '[]'
-    ) as any[]
-
-    const usersToDelete = users.filter((u) => u.clinicId === clinicId)
-    const remainingUsers = users.filter((u) => u.clinicId !== clinicId)
-
-    localStorage.setItem('auth_users', JSON.stringify(remainingUsers))
-
-    console.log(`🗑️  Deletados ${usersToDelete.length} usuários vinculados à clínica`)
-
-    // 2. Deletar a clínica
-    const filtered = clinics.filter((c) => c.id !== clinicId)
-    saveClinics(filtered)
-
-    console.log('🗑️  Clínica deletada:', clinic.name)
   }
 
   /**
    * Obter estatísticas da clínica
    */
   static async getClinicStats(clinicId: string): Promise<ClinicStats> {
-    // TODO: Implementar com dados reais quando tiver users e treatments
-    // Por enquanto retorna mock
-    const clinic = await this.getClinicById(clinicId)
+    try {
+      // This endpoint doesn't exist yet
+      // For now, return basic stats
+      const clinic = await this.getClinicById(clinicId)
 
-    if (!clinic) {
-      throw new Error('Clínica não encontrada')
-    }
+      if (!clinic) {
+        throw new Error('Clínica não encontrada')
+      }
 
-    return {
-      clinicId: clinic.id,
-      clinicName: clinic.name,
-      totalOrthodontists: 0,
-      totalPatients: 0,
-      totalTreatments: 0,
-      activeTreatments: 0,
-      completedTreatments: 0,
-      totalStoriesGenerated: 0,
+      // TODO: Create /clinics/:id/stats endpoint in backend
+      return {
+        clinicId: clinic.id,
+        clinicName: clinic.name,
+        totalOrthodontists: 0,
+        totalPatients: 0,
+        totalTreatments: 0,
+        activeTreatments: 0,
+        completedTreatments: 0,
+        totalStoriesGenerated: 0,
+      }
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error)
+      throw error
     }
   }
 
@@ -218,11 +170,15 @@ export class ClinicService {
    * Obter estatísticas de todas as clínicas (super-admin)
    */
   static async getAllClinicsStats(): Promise<ClinicStats[]> {
-    const clinics = await this.getActiveClinics()
-
-    return Promise.all(
-      clinics.map((clinic) => this.getClinicStats(clinic.id))
-    )
+    try {
+      const clinics = await this.getActiveClinics()
+      return Promise.all(
+        clinics.map((clinic) => this.getClinicStats(clinic.id))
+      )
+    } catch (error) {
+      console.error('Erro ao obter estatísticas de clínicas:', error)
+      throw error
+    }
   }
 }
 
@@ -232,26 +188,32 @@ export class ClinicService {
 
 /**
  * Criar clínica de demonstração se não existir
+ * NOTE: This is deprecated - seeding should be done on the backend
  */
-export async function seedDemoClinic(): Promise<Clinic> {
-  const existing = await ClinicService.getClinicBySlug('clinica-demo')
+export async function seedDemoClinic(): Promise<Clinic | null> {
+  try {
+    const existing = await ClinicService.getClinicBySlug('clinica-demo')
 
-  if (existing) {
-    console.log('✅ Clínica demo já existe')
-    return existing
+    if (existing) {
+      console.log('✅ Clínica demo já existe')
+      return existing
+    }
+
+    const demoClinic = await ClinicService.createClinic({
+      name: 'Clínica Demo Kids Aligner',
+      slug: 'clinica-demo',
+      country: 'BR',
+      email: 'contato@demo.com',
+      phone: '(11) 99999-9999',
+      addressCity: 'São Paulo',
+      addressState: 'SP',
+      subscriptionTier: 'pro',
+    })
+
+    console.log('✅ Clínica demo criada:', demoClinic.name)
+    return demoClinic
+  } catch (error) {
+    console.error('Erro ao criar clínica demo:', error)
+    return null
   }
-
-  const demoClinic = await ClinicService.createClinic({
-    name: 'Clínica Demo Kids Aligner',
-    slug: 'clinica-demo',
-    country: 'BR',
-    email: 'contato@demo.com',
-    phone: '(11) 99999-9999',
-    addressCity: 'São Paulo',
-    addressState: 'SP',
-    subscriptionTier: 'pro',
-  })
-
-  console.log('✅ Clínica demo criada:', demoClinic.name)
-  return demoClinic
 }

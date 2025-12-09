@@ -50,6 +50,7 @@ const superAdminMenu = [
   { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
   { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
   { href: '/admin/data', label: 'Gerenciar Dados', icon: Database },
+  { href: '/storage-status', label: 'Status do Storage', icon: Database },
 ]
 
 const menuItems: Record<UserRole, typeof patientMenu> = {

@@ -36,9 +36,11 @@ import AdminDataManagement from './pages/AdminDataManagement'
 import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
 import DebugAuth from './pages/DebugAuth'
+import StorageStatus from './pages/StorageStatus'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import '@/utils/debugAuth' // Debug helper para testar autenticação
 import '@/utils/testAuth' // Test auth flow
+import '@/utils/storageMonitor' // Monitor de localStorage para detectar perdas de dados
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -61,6 +63,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/debug-auth" element={<DebugAuth />} />
+            <Route path="/storage-status" element={<StorageStatus />} />
 
             {/* Rotas Protegidas (Requer Autenticação) */}
             <Route element={<ProtectedRoute />}>
