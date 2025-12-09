@@ -13,6 +13,8 @@ import { db, users } from './db/index'
 import authRoutes from './routes/auth'
 import clinicsRoutes from './routes/clinics'
 import alignersRoutes from './routes/aligners'
+import storiesRoutes from './routes/stories'
+import missionsRoutes from './routes/missions'
 
 // Load environment variables
 dotenv.config()
@@ -56,6 +58,8 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/clinics', clinicsRoutes)
 app.use('/api', alignersRoutes)
+app.use('/api', storiesRoutes)
+app.use('/api', missionsRoutes)
 
 // 404 handler
 app.use((req, res) => {
