@@ -232,14 +232,11 @@ const AdminClinics = () => {
   }
 
   const handleDelete = async (clinic: Clinic) => {
-    const confirmMessage = `ATENÇÃO: Esta ação é irreversível!\n\nAo deletar a clínica "${clinic.name}", todos os ortodontistas e pacientes vinculados também serão excluídos permanentemente.\n\nDigite o nome da clínica para confirmar a exclusão.`
+    const confirmMessage = `ATENÇÃO: Esta ação é irreversível!\n\nAo deletar a clínica "${clinic.name}", todos os ortodontistas e pacientes vinculados também serão excluídos permanentemente.\n\nDeseja realmente continuar?`
 
-    const userInput = prompt(confirmMessage)
+    const confirmed = confirm(confirmMessage)
 
-    if (userInput !== clinic.name) {
-      if (userInput !== null) {
-        toast.error('Nome da clínica não confere. Exclusão cancelada.')
-      }
+    if (!confirmed) {
       return
     }
 
