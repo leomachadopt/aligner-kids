@@ -126,7 +126,7 @@ const AdminClinics = () => {
     setFormData({
       name: clinic.name,
       slug: clinic.slug,
-      country: clinic.country,
+      country: clinic.country || 'BR', // Fallback para clínicas antigas
       email: clinic.email,
       phone: clinic.phone || '',
       website: clinic.website || '',
@@ -418,9 +418,11 @@ const AdminClinics = () => {
                       <Badge variant="outline" className="capitalize">
                         {clinic.subscriptionTier}
                       </Badge>
-                      <Badge variant="outline">
-                        {COUNTRY_INFO[clinic.country].name}
-                      </Badge>
+                      {clinic.country && (
+                        <Badge variant="outline">
+                          {COUNTRY_INFO[clinic.country]?.name || clinic.country}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Info */}
@@ -566,7 +568,7 @@ const AdminClinics = () => {
               <Label htmlFor="country">País *</Label>
               <select
                 id="country"
-                value={formData.country}
+                value={formData.country || 'BR'}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -818,7 +820,7 @@ const AdminClinics = () => {
               <Label htmlFor="edit-country">País *</Label>
               <select
                 id="edit-country"
-                value={formData.country}
+                value={formData.country || 'BR'}
                 onChange={(e) =>
                   setFormData({
                     ...formData,

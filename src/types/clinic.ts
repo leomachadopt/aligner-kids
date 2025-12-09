@@ -10,7 +10,7 @@ export interface Clinic {
   name: string
   slug: string
   logoUrl?: string
-  country: Country // País da clínica (determina formato de campos)
+  country?: Country // País da clínica (determina formato de campos) - opcional para compatibilidade
 
   // Contato
   email: string
@@ -44,7 +44,7 @@ export interface Clinic {
 export interface ClinicInput {
   name: string
   slug: string
-  country: Country
+  country?: Country // Opcional para compatibilidade, mas recomendado definir
   email: string
   phone?: string
   website?: string

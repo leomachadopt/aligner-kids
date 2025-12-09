@@ -45,7 +45,7 @@ export class ClinicService {
       id: `clinic-${Date.now()}`,
       name: input.name,
       slug: input.slug,
-      country: input.country,
+      country: input.country || 'BR', // Fallback para Brasil se não especificado
       email: input.email,
       phone: input.phone,
       website: input.website,
