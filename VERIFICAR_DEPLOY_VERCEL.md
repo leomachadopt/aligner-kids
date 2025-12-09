@@ -74,3 +74,4 @@ vercel --prod --force
    - Import `leomachadopt/aligner-kids`
    - Configure e faça deploy
 
+

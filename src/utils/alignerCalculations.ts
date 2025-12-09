@@ -134,3 +134,4 @@ export function getTreatmentStatus(
   return { status: 'on-track', message: 'Tratamento em dia' }
 }
 
+

@@ -17,35 +17,25 @@ import { Celebration } from './Confetti'
 import { useGamification } from '@/context/GamificationContext'
 import { useTreatment, useCurrentAligner, useAligners } from '@/context/AlignerContext'
 
-const TOTAL_ALIGNERS = 24
-
-// Temas visuais para cada marco da jornada
-const JOURNEY_THEMES = [
-  { range: [1, 6], icon: Trees, color: 'bg-green-400', label: 'Floresta Inicial' },
-  { range: [7, 12], icon: Mountain, color: 'bg-blue-400', label: 'Montanhas' },
-  { range: [13, 18], icon: Castle, color: 'bg-purple-400', label: 'Reino Mágico' },
-  { range: [19, 24], icon: Star, color: 'bg-yellow-400', label: 'Céu Estrelado' },
-]
-
 export const AdventureJourney = () => {
   const treatment = useTreatment()
   const currentAlignerData = useCurrentAligner()
   const { confirmAlignerChange } = useAligners()
   const { addCoins, addXP } = useGamification()
-  
-  const totalAligners = treatment?.totalAligners || TOTAL_ALIGNERS
+
+  const totalAligners = treatment?.totalAligners || 9 // Default to 9 if no treatment
   const currentAligner = currentAlignerData?.number || 1
   const [showCelebration, setShowCelebration] = useState(false)
 
   const { aligners } = useAligners()
-  
+
   const handleNextAligner = async () => {
     if (currentAligner < totalAligners) {
       // Find next aligner
       const nextAligner = aligners.find(
         (a) => a.number === currentAligner + 1 && a.status === 'pending'
       )
-      
+
       if (nextAligner) {
         try {
           await confirmAlignerChange(nextAligner.id)
@@ -59,7 +49,20 @@ export const AdventureJourney = () => {
     }
   }
 
-  const journeySteps = Array.from({ length: TOTAL_ALIGNERS }, (_, i) => i + 1)
+  const journeySteps = Array.from({ length: totalAligners }, (_, i) => i + 1)
+
+  // Gerar temas dinamicamente baseado no total de alinhadores
+  const getJourneyThemes = (total: number) => {
+    const quarterSize = Math.ceil(total / 4)
+    return [
+      { range: [1, quarterSize], icon: Trees, color: 'bg-green-400', label: 'Floresta Inicial' },
+      { range: [quarterSize + 1, quarterSize * 2], icon: Mountain, color: 'bg-blue-400', label: 'Montanhas' },
+      { range: [quarterSize * 2 + 1, quarterSize * 3], icon: Castle, color: 'bg-purple-400', label: 'Reino Mágico' },
+      { range: [quarterSize * 3 + 1, total], icon: Star, color: 'bg-yellow-400', label: 'Céu Estrelado' },
+    ]
+  }
+
+  const JOURNEY_THEMES = getJourneyThemes(totalAligners)
 
   const getThemeForStep = (step: number) => {
     return JOURNEY_THEMES.find(
@@ -126,7 +129,9 @@ export const AdventureJourney = () => {
                   const isCurrent = step === currentAligner
                   const isFuture = step > currentAligner
                   const theme = getThemeForStep(step)
-                  const isMilestone = step % 6 === 0
+                  // Milestone a cada 1/4 dos alinhadores
+                  const milestoneInterval = Math.ceil(totalAligners / 4)
+                  const isMilestone = step % milestoneInterval === 0
 
                   return (
                     <div

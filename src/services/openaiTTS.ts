@@ -219,3 +219,4 @@ export default OpenAITTSService
 // Exemplo de uso:
 // const audio = await OpenAITTSService.textToSpeech("Olá, mundo!")
 // const blobUrl = OpenAITTSService.createAudioBlobUrl(audio.audioData)
+
