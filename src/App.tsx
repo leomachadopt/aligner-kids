@@ -32,6 +32,7 @@ import AdminPrompts from './pages/AdminPrompts'
 import AdminClinics from './pages/AdminClinics'
 import AdminOrthodontists from './pages/AdminOrthodontists'
 import AdminMissions from './pages/AdminMissions'
+import AdminDataManagement from './pages/AdminDataManagement'
 import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -93,6 +94,7 @@ const App = () => (
                 <Route path="/admin/orthodontists" element={<AdminOrthodontists />} />
                 <Route path="/admin/prompts" element={<AdminPrompts />} />
                 <Route path="/admin/missions" element={<AdminMissions />} />
+                <Route path="/admin/data" element={<AdminDataManagement />} />
               </Route>
             </Route>
 

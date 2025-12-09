@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   Trophy,
+  Database,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/user'
@@ -48,6 +49,7 @@ const superAdminMenu = [
   { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
   { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
   { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
+  { href: '/admin/data', label: 'Gerenciar Dados', icon: Database },
 ]
 
 const menuItems: Record<UserRole, typeof patientMenu> = {
