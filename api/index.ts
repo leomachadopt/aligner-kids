@@ -4,7 +4,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import express, { Request, Response } from 'express'
+import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
@@ -12,10 +12,8 @@ import cookieParser from 'cookie-parser'
 import authRoutes from '../server/routes/auth'
 import clinicsRoutes from '../server/routes/clinics'
 import alignersRoutes from '../server/routes/aligners'
-import storiesRoutes from '../server/routes/stories'
-import missionsRoutes from '../server/routes/missions'
 
-// Create Express app
+// Create Express app once (not per request)
 const app = express()
 
 // Middleware
@@ -24,15 +22,16 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:8082',
     'https://aligner-kids.vercel.app',
-    /https:\/\/aligner-kids.*\.vercel\.app/, // All preview deployments
+    /https:\/\/aligner-kids.*\.vercel\.app/,
   ],
   credentials: true,
 }))
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 
 // Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -44,12 +43,10 @@ app.get('/api/health', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/clinics', clinicsRoutes)
-app.use('/api/stories', storiesRoutes)
-app.use('/api/missions', missionsRoutes)
 app.use('/api', alignersRoutes)
 
 // Error handler
-app.use((err: any, req: Request, res: Response, next: any) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error('Express error:', err)
   res.status(500).json({
     error: 'Internal server error',
