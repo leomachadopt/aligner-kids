@@ -139,6 +139,44 @@ router.put('/treatments/:id', async (req, res) => {
   }
 })
 
+// Delete treatment (útil para testes)
+router.delete('/treatments/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    console.log(`🗑️  Deletando tratamento ${id} e seus alinhadores...`)
+
+    // 1. Deletar todos os alinhadores deste tratamento
+    const deletedAligners = await db
+      .delete(aligners)
+      .where(eq(aligners.treatmentId, id))
+      .returning()
+
+    console.log(`   - ${deletedAligners.length} alinhadores deletados`)
+
+    // 2. Deletar o tratamento
+    const deletedTreatment = await db
+      .delete(treatments)
+      .where(eq(treatments.id, id))
+      .returning()
+
+    if (deletedTreatment.length === 0) {
+      return res.status(404).json({ error: 'Treatment not found' })
+    }
+
+    console.log(`✅ Tratamento deletado com sucesso`)
+
+    res.json({
+      success: true,
+      message: 'Treatment and aligners deleted successfully',
+      deletedAligners: deletedAligners.length
+    })
+  } catch (error) {
+    console.error('Error deleting treatment:', error)
+    res.status(500).json({ error: 'Failed to delete treatment' })
+  }
+})
+
 // ============================================
 // ALIGNERS
 // ============================================

@@ -94,8 +94,12 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({ error: 'Usuário inativo' })
     }
 
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24h
+    const token = `token-${user.id}`
+
     // Update last login
-    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id))
+    await db.update(users).set({ lastLoginAt: now }).where(eq(users.id, user.id))
 
     res.json({
       user: {
@@ -103,8 +107,16 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         role: user.role,
         fullName: user.fullName,
-        clinicId: user.clinicId
-      }
+        clinicId: user.clinicId,
+        isActive: user.isActive,
+        isApproved: user.isApproved,
+        emailVerified: true,
+        createdAt: new Date(user.createdAt ?? now).toISOString(),
+        updatedAt: new Date(user.updatedAt ?? now).toISOString(),
+        lastLoginAt: now.toISOString(),
+      },
+      token,
+      expiresAt: expiresAt.toISOString(),
     })
   } catch (error: any) {
     console.error('Login error:', error)

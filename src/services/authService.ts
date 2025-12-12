@@ -19,6 +19,7 @@ import { apiClient } from '@/utils/apiClient'
 // ============================================
 
 const SESSION_STORAGE_KEY = 'auth_session_v1'
+const DEFAULT_SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24h fallback
 
 // ============================================
 // CONSTANTES
@@ -26,18 +27,37 @@ const SESSION_STORAGE_KEY = 'auth_session_v1'
 
 let sessionCache: AuthResponse | null = null
 
+function normalizeSession(session: AuthResponse): AuthResponse {
+  const expiresAtMs = (() => {
+    const parsed = session.expiresAt ? new Date(session.expiresAt).getTime() : NaN
+    if (Number.isNaN(parsed) || parsed <= Date.now()) {
+      return Date.now() + DEFAULT_SESSION_TTL_MS
+    }
+    return parsed
+  })()
+
+  const token = session.token || `session-${session.user.id}`
+
+  return {
+    ...session,
+    token,
+    expiresAt: new Date(expiresAtMs).toISOString(),
+  }
+}
+
 // ============================================
 // SESSION HELPERS
 // ============================================
 
 function persistSession(session: AuthResponse): void {
-  sessionCache = session
-  apiClient.setToken(session.token)
+  const normalized = normalizeSession(session)
+  sessionCache = normalized
+  apiClient.setToken(normalized.token)
 
   if (typeof window === 'undefined') return
 
   try {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(normalized))
   } catch (error) {
     console.warn('Não foi possível salvar a sessão no storage:', error)
   }
@@ -53,20 +73,21 @@ function getSession(): AuthResponse | null {
     if (!stored) return null
 
     const parsed = JSON.parse(stored) as AuthResponse | null
-    if (!parsed?.token || !parsed?.user || !parsed?.expiresAt) {
+    if (!parsed?.user) {
       localStorage.removeItem(SESSION_STORAGE_KEY)
       return null
     }
 
-    const expiresAt = new Date(parsed.expiresAt).getTime()
+    const normalized = normalizeSession(parsed)
+    const expiresAt = new Date(normalized.expiresAt).getTime()
     if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
       localStorage.removeItem(SESSION_STORAGE_KEY)
       return null
     }
 
-    sessionCache = parsed
-    apiClient.setToken(parsed.token)
-    return parsed
+    sessionCache = normalized
+    apiClient.setToken(normalized.token)
+    return normalized
   } catch (error) {
     console.error('Erro ao restaurar sessão do storage:', error)
     localStorage.removeItem(SESSION_STORAGE_KEY)
