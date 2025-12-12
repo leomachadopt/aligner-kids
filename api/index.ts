@@ -4,12 +4,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import express from 'express'
-import cookieParser from 'cookie-parser'
-import bcrypt from 'bcryptjs'
-import { neon } from '@neondatabase/serverless'
-import { drizzle } from 'drizzle-orm/neon-http'
-import { eq } from 'drizzle-orm'
-import * as schema from '../server/db/schema'
 
 // Create Express app
 const app = express()
@@ -28,67 +22,14 @@ app.use((req, res, next) => {
 })
 
 // Body parser
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
-app.use(cookieParser())
-
-// Lazy DB connection
-function getDb() {
-  const sql = neon(process.env.DATABASE_URL!)
-  return drizzle(sql, { schema })
-}
+app.use(express.json())
 
 // Health endpoint
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'healthy',
+    status: 'healthy - minimal version',
     timestamp: new Date().toISOString(),
     database: process.env.DATABASE_URL ? 'connected' : 'not configured'
-  })
-})
-
-// Login endpoint inline
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { credential, password } = req.body
-    const db = getDb()
-
-    const [user] = await db.select().from(schema.users).where(eq(schema.users.email, credential)).limit(1)
-
-    if (!user) {
-      return res.status(401).json({ error: 'Credenciais inválidas' })
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password_hash)
-
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' })
-    }
-
-    if (!user.is_active) {
-      return res.status(403).json({ error: 'Usuário inativo' })
-    }
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName
-      }
-    })
-  } catch (error: any) {
-    console.error('Login error:', error)
-    res.status(500).json({ error: 'Erro ao fazer login' })
-  }
-})
-
-// Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('API Error:', err)
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message
   })
 })
 
