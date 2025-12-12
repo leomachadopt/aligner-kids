@@ -11,8 +11,6 @@ import cookieParser from 'cookie-parser'
 import authRoutes from './routes/auth'
 import clinicsRoutes from './routes/clinics'
 import alignersRoutes from './routes/aligners'
-import storiesRoutes from './routes/stories'
-import missionsRoutes from './routes/missions'
 
 let app: Application | null = null
 
@@ -50,8 +48,6 @@ export function getApp(): Application {
   // API Routes
   app.use('/api/auth', authRoutes)
   app.use('/api/clinics', clinicsRoutes)
-  app.use('/api/stories', storiesRoutes)
-  app.use('/api/missions', missionsRoutes)
   app.use('/api', alignersRoutes)
 
   // Error handler
