@@ -1,27 +1,12 @@
 /**
  * Vercel Serverless Function Entry Point
+ * Wraps Express app for serverless deployment
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { getApp } from '../server/app.serverless'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-
-  // Handle OPTIONS
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  return res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production',
-    database: process.env.DATABASE_URL ? 'connected' : 'not configured',
-    path: req.url,
-    method: req.method
-  })
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  const app = getApp()
+  return app(req as any, res as any)
 }
