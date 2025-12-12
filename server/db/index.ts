@@ -5,15 +5,13 @@
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import * as schema from './schema'
-import dotenv from 'dotenv'
-
-// Load environment variables
-dotenv.config()
 
 // Get database URL from environment
+// In Vercel, environment variables are automatically injected
 const DATABASE_URL = process.env.DATABASE_URL
 
 if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set in environment variables')
   throw new Error('DATABASE_URL is not set in environment variables')
 }
 

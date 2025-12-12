@@ -4,46 +4,30 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import express from 'express'
-import cors from 'cors'
-import cookieParser from 'cookie-parser'
 
-// Import routes
-import authRoutes from '../server/routes/auth'
-import clinicsRoutes from '../server/routes/clinics'
-import alignersRoutes from '../server/routes/aligners'
-
-const app = express()
-
-// Middleware
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:8082',
-    'https://aligner-kids.vercel.app',
-    /https:\/\/aligner-kids.*\.vercel\.app/, // All preview deployments
-  ],
-  credentials: true,
-}))
-app.use(express.json())
-app.use(cookieParser())
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production',
-    database: process.env.DATABASE_URL ? 'connected' : 'not configured'
-  })
-})
-
-// Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/clinics', clinicsRoutes)
-app.use('/api', alignersRoutes)
-
-// Vercel serverless function handler
+// Simple health check for testing
 export default async (req: VercelRequest, res: VercelResponse) => {
-  return app(req as any, res as any)
+  try {
+    // Test environment variables
+    const hasDatabase = !!process.env.DATABASE_URL
+    const hasOpenAI = !!process.env.OPENAI_API_KEY
+
+    return res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'production',
+      config: {
+        database: hasDatabase,
+        openai: hasOpenAI
+      },
+      method: req.method,
+      url: req.url
+    })
+  } catch (error: any) {
+    console.error('Error in serverless function:', error)
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message
+    })
+  }
 }
