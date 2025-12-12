@@ -74,4 +74,18 @@ export class TreatmentService {
       throw error
     }
   }
+
+  /**
+   * Deletar tratamento (útil para testes)
+   * Remove o tratamento e todos os alinhadores associados
+   */
+  static async deleteTreatment(treatmentId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/treatments/${treatmentId}`)
+      console.log('🗑️  Tratamento deletado com sucesso')
+    } catch (error) {
+      console.error('Erro ao deletar tratamento:', error)
+      throw error
+    }
+  }
 }

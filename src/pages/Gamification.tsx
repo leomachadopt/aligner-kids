@@ -190,7 +190,7 @@ const Gamification = () => {
           <AdventureJourney />
         </div>
         <div>
-          <StoryUnlock />
+          <StoryUnlock chapters={chapters.length > 0 ? chapters as any : undefined} />
         </div>
       </div>
 

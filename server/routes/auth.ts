@@ -157,6 +157,7 @@ router.get('/users', async (_req, res) => {
 })
 
 // List pending orthodontists (isApproved = false OR isApproved null)
+// NOTE: This must come BEFORE /users/:id to avoid being caught by the param route
 router.get('/users/pending', async (_req, res) => {
   try {
     const all = await db.select().from(users)
@@ -167,6 +168,24 @@ router.get('/users/pending', async (_req, res) => {
   } catch (error) {
     console.error('Error fetching pending orthodontists:', error)
     res.status(500).json({ error: 'Failed to fetch pending orthodontists' })
+  }
+})
+
+// Get single user by ID
+router.get('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = await db.select().from(users).where(eq(users.id, id))
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = result[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    res.status(500).json({ error: 'Failed to fetch user' })
   }
 })
 

@@ -6,6 +6,7 @@ import { Router } from 'express'
 import { db, stories, story_chapters, story_preferences } from '../db/index'
 import { eq, and } from 'drizzle-orm'
 import { StoryGenerationService } from '../services/storyGenerationService'
+import { OpenAITTSService } from '../services/openaiTTS'
 
 const router = Router()
 
@@ -392,8 +393,30 @@ router.post('/stories/generate', async (req, res) => {
 
       // Salvar capítulos do lote
       for (const chapterData of batch.chapters) {
+        const chapterId = `chapter-${Date.now()}-${chapterData.chapterNumber}`
+
+        // Gerar áudio do capítulo
+        let audioUrl = null
+        let audioDurationSeconds = 0
+        let audioGenerated = false
+
+        try {
+          console.log(`🎙️  Gerando áudio para capítulo ${chapterData.chapterNumber}...`)
+          const audioResult = await OpenAITTSService.generateChapterAudio(
+            chapterData.title,
+            chapterData.content
+          )
+          audioUrl = audioResult.audioUrl
+          audioDurationSeconds = audioResult.durationSeconds
+          audioGenerated = true
+          console.log(`✅ Áudio gerado: ${audioUrl}`)
+        } catch (error) {
+          console.error(`⚠️  Erro ao gerar áudio do capítulo ${chapterData.chapterNumber}:`, error)
+          // Continua sem áudio se falhar
+        }
+
         await db.insert(story_chapters).values({
-          id: `chapter-${Date.now()}-${chapterData.chapterNumber}`,
+          id: chapterId,
           storyId: series.id,
           treatmentId: treatmentId || null,
           chapterNumber: chapterData.chapterNumber,
@@ -403,8 +426,9 @@ router.post('/stories/generate', async (req, res) => {
           wordCount: chapterData.wordCount,
           isUnlocked: chapterData.chapterNumber === 1, // Só o primeiro desbloqueado
           isRead: false,
-          audioUrl: null,
-          audioGenerated: false,
+          audioUrl,
+          audioGenerated,
+          audioDurationSeconds,
           readCount: 0,
         })
 

@@ -180,16 +180,21 @@ Gere os capítulos ${startChapter} até ${endChapter}.`
    * Parse da resposta da OpenAI
    */
   private static parseStoryResponse(content: string, expectedChapters: number): GenerationResult {
-    // Extrair título
+    console.log('🔍 Parsing resposta da IA...')
+    console.log('📄 Primeiros 500 chars:', content.substring(0, 500))
+
+    // Extrair título (opcional)
     const titleMatch = content.match(/===\s*TÍTULO DA HISTÓRIA:\s*(.+?)\s*===/i)
     const storyTitle = titleMatch ? titleMatch[1].trim() : 'História Mágica'
 
-    // Extrair capítulos
+    // Extrair capítulos com regex mais tolerante
     const chapters: ChapterData[] = []
-    const regex = /===\s*CAPÍTULO\s+(\d+):\s*(.+?)\s*===\n([\s\S]+?)(?====\s*CAPÍTULO|\s*$)/gi
 
+    // Tentar com delimitadores ===
+    const regexStrict = /===\s*CAPÍTULO\s+(\d+):\s*(.+?)\s*===\s*\n([\s\S]+?)(?====\s*CAPÍTULO|$)/gi
     let match
-    while ((match = regex.exec(content)) !== null) {
+
+    while ((match = regexStrict.exec(content)) !== null) {
       const chapterNumber = parseInt(match[1])
       const title = match[2].trim()
       const chapterContent = match[3].trim()
@@ -197,17 +202,41 @@ Gere os capítulos ${startChapter} até ${endChapter}.`
 
       chapters.push({
         chapterNumber,
-        requiredAlignerNumber: chapterNumber, // 1:1 com alinhador
+        requiredAlignerNumber: chapterNumber,
         title,
         content: chapterContent,
         wordCount,
       })
     }
 
+    // Fallback: tentar sem os ===
     if (chapters.length === 0) {
+      console.log('⚠️  Primeira regex falhou, tentando fallback...')
+      const regexFallback = /CAPÍTULO\s+(\d+):\s*(.+?)\n([\s\S]+?)(?=CAPÍTULO\s+\d+:|$)/gi
+
+      while ((match = regexFallback.exec(content)) !== null) {
+        const chapterNumber = parseInt(match[1])
+        const title = match[2].trim()
+        const chapterContent = match[3].trim()
+        const wordCount = chapterContent.split(/\s+/).length
+
+        chapters.push({
+          chapterNumber,
+          requiredAlignerNumber: chapterNumber,
+          title,
+          content: chapterContent,
+          wordCount,
+        })
+      }
+    }
+
+    if (chapters.length === 0) {
+      console.error('❌ Nenhum capítulo encontrado!')
+      console.error('📄 Conteúdo completo:', content)
       throw new Error('Nenhum capítulo encontrado na resposta da IA')
     }
 
+    console.log(`✅ ${chapters.length} capítulos parseados`)
     chapters.sort((a, b) => a.chapterNumber - b.chapterNumber)
 
     return { storyTitle, chapters }

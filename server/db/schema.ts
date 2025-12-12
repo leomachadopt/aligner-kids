@@ -162,6 +162,7 @@ export const story_chapters = pgTable('story_chapters', {
   isRead: boolean('is_read').default(false).notNull(),
   audioUrl: varchar('audio_url', { length: 500 }),
   audioGenerated: boolean('audio_generated').default(false),
+  audioDurationSeconds: integer('audio_duration_seconds'),
   readCount: integer('read_count').default(0),
   lastReadAt: timestamp('last_read_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
