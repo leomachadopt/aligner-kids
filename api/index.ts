@@ -6,51 +6,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import express from 'express'
 import cors from 'cors'
-import cookieParser from 'cookie-parser'
-
-// Import routes
-import authRoutes from '../server/routes/auth'
-import clinicsRoutes from '../server/routes/clinics'
-import alignersRoutes from '../server/routes/aligners'
 
 // Create Express app once (not per request)
 const app = express()
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:8082',
-    'https://aligner-kids.vercel.app',
-    /https:\/\/aligner-kids.*\.vercel\.app/,
-  ],
+  origin: true,
   credentials: true,
 }))
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
-app.use(cookieParser())
+app.use(express.json())
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.all('*', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',
-    database: process.env.DATABASE_URL ? 'connected' : 'not configured'
-  })
-})
-
-// API Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/clinics', clinicsRoutes)
-app.use('/api', alignersRoutes)
-
-// Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Express error:', err)
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message
+    database: process.env.DATABASE_URL ? 'connected' : 'not configured',
+    path: req.path,
+    method: req.method
   })
 })
 
