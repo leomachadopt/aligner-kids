@@ -7,11 +7,6 @@ import express, { Application } from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
-// Import routes
-import authRoutes from './routes/auth'
-import clinicsRoutes from './routes/clinics'
-import alignersRoutes from './routes/aligners'
-
 let app: Application | null = null
 
 export function getApp(): Application {
@@ -38,17 +33,14 @@ export function getApp(): Application {
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({
-      status: 'healthy',
+      status: 'healthy - Express working!',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'production',
       database: process.env.DATABASE_URL ? 'connected' : 'not configured'
     })
   })
 
-  // API Routes
-  app.use('/api/auth', authRoutes)
-  app.use('/api/clinics', clinicsRoutes)
-  app.use('/api', alignersRoutes)
+  // API Routes will be added here
 
   // Error handler
   app.use((err: any, req: any, res: any, next: any) => {
