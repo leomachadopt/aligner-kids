@@ -3,6 +3,7 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useUserRole } from '@/context/UserRoleContext'
+import { useAuth } from '@/context/AuthContext'
 import { AlignerProvider } from '@/context/AlignerContext'
 import { useEffect } from 'react'
 
@@ -17,6 +18,7 @@ const noLayoutRoutes = [
 export default function Layout() {
   const location = useLocation()
   const { role, isChild } = useUserRole()
+  const { user } = useAuth()
 
   useEffect(() => {
     document.body.classList.toggle('child-theme', isChild)
@@ -26,8 +28,8 @@ export default function Layout() {
     return <Outlet />
   }
 
-  // Mock patient ID - in production, get from auth context
-  const patientId = 'patient-1'
+  // Usa o ID do usuário autenticado (paciente) como referência para o contexto de alinhadores
+  const patientId = user?.id || 'patient-1'
 
   return (
     <AlignerProvider patientId={patientId}>

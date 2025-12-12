@@ -47,15 +47,15 @@ const AdminOrthodontists = () => {
     try {
       setLoading(true)
 
-      // Carregar todos os usuários
-      const allUsers = AuthService.getAllUsers('current-admin-id')
+      // Carregar todos os usuários (assíncrono, via API)
+      const allUsers = await AuthService.getAllUsersAsync()
 
       // Filtrar ortodontistas
       const orthos = allUsers.filter((u) => u.role === 'orthodontist')
       setOrthodontists(orthos)
 
-      // Filtrar pendentes
-      const pending = AuthService.getPendingOrthodontists()
+      // Filtrar pendentes via API
+      const pending = await AuthService.getPendingOrthodontistsAsync()
       setPendingOrthodontists(pending)
 
       // Carregar clínicas

@@ -20,7 +20,6 @@ import type {
   ChangePasswordInput,
 } from '@/types/user'
 import { AuthService } from '@/services/authService'
-import { useNavigate } from 'react-router-dom'
 
 interface AuthContextType extends AuthState {
   login: (input: LoginInput) => Promise<void>
@@ -41,31 +40,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isLoading: true,
   })
 
-  // Carregar sessão ao iniciar
+  // Carregar sessão persistida ao iniciar
   useEffect(() => {
     loadSession()
   }, [])
 
   const loadSession = () => {
-    try {
-      const session = AuthService.getCurrentSession()
-      if (session) {
-        setState({
-          user: session.user,
-          token: session.token,
-          isAuthenticated: true,
-          isLoading: false,
-        })
-      } else {
-        setState({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-        })
-      }
-    } catch (error) {
-      console.error('Erro ao carregar sessão:', error)
+    const session = AuthService.getCurrentSession()
+    if (session) {
+      setState({
+        user: session.user,
+        token: session.token,
+        isAuthenticated: true,
+        isLoading: false,
+      })
+    } else {
       setState({
         user: null,
         token: null,

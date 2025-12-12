@@ -20,6 +20,7 @@ export interface Treatment {
   id: string
   patientId: string
   orthodontistId: string
+  name?: string
   startDate: string // ISO date string
   expectedEndDate: string // ISO date string
   totalAligners: number
@@ -30,6 +31,7 @@ export interface Treatment {
 
 export interface StoryChapter {
   id: string
+  treatmentId?: string
   chapterNumber: number
   requiredAlignerNumber: number // minimum aligner number to unlock
   title: string
@@ -39,7 +41,7 @@ export interface StoryChapter {
 
 // Service interfaces for CRUD operations
 export interface AlignerService {
-  getAlignersByPatient(patientId: string): Promise<Aligner[]>
+  getAlignersByPatient(patientId: string, treatmentId?: string): Promise<Aligner[]>
   getAlignerById(id: string): Promise<Aligner | null>
   createAligner(aligner: Omit<Aligner, 'id' | 'usageDays' | 'usageHours'>): Promise<Aligner>
   updateAligner(id: string, updates: Partial<Aligner>): Promise<Aligner>
@@ -47,8 +49,9 @@ export interface AlignerService {
   getTreatmentByPatient(patientId: string): Promise<Treatment | null>
   createTreatment(treatment: Omit<Treatment, 'id'>): Promise<Treatment>
   updateTreatment(id: string, updates: Partial<Treatment>): Promise<Treatment>
-  getCurrentAligner(patientId: string): Promise<Aligner | null>
+  getCurrentAligner(patientId: string, treatmentId?: string): Promise<Aligner | null>
   confirmAlignerChange(patientId: string, alignerId: string): Promise<Aligner>
 }
+
 
 

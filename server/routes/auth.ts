@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, users } from '../db/index'
+import { db, users, aligners, treatments, stories, story_chapters, story_preferences } from '../db/index'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 
@@ -138,6 +138,147 @@ router.get('/me', async (req, res) => {
   } catch (error) {
     console.error('Error getting current user:', error)
     res.status(500).json({ error: 'Failed to get user' })
+  }
+})
+
+// ============================================
+// Admin - Users management
+// ============================================
+
+// List all users
+router.get('/users', async (_req, res) => {
+  try {
+    const all = await db.select().from(users)
+    res.json({ users: all })
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
+// List pending orthodontists (isApproved = false OR isApproved null)
+router.get('/users/pending', async (_req, res) => {
+  try {
+    const all = await db.select().from(users)
+    const pending = all.filter(
+      (u) => u.role === 'orthodontist' && (!u.isApproved || u.isApproved === false),
+    )
+    res.json({ users: pending })
+  } catch (error) {
+    console.error('Error fetching pending orthodontists:', error)
+    res.status(500).json({ error: 'Failed to fetch pending orthodontists' })
+  }
+})
+
+// Approve orthodontist
+router.put('/users/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params
+    const updated = await db
+      .update(users)
+      .set({
+        isApproved: true,
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error) {
+    console.error('Error approving orthodontist:', error)
+    res.status(500).json({ error: 'Failed to approve orthodontist' })
+  }
+})
+
+// Reject orthodontist (mark as not approved and inactive)
+router.put('/users/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params
+    const updated = await db
+      .update(users)
+      .set({
+        isApproved: false,
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error) {
+    console.error('Error rejecting orthodontist:', error)
+    res.status(500).json({ error: 'Failed to reject orthodontist' })
+  }
+})
+
+// Deactivate user
+router.put('/users/:id/deactivate', async (req, res) => {
+  try {
+    const { id } = req.params
+    const updated = await db
+      .update(users)
+      .set({
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error) {
+    console.error('Error deactivating user:', error)
+    res.status(500).json({ error: 'Failed to deactivate user' })
+  }
+})
+
+// Delete user
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    // Carregar usuário
+    const existing = await db.select().from(users).where(eq(users.id, id))
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    const user = existing[0]
+
+    // Cascade delete de dados do paciente
+    if (user.role === 'patient' || user.role === 'child-patient') {
+      // story chapters -> stories -> preferences
+      const patientStories = await db.select().from(stories).where(eq(stories.patientId, id))
+      for (const st of patientStories) {
+        await db.delete(story_chapters).where(eq(story_chapters.storyId, st.id))
+      }
+      await db.delete(stories).where(eq(stories.patientId, id))
+      await db.delete(story_preferences).where(eq(story_preferences.patientId, id))
+
+      // aligners e treatments
+      await db.delete(aligners).where(eq(aligners.patientId, id))
+      await db.delete(treatments).where(eq(treatments.patientId, id))
+    }
+
+    // Excluir usuário
+    await db.delete(users).where(eq(users.id, id))
+    res.json({ message: 'User deleted' })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    res.status(500).json({ error: 'Failed to delete user' })
   }
 })
 

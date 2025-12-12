@@ -79,9 +79,9 @@ export const debugAuth = {
   getSession() {
     const session = AuthService.getCurrentSession()
     if (session) {
-      console.log('✅ Sessão ativa:', session.user)
+      console.log('✅ Sessão ativa (memória):', session.user)
     } else {
-      console.log('❌ Nenhuma sessão ativa')
+      console.log('❌ Nenhuma sessão ativa (memória)')
     }
     return session
   },
@@ -92,8 +92,7 @@ export const debugAuth = {
   clearAllUsers() {
     if (confirm('⚠️ Tem certeza? Isso vai remover TODOS os usuários!')) {
       localStorage.removeItem('auth_users')
-      localStorage.removeItem('auth_session')
-      console.log('🗑️ Todos os usuários removidos')
+      console.log('🗑️ Todos os usuários removidos (localStorage)')
       console.log('🔄 Recarregue a página para criar os super-admins novamente')
     }
   },

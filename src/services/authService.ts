@@ -15,39 +15,76 @@ import type {
 import { apiClient } from '@/utils/apiClient'
 
 // ============================================
+// STORAGE CONFIG
+// ============================================
+
+const SESSION_STORAGE_KEY = 'auth_session_v1'
+
+// ============================================
 // CONSTANTES
 // ============================================
 
-const STORAGE_KEY_SESSION = 'auth_session'
+let sessionCache: AuthResponse | null = null
 
 // ============================================
 // SESSION HELPERS
 // ============================================
 
-function saveSession(session: AuthResponse): void {
-  localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session))
-  // Update API client token
+function persistSession(session: AuthResponse): void {
+  sessionCache = session
   apiClient.setToken(session.token)
+
+  if (typeof window === 'undefined') return
+
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+  } catch (error) {
+    console.warn('Não foi possível salvar a sessão no storage:', error)
+  }
 }
 
 function getSession(): AuthResponse | null {
-  const data = localStorage.getItem(STORAGE_KEY_SESSION)
-  if (!data) return null
+  if (sessionCache) return sessionCache
+
+  if (typeof window === 'undefined') return null
 
   try {
-    const session: AuthResponse = JSON.parse(data)
-    // Set token in API client
-    apiClient.setToken(session.token)
-    return session
-  } catch (e) {
-    console.error('Error parsing session:', e)
+    const stored = localStorage.getItem(SESSION_STORAGE_KEY)
+    if (!stored) return null
+
+    const parsed = JSON.parse(stored) as AuthResponse | null
+    if (!parsed?.token || !parsed?.user || !parsed?.expiresAt) {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      return null
+    }
+
+    const expiresAt = new Date(parsed.expiresAt).getTime()
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      return null
+    }
+
+    sessionCache = parsed
+    apiClient.setToken(parsed.token)
+    return parsed
+  } catch (error) {
+    console.error('Erro ao restaurar sessão do storage:', error)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
     return null
   }
 }
 
 function clearSession(): void {
-  localStorage.removeItem(STORAGE_KEY_SESSION)
+  sessionCache = null
   apiClient.setToken(null)
+
+  if (typeof window === 'undefined') return
+
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch (error) {
+    console.warn('Não foi possível limpar a sessão do storage:', error)
+  }
 }
 
 // ============================================
@@ -59,9 +96,19 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-function isValidCPF(cpf: string): boolean {
-  const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/
-  return cpfRegex.test(cpf)
+// Aceita CPF (11 dígitos, com ou sem máscara) ou NIF PT (9 dígitos)
+function isValidTaxId(value: string): boolean {
+  if (!value) return true
+  const digits = value.replace(/\D/g, '')
+  if (digits.length === 9) {
+    // NIF/PT: 9 dígitos
+    return true
+  }
+  if (digits.length === 11) {
+    // CPF/BR: 11 dígitos
+    return true
+  }
+  return false
 }
 
 function formatCPF(cpf: string): string {
@@ -92,26 +139,18 @@ export class AuthService {
       throw new Error('A senha deve ter no mínimo 6 caracteres')
     }
 
-    // Validar CPF apenas para Brasil
-    if (input.cpf && input.cpf.includes('.')) {
-      if (!isValidCPF(input.cpf)) {
-        throw new Error('CPF inválido')
-      }
+    // Validar CPF/NIF (opcional): aceita 9 dígitos (NIF PT) ou 11 dígitos (CPF)
+    if (input.cpf && !isValidTaxId(input.cpf)) {
+      throw new Error('Documento inválido (use 9 dígitos para NIF ou 11 dígitos para CPF)')
     }
 
     try {
-      // Formatar CPF se for brasileiro
-      const formattedInput = {
-        ...input,
-        cpf: input.cpf && input.cpf.includes('.') ? formatCPF(input.cpf) : input.cpf,
-      }
-
       // Chamar API
-      const response = await apiClient.post<AuthResponse>('/auth/register', formattedInput)
+      const response = await apiClient.post<AuthResponse>('/auth/register', input)
 
       // Salvar sessão se solicitado
       if (createSession) {
-        saveSession(response)
+        persistSession(response)
       }
 
       console.log('✅ Usuário registrado:', response.user.email)
@@ -133,7 +172,7 @@ export class AuthService {
       const response = await apiClient.post<AuthResponse>('/auth/login', input)
 
       // Salvar sessão
-      saveSession(response)
+      persistSession(response)
 
       console.log('✅ Login realizado:', response.user.email)
       return response
@@ -232,7 +271,7 @@ export class AuthService {
       const session = getSession()
       if (session && session.user.id === userId) {
         session.user = response.user
-        saveSession(session)
+        persistSession(session)
       }
 
       return response.user
@@ -271,7 +310,6 @@ export class AuthService {
    * Buscar usuários (apenas para admin)
    */
   static getAllUsers(currentUserId: string): User[] {
-    // This method is synchronous, but should be async now
     console.warn('getAllUsers is deprecated. Use getAllUsersAsync instead.')
     return []
   }
@@ -281,7 +319,6 @@ export class AuthService {
    */
   static async getAllUsersAsync(): Promise<User[]> {
     try {
-      // This endpoint doesn't exist yet - we'll need to add it
       const response = await apiClient.get<{ users: User[] }>('/auth/users')
       return response.users
     } catch (error) {
@@ -336,7 +373,6 @@ export class AuthService {
    */
   static async getPendingOrthodontistsAsync(): Promise<User[]> {
     try {
-      // This endpoint doesn't exist yet - we'll need to add it
       const response = await apiClient.get<{ users: User[] }>('/auth/users/pending')
       return response.users
     } catch (error) {
@@ -353,7 +389,6 @@ export class AuthService {
     orthodontistId: string,
   ): Promise<User> {
     try {
-      // This endpoint doesn't exist yet - we'll need to add it
       const response = await apiClient.put<{ user: User }>(`/auth/users/${orthodontistId}/approve`, {})
       console.log('✅ Ortodontista aprovado:', response.user.email)
       return response.user
@@ -371,7 +406,6 @@ export class AuthService {
     orthodontistId: string,
   ): Promise<void> {
     try {
-      // This endpoint doesn't exist yet - we'll need to add it
       await apiClient.put(`/auth/users/${orthodontistId}/reject`, {})
       console.log('❌ Ortodontista rejeitado')
     } catch (error) {
@@ -392,7 +426,6 @@ export class AuthService {
     }
 
     try {
-      // This endpoint doesn't exist yet - we'll need to add it
       await apiClient.put(`/auth/users/${targetUserId}/deactivate`, {})
       console.log('⚠️  Usuário desativado')
     } catch (error) {

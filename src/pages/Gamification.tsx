@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { AdventureJourney } from '@/components/AdventureJourney'
 import { StoryUnlock } from '@/components/StoryUnlock'
 import { useTreatment, useCurrentAligner } from '@/context/AlignerContext'
-import { StorySeriesService } from '@/services/storySeriesService'
+import { StorySeriesService as StorySeriesApiService } from '@/services/storyService.v2'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+import { useEffect, useState } from 'react'
+import type { StorySeries, StoryChapterV3 } from '@/types/story'
 
 const badges = [
   { id: '1', name: 'Mês de Ouro', icon: '🏆', earned: true, description: 'Um mês completo de uso', earnedDate: '2024-01-15' },
@@ -21,24 +24,74 @@ const Gamification = () => {
   const treatment = useTreatment()
   const currentAligner = useCurrentAligner()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  const patientId = 'current-patient' // TODO: Pegar do contexto de autenticação
-  const hasStory = StorySeriesService.hasStory(patientId)
-  const series = hasStory ? StorySeriesService.getPatientSeries(patientId) : null
+  const [series, setSeries] = useState<StorySeries | null>(null)
+  const [chapters, setChapters] = useState<StoryChapterV3[]>([])
+  const [isLoadingStory, setIsLoadingStory] = useState(true)
+
+  const patientId = user?.id
   const currentAlignerNumber = currentAligner?.number || 1
 
   // Calcular progresso da história
   let storyProgress = 0
   let unlockedCount = 0
-  let totalChapters = 0
+  let totalChapters = treatment?.totalAligners || 0
+
+  useEffect(() => {
+    const loadStory = async () => {
+      if (!patientId) {
+        setIsLoadingStory(false)
+        return
+      }
+      try {
+        const patientSeries = await StorySeriesApiService.getPatientSeries(
+          patientId,
+          treatment?.id,
+        )
+        if (patientSeries) {
+          setSeries(patientSeries)
+          const fetchedChapters = await StorySeriesApiService.getSeriesChapters(
+            patientSeries.id,
+          )
+          setChapters(fetchedChapters)
+        } else {
+          setSeries(null)
+          setChapters([])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar história:', error)
+        setSeries(null)
+        setChapters([])
+      } finally {
+        setIsLoadingStory(false)
+      }
+    }
+
+    loadStory()
+  }, [patientId, treatment?.id])
 
   if (series) {
-    const chapters = StorySeriesService.getSeriesChapters(series.id)
-    totalChapters = chapters.length
-    unlockedCount = chapters.filter(
-      (ch) => ch.requiredAlignerNumber <= currentAlignerNumber
-    ).length
-    storyProgress = totalChapters > 0 ? (unlockedCount / totalChapters) * 100 : 0
+    const effectiveTotal = treatment?.totalAligners || chapters.length
+    totalChapters = effectiveTotal
+
+    unlockedCount = Math.min(
+      effectiveTotal,
+      chapters.filter((ch) => ch.requiredAlignerNumber <= currentAlignerNumber).length,
+    )
+
+    storyProgress = effectiveTotal > 0 ? (unlockedCount / effectiveTotal) * 100 : 0
+  } else if (totalChapters > 0) {
+    unlockedCount = Math.min(currentAlignerNumber, totalChapters)
+    storyProgress = (unlockedCount / totalChapters) * 100
+  }
+
+  if (isLoadingStory) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Carregando sua história...</p>
+      </div>
+    )
   }
 
   return (
@@ -60,7 +113,7 @@ const Gamification = () => {
       </div>
 
       {/* Card de História - Criar ou Ver */}
-      {!hasStory ? (
+      {!series ? (
         // Card "Criar História" (quando ainda não tem história)
         <Card className="border-2 border-primary-child shadow-xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 hover:shadow-2xl transition-shadow">
           <CardContent className="p-6">

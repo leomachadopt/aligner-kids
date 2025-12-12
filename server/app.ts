@@ -22,15 +22,48 @@ dotenv.config()
 const app = express()
 
 // Middleware
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:8082',
-    'https://aligner-kids.vercel.app',
-    /https:\/\/aligner-kids-.*\.vercel\.app/, // Preview deployments (regex)
-  ],
+const isProd = process.env.NODE_ENV === 'production'
+
+// Em produção: permitir domínios oficiais + sempre localhost/127.* (para suporte local)
+// Em dev: permitir tudo
+const allowedOrigins = [
+  'https://aligner-kids.vercel.app',
+  /https:\/\/aligner-kids-.*\.vercel\.app/, // Preview deployments (regex)
+]
+
+const localhostRegex = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true) // requests sem origem (ex: curl)
+
+    // Sempre permitir localhost/127.* (qualquer porta), mesmo em prod (suporte interno)
+    if (localhostRegex.test(origin)) {
+      return callback(null, true)
+    }
+
+    const isAllowedProd = allowedOrigins.some((o) =>
+      o instanceof RegExp ? o.test(origin) : o === origin,
+    )
+
+    if (!isProd) {
+      // Dev: libera tudo
+      return callback(null, true)
+    }
+
+    // Prod: aceita oficiais ou localhost (já tratado acima)
+    if (isAllowedProd) {
+      return callback(null, true)
+    }
+
+    return callback(new Error('Not allowed by CORS'))
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-}))
+}
+
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use(cookieParser())
 

@@ -29,10 +29,12 @@ export class StorySeriesService {
   /**
    * Busca história do paciente
    */
-  static async getPatientSeries(patientId: string): Promise<StorySeries | null> {
+  static async getPatientSeries(patientId: string, treatmentId?: string): Promise<StorySeries | null> {
     try {
-      const response = await apiClient.get<{ story: StorySeries }>(`/stories/patient/${patientId}`)
-      return response.story
+      const response = await apiClient.get<{ story: StorySeries }>(
+        `/stories/patient/${patientId}${treatmentId ? `?treatmentId=${treatmentId}` : ''}`,
+      )
+      return response.story || null
     } catch (error) {
       console.error('Erro ao buscar história:', error)
       return null
@@ -84,10 +86,12 @@ export class StorySeriesService {
   static async savePreferences(
     patientId: string,
     preferences: StoryPreferencesInput,
+    treatmentId?: string,
   ): Promise<void> {
     try {
       await apiClient.post('/stories/preferences', {
         patientId,
+        treatmentId,
         ...preferences,
       })
       console.log('✅ Preferências salvas')
@@ -118,6 +122,7 @@ export class StorySeriesService {
     patientId: string,
     input: StorySeriesInput,
     onProgress?: (message: string, progress: number) => void,
+    treatmentId?: string,
   ): Promise<StorySeries> {
     try {
       // Verificar se já tem história
@@ -131,62 +136,97 @@ export class StorySeriesService {
       onProgress?.('🎬 Iniciando geração da história...', 0)
 
       // Salvar preferências
-      await this.savePreferences(patientId, input.preferences)
+      await this.savePreferences(patientId, input.preferences, treatmentId)
 
-      // Gerar título e sinopse da série com IA
-      onProgress?.('✨ Gerando título e sinopse...', 10)
-      const seriesInfo = await StorySeriesAIService.generateSeriesInfo(
-        input.preferences,
-        input.totalAligners,
-      )
-
-      // Criar série no banco
+      // Criar série com título provisório
       const seriesResponse = await apiClient.post<{ story: StorySeries }>('/stories', {
         patientId,
-        title: seriesInfo.title,
-        description: seriesInfo.synopsis,
+        treatmentId,
+        title: 'História Mágica',
+        description: '',
         totalChapters: input.totalAligners,
       })
 
-      const series = seriesResponse.story
+      let series = seriesResponse.story
+      const allChapters: Array<{
+        chapterNumber: number
+        title: string
+        content: string
+      }> = []
 
-      onProgress?.('📚 Gerando capítulos...', 20)
+      const BATCH_SIZE = 5
+      const totalChapters = input.totalAligners
+      const totalBatches = Math.ceil(totalChapters / BATCH_SIZE)
+      let storyTitle = ''
 
-      // Gerar capítulos
-      const chaptersInfo = await StorySeriesAIService.generateChapters(
-        seriesInfo,
-        input.preferences,
-        input.totalAligners,
-        (chapterProgress) => {
-          const overallProgress = 20 + (chapterProgress / input.totalAligners) * 60
-          onProgress?.(`📖 Capítulo ${chapterProgress}/${input.totalAligners}...`, overallProgress)
-        },
-      )
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startChapter = batchIndex * BATCH_SIZE + 1
+        const endChapter = Math.min(startChapter + BATCH_SIZE - 1, totalChapters)
 
-      // Salvar capítulos no banco
-      onProgress?.('💾 Salvando capítulos...', 80)
-      for (const chapterInfo of chaptersInfo) {
-        await apiClient.post('/chapters', {
-          storyId: series.id,
-          chapterNumber: chapterInfo.chapterNumber,
-          title: chapterInfo.title,
-          content: chapterInfo.content,
-          requiredAlignerNumber: chapterInfo.requiredAlignerNumber,
-          isUnlocked: chapterInfo.requiredAlignerNumber === 1,
-          isRead: false,
-        })
+        onProgress?.(
+          `✨ Gerando capítulos ${startChapter}-${endChapter}...`,
+          5 + (allChapters.length / totalChapters) * 85,
+        )
+
+        const batch = await StorySeriesAIService.generateChapterBatch(
+          input.preferences,
+          totalChapters,
+          startChapter,
+          endChapter,
+          allChapters.map((ch) => ({
+            chapterNumber: ch.chapterNumber,
+            title: ch.title,
+            content: ch.content,
+          })),
+          storyTitle || undefined,
+        )
+
+        if (!storyTitle && batch.storyTitle) {
+          storyTitle = batch.storyTitle
+          // Atualizar título da série
+          const updatedSeries = await apiClient.put<{ story: StorySeries }>(
+            `/stories/${series.id}`,
+            { title: storyTitle },
+          )
+          series = updatedSeries.story
+        }
+
+        // Salvar capítulos do lote
+        for (const chapterData of batch.chapters) {
+          await apiClient.post('/chapters', {
+            storyId: series.id,
+            chapterNumber: chapterData.chapterNumber,
+            title: chapterData.title,
+            content: chapterData.content,
+            requiredAlignerNumber: chapterData.requiredAlignerNumber,
+            isUnlocked: chapterData.requiredAlignerNumber === 1,
+            isRead: false,
+          })
+          allChapters.push({
+            chapterNumber: chapterData.chapterNumber,
+            title: chapterData.title,
+            content: chapterData.content,
+          })
+
+          const progress = 5 + (allChapters.length / totalChapters) * 85
+          onProgress?.(
+            `📖 Capítulo ${chapterData.chapterNumber}/${totalChapters} salvo...`,
+            progress,
+          )
+        }
       }
 
-      // Marcar série como completa
+      // Finalizar série
       await apiClient.put(`/stories/${series.id}`, {
         isComplete: true,
         generationCompletedAt: new Date().toISOString(),
+        title: storyTitle || series.title,
       })
 
       onProgress?.('✅ História criada com sucesso!', 100)
 
       const endTime = Date.now()
-      console.log(`⏱️  Geração concluída em ${Math.round((endTime - startTime) / 1000)}s`)
+      console.log(`⏱️  Geração em lotes concluída em ${Math.round((endTime - startTime) / 1000)}s`)
 
       return series
     } catch (error) {

@@ -4,7 +4,7 @@
 
 import { Router } from 'express'
 import { db, treatments, aligners } from '../db/index'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 
 const router = Router()
 
@@ -20,9 +20,11 @@ router.get('/treatments/patient/:patientId', async (req, res) => {
       .select()
       .from(treatments)
       .where(eq(treatments.patientId, patientId))
+      .orderBy(desc(treatments.createdAt))
 
     if (result.length === 0) {
-      return res.status(404).json({ error: 'Treatment not found' })
+      // Evita 404 ruidoso no front; retorna vazio
+      return res.json({ treatment: null })
     }
 
     res.json({ treatment: result[0] })
@@ -35,16 +37,33 @@ router.get('/treatments/patient/:patientId', async (req, res) => {
 // Create treatment
 router.post('/treatments', async (req, res) => {
   try {
+    if (!req.body.patientId || !req.body.totalAligners) {
+      return res.status(400).json({ error: 'patientId e totalAligners são obrigatórios' })
+    }
+
+    const startDate =
+      (req.body.startDate && String(req.body.startDate).slice(0, 10)) ||
+      new Date().toISOString().slice(0, 10)
+
+    const expectedEndDate =
+      (req.body.expectedEndDate && String(req.body.expectedEndDate).slice(0, 10)) ||
+      (req.body.estimatedEndDate && String(req.body.estimatedEndDate).slice(0, 10)) ||
+      null
+
+    // Sempre iniciar progresso no primeiro alinhador de um novo tratamento
+    const currentAlignerNumber = 1
+
     const newTreatment = await db
       .insert(treatments)
       .values({
         id: `treatment-${Date.now()}`,
         patientId: req.body.patientId,
-        startDate: req.body.startDate,
-        estimatedEndDate: req.body.estimatedEndDate,
+        name: req.body.name || null,
+        startDate,
+        expectedEndDate,
         totalAligners: req.body.totalAligners,
-        currentAlignerNumber: 1,
-        status: 'active',
+        currentAlignerNumber,
+        status: req.body.status || 'active',
         notes: req.body.notes || null,
       })
       .returning()
@@ -62,7 +81,12 @@ router.put('/treatments/:id', async (req, res) => {
     const updated = await db
       .update(treatments)
       .set({
-        ...req.body,
+        startDate: req.body.startDate,
+        expectedEndDate: req.body.expectedEndDate || req.body.estimatedEndDate,
+        totalAligners: req.body.totalAligners,
+        currentAlignerNumber: req.body.currentAlignerNumber,
+        status: req.body.status,
+        notes: req.body.notes,
         updatedAt: new Date(),
       })
       .where(eq(treatments.id, req.params.id))
@@ -87,11 +111,16 @@ router.put('/treatments/:id', async (req, res) => {
 router.get('/aligners/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
+    const { treatmentId } = req.query
+    const baseWhere = treatmentId
+      ? and(eq(aligners.patientId, patientId), eq(aligners.treatmentId, treatmentId as string))
+      : eq(aligners.patientId, patientId)
+
     const result = await db
       .select()
       .from(aligners)
-      .where(eq(aligners.patientId, patientId))
-      .orderBy(aligners.number)
+      .where(baseWhere)
+      .orderBy(aligners.alignerNumber)
 
     res.json({ aligners: result })
   } catch (error) {
@@ -126,14 +155,20 @@ router.post('/aligners', async (req, res) => {
       .insert(aligners)
       .values({
         id: `aligner-${Date.now()}`,
-        treatmentId: req.body.treatmentId,
         patientId: req.body.patientId,
-        number: req.body.number,
-        startDate: req.body.startDate || null,
-        endDate: req.body.endDate || null,
-        status: req.body.status || 'pending',
+        treatmentId: req.body.treatmentId || null,
+        alignerNumber: req.body.alignerNumber ?? req.body.number,
+        startDate: req.body.startDate || new Date().toISOString(),
+        endDate: req.body.endDate || req.body.expectedEndDate || new Date().toISOString(),
+        actualEndDate: req.body.actualEndDate || null,
+        status:
+          req.body.status ||
+          (req.body.alignerNumber ?? req.body.number) === 1
+            ? 'active'
+            : 'pending',
+        usageHours: req.body.usageHours ?? 0,
+        targetHoursPerDay: req.body.targetHoursPerDay ?? 22,
         notes: req.body.notes || null,
-        photoUrls: req.body.photoUrls || [],
       })
       .returning()
 
@@ -150,7 +185,15 @@ router.put('/aligners/:id', async (req, res) => {
     const updated = await db
       .update(aligners)
       .set({
-        ...req.body,
+        treatmentId: req.body.treatmentId,
+        alignerNumber: req.body.alignerNumber ?? req.body.number,
+        startDate: req.body.startDate,
+        endDate: req.body.endDate,
+        actualEndDate: req.body.actualEndDate,
+        status: req.body.status,
+        usageHours: req.body.usageHours,
+        targetHoursPerDay: req.body.targetHoursPerDay,
+        notes: req.body.notes,
         updatedAt: new Date(),
       })
       .where(eq(aligners.id, req.params.id))
@@ -194,14 +237,24 @@ router.post('/aligners/:id/confirm', async (req, res) => {
       })
       .where(eq(aligners.id, alignerId))
 
-    // Update treatment current aligner number
-    await db
-      .update(treatments)
-      .set({
-        currentAlignerNumber: aligner.number + 1,
-        updatedAt: new Date(),
-      })
-      .where(eq(treatments.id, aligner.treatmentId))
+    // Update treatment current aligner number (prefer treatmentId if exists)
+    if (aligner.treatmentId) {
+      await db
+        .update(treatments)
+        .set({
+          currentAlignerNumber: aligner.alignerNumber + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(treatments.id, aligner.treatmentId))
+    } else {
+      await db
+        .update(treatments)
+        .set({
+          currentAlignerNumber: aligner.alignerNumber + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(treatments.patientId, aligner.patientId))
+    }
 
     // Find and activate next aligner
     const nextAligner = await db
@@ -209,8 +262,9 @@ router.post('/aligners/:id/confirm', async (req, res) => {
       .from(aligners)
       .where(
         and(
-          eq(aligners.treatmentId, aligner.treatmentId),
-          eq(aligners.number, aligner.number + 1)
+          eq(aligners.patientId, aligner.patientId),
+          aligner.treatmentId ? eq(aligners.treatmentId, aligner.treatmentId) : undefined,
+          eq(aligners.alignerNumber, aligner.alignerNumber + 1)
         )
       )
 
@@ -230,13 +284,23 @@ router.post('/aligners/:id/confirm', async (req, res) => {
       })
     } else {
       // No more aligners - treatment complete
-      await db
-        .update(treatments)
-        .set({
-          status: 'completed',
-          updatedAt: new Date(),
-        })
-        .where(eq(treatments.id, aligner.treatmentId))
+      if (aligner.treatmentId) {
+        await db
+          .update(treatments)
+          .set({
+            status: 'completed',
+            updatedAt: new Date(),
+          })
+          .where(eq(treatments.id, aligner.treatmentId))
+      } else {
+        await db
+          .update(treatments)
+          .set({
+            status: 'completed',
+            updatedAt: new Date(),
+          })
+          .where(eq(treatments.patientId, aligner.patientId))
+      }
 
       res.json({
         confirmedAligner: aligner,

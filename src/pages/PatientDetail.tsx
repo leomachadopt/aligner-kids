@@ -69,12 +69,22 @@ const PatientDetail = () => {
       if (!id || !currentUser) return
 
       try {
-        // Buscar paciente
-        const patientData = AuthService.getUserById(id)
+        // Buscar paciente na clínica do usuário logado
+        const clinicUsers = await AuthService.getUsersByClinicAsync(currentUser.clinicId || '')
+        const patientData = clinicUsers.find((u) => u.id === id) || null
 
-        // Validar que o paciente pertence à mesma clínica do ortodontista
-        if (currentUser.role === 'orthodontist' && patientData?.clinicId !== currentUser.clinicId) {
+        // Validar permissão (ortodontista só vê pacientes da própria clínica)
+        if (
+          currentUser.role === 'orthodontist' &&
+          patientData?.clinicId !== currentUser.clinicId
+        ) {
           toast.error('Você não tem permissão para acessar este paciente')
+          setLoading(false)
+          return
+        }
+
+        if (!patientData) {
+          setPatient(null)
           setLoading(false)
           return
         }
@@ -82,7 +92,7 @@ const PatientDetail = () => {
         setPatient(patientData)
 
         // Buscar dados da clínica
-        if (patientData?.clinicId) {
+        if (patientData.clinicId) {
           const clinicData = await ClinicService.getClinicById(patientData.clinicId)
           setClinic(clinicData)
         }
@@ -161,8 +171,9 @@ const PatientDetail = () => {
         birthDate: editPatientData.birthDate || undefined,
       })
 
-      // Recarregar dados do paciente
-      const updatedPatient = AuthService.getUserById(id)
+      // Recarregar dados do paciente a partir do backend
+      const clinicUsers = await AuthService.getUsersByClinicAsync(currentUser?.clinicId || '')
+      const updatedPatient = clinicUsers.find((u) => u.id === id) || null
       setPatient(updatedPatient)
 
       toast.success('Dados do paciente atualizados com sucesso!')
@@ -616,5 +627,6 @@ const PatientDetail = () => {
 }
 
 export default PatientDetail
+
 
 

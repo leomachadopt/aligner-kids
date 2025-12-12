@@ -3,18 +3,15 @@
  * Wraps Express app for Vercel deployment
  */
 
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
-import dotenv from 'dotenv'
 
 // Import routes
 import authRoutes from '../server/routes/auth'
 import clinicsRoutes from '../server/routes/clinics'
 import alignersRoutes from '../server/routes/aligners'
-
-// Load environment variables
-dotenv.config()
 
 const app = express()
 
@@ -36,7 +33,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'production',
+    database: process.env.DATABASE_URL ? 'connected' : 'not configured'
   })
 })
 
@@ -45,5 +43,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/clinics', clinicsRoutes)
 app.use('/api', alignersRoutes)
 
-// For Vercel serverless
-export default app
+// Vercel serverless function handler
+export default async (req: VercelRequest, res: VercelResponse) => {
+  return app(req as any, res as any)
+}

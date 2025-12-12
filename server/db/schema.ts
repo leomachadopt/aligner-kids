@@ -72,6 +72,7 @@ export const clinics = pgTable('clinics', {
 export const treatments = pgTable('treatments', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }),
   startDate: varchar('start_date', { length: 10 }).notNull(),
   expectedEndDate: varchar('expected_end_date', { length: 10 }),
   currentAlignerNumber: integer('current_aligner_number').default(1).notNull(),
@@ -85,6 +86,7 @@ export const treatments = pgTable('treatments', {
 export const aligners = pgTable('aligners', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
   alignerNumber: integer('aligner_number').notNull(),
   startDate: varchar('start_date', { length: 10 }).notNull(),
   endDate: varchar('end_date', { length: 10 }).notNull(),
@@ -104,6 +106,7 @@ export const aligners = pgTable('aligners', {
 export const story_preferences = pgTable('story_preferences', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
   ageGroup: integer('age_group').notNull(),
   environment: varchar('environment', { length: 100 }).notNull(),
   mainCharacter: varchar('main_character', { length: 100 }).notNull(),
@@ -117,6 +120,7 @@ export const story_preferences = pgTable('story_preferences', {
 export const stories = pgTable('stories', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
   promptId: varchar('prompt_id', { length: 255 }),
   preferencesSnapshot: jsonb('preferences_snapshot'),
 

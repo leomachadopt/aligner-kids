@@ -78,7 +78,7 @@ const PatientManagement = () => {
       setClinic(clinicData)
 
       // Buscar TODOS os pacientes da clínica (filtrar apenas patients e child-patients)
-      const allUsers = AuthService.getUsersByClinic(user.clinicId)
+      const allUsers = await AuthService.getUsersByClinicAsync(user.clinicId)
       const clinicPatients = allUsers.filter(
         (u) => u.role === 'patient' || u.role === 'child-patient'
       )
@@ -132,7 +132,7 @@ const PatientManagement = () => {
         return
       }
 
-      // Validações básicas
+      // Validações básicas (cpf não é obrigatório)
       if (!formData.fullName || !formData.email || !formData.phone || !formData.password) {
         toast.error('Preencha todos os campos obrigatórios')
         return
@@ -151,7 +151,7 @@ const PatientManagement = () => {
 
       // Registrar paciente (sem criar sessão para não deslogar o ortodontista)
       await AuthService.register({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         role: patientType,
@@ -652,5 +652,6 @@ const PatientManagement = () => {
 }
 
 export default PatientManagement
+
 
 

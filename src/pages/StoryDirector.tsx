@@ -30,13 +30,15 @@ import {
   STORY_THEMES,
   getRandomGenerationMessage,
 } from '@/config/storyOptions'
-import { StorySeriesService } from '@/services/storySeriesService'
+import { StorySeriesService as StorySeriesApiService } from '@/services/storyService.v2'
 import { useTreatment } from '@/context/AlignerContext'
+import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 
 const StoryDirector = () => {
   const navigate = useNavigate()
   const treatment = useTreatment()
+  const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationMessage, setGenerationMessage] = useState('')
@@ -47,8 +49,7 @@ const StoryDirector = () => {
     ageGroup: 8, // Padrão
   })
 
-  const patientId = 'current-patient' // TODO: Pegar do contexto de autenticação
-  const totalAligners = treatment?.totalAligners || 24
+  const totalAligners = treatment?.totalAligners || 0
 
   const totalSteps = 5
   const progress = (currentStep / totalSteps) * 100
@@ -91,13 +92,26 @@ const StoryDirector = () => {
   // ============================================
 
   const handleGenerateStory = async () => {
+    if (!user?.id) {
+      toast.error('É necessário estar autenticado para gerar uma história.')
+      navigate('/login')
+      return
+    }
+    const patientId = user.id
+
     if (!preferences.environment || !preferences.mainCharacter || !preferences.theme) {
       toast.error('Por favor, complete todas as etapas obrigatórias!')
       return
     }
 
+    if (!totalAligners || totalAligners < 1) {
+      toast.error('Defina o número de alinhadores do tratamento para gerar a história.')
+      return
+    }
+
     // Verificar se já tem história
-    if (StorySeriesService.hasStory(patientId)) {
+    const alreadyHasStory = await StorySeriesApiService.hasStory(patientId)
+    if (alreadyHasStory) {
       toast.error('Você já tem uma história! Veja em "Minha História"')
       navigate('/my-story')
       return
@@ -120,7 +134,7 @@ const StoryDirector = () => {
       console.log('Total de capítulos (alinhadores):', totalAligners)
 
       // Criar história completa com capítulos e áudio
-      await StorySeriesService.createStorySeries(
+      await StorySeriesApiService.createStorySeries(
         patientId,
         {
           preferences: fullPreferences,
@@ -130,6 +144,7 @@ const StoryDirector = () => {
           setGenerationMessage(message)
           setGenerationProgress(progress)
         },
+        treatment?.id,
       )
 
       toast.success('✨ Sua história foi criada com sucesso!')

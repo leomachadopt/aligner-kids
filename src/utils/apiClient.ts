@@ -15,16 +15,6 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL
-    // Load token from localStorage on initialization
-    const session = localStorage.getItem('session')
-    if (session) {
-      try {
-        const { token } = JSON.parse(session)
-        this.token = token
-      } catch (e) {
-        console.error('Error loading token from session:', e)
-      }
-    }
   }
 
   setToken(token: string | null) {

@@ -3,165 +3,179 @@ import type {
   Treatment,
   AlignerService as IAlignerService,
 } from '@/types/aligner'
+import { apiClient } from '@/utils/apiClient'
 
-const STORAGE_KEYS = {
-  ALIGNERS: 'aligners',
-  TREATMENTS: 'treatments',
+function mapAligner(apiAligner: any): Aligner {
+  return {
+    id: apiAligner.id,
+    patientId: apiAligner.patientId,
+    number: apiAligner.alignerNumber ?? apiAligner.number ?? apiAligner.number ?? 0,
+    startDate: apiAligner.startDate || '',
+    expectedEndDate: apiAligner.endDate || apiAligner.expectedEndDate || '',
+    actualEndDate: apiAligner.actualEndDate || null,
+    usageDays: apiAligner.usageDays ?? 0,
+    usageHours: apiAligner.usageHours ?? 0,
+    status: apiAligner.status || 'pending',
+    wearTime: apiAligner.targetHoursPerDay ?? apiAligner.wearTime ?? 22,
+    changeInterval: apiAligner.changeInterval ?? 14,
+    notes: apiAligner.notes,
+  }
 }
 
-// Mock implementation using localStorage
-// This can be easily replaced with API calls in the future
-class AlignerServiceMock implements IAlignerService {
-  private getAligners(): Aligner[] {
-    const stored = localStorage.getItem(STORAGE_KEYS.ALIGNERS)
-    return stored ? JSON.parse(stored) : []
+function mapTreatment(apiTreatment: any): Treatment {
+  return {
+    id: apiTreatment.id,
+    patientId: apiTreatment.patientId,
+    orthodontistId: apiTreatment.orthodontistId || '',
+    name: apiTreatment.name || undefined,
+    startDate: apiTreatment.startDate,
+    expectedEndDate: apiTreatment.expectedEndDate || apiTreatment.estimatedEndDate || '',
+    totalAligners: apiTreatment.totalAligners,
+    currentAlignerNumber: apiTreatment.currentAlignerNumber ?? 1,
+    status: apiTreatment.status || 'active',
+    aligners: [],
   }
+}
 
-  private saveAligners(aligners: Aligner[]): void {
-    localStorage.setItem(STORAGE_KEYS.ALIGNERS, JSON.stringify(aligners))
-  }
-
-  private getTreatments(): Treatment[] {
-    const stored = localStorage.getItem(STORAGE_KEYS.TREATMENTS)
-    return stored ? JSON.parse(stored) : []
-  }
-
-  private saveTreatments(treatments: Treatment[]): void {
-    localStorage.setItem(STORAGE_KEYS.TREATMENTS, JSON.stringify(treatments))
-  }
-
-  async getAlignersByPatient(patientId: string): Promise<Aligner[]> {
-    const aligners = this.getAligners()
-    return aligners.filter((a) => a.patientId === patientId)
+class AlignerServiceAPI implements IAlignerService {
+  async getAlignersByPatient(patientId: string, treatmentId?: string): Promise<Aligner[]> {
+    try {
+      const res = await apiClient.get<{ aligners: any[] }>(
+        `/aligners/patient/${patientId}${treatmentId ? `?treatmentId=${treatmentId}` : ''}`,
+      )
+      return (res.aligners || []).map(mapAligner)
+    } catch (error) {
+      console.error('Erro ao buscar alinhadores:', error)
+      return []
+    }
   }
 
   async getAlignerById(id: string): Promise<Aligner | null> {
-    const aligners = this.getAligners()
-    return aligners.find((a) => a.id === id) || null
+    try {
+      const res = await apiClient.get<{ aligner: any }>(`/aligners/${id}`)
+      return res?.aligner ? mapAligner(res.aligner) : null
+    } catch (error) {
+      console.error('Erro ao buscar alinhador:', error)
+      return null
+    }
   }
 
   async createAligner(
-    alignerData: Omit<Aligner, 'id' | 'usageDays' | 'usageHours'>,
+    alignerData: Omit<Aligner, 'id' | 'usageDays' | 'usageHours'> & { treatmentId?: string },
   ): Promise<Aligner> {
-    const aligners = this.getAligners()
-    const newAligner: Aligner = {
-      ...alignerData,
-      id: `aligner-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      usageDays: 0,
-      usageHours: 0,
+    if (!alignerData.patientId) {
+      throw new Error('patientId é obrigatório para criar alinhador')
     }
-    aligners.push(newAligner)
-    this.saveAligners(aligners)
-    return newAligner
+    const payload = {
+      treatmentId: (alignerData as any).treatmentId,
+      patientId: alignerData.patientId,
+      number: alignerData.number,
+      alignerNumber: alignerData.number,
+      startDate: alignerData.startDate?.slice(0, 10),
+      endDate: alignerData.expectedEndDate?.slice(0, 10),
+      status:
+        alignerData.status ??
+        (alignerData.number === 1 ? 'active' : 'pending'),
+      notes: alignerData.notes,
+      targetHoursPerDay: alignerData.wearTime ?? 22,
+    }
+    const res = await apiClient.post<{ aligner: any }>(`/aligners`, payload)
+    return mapAligner(res.aligner)
   }
 
-  async updateAligner(
-    id: string,
-    updates: Partial<Aligner>,
-  ): Promise<Aligner> {
-    const aligners = this.getAligners()
-    const index = aligners.findIndex((a) => a.id === id)
-    if (index === -1) {
-      throw new Error(`Aligner with id ${id} not found`)
+  async updateAligner(id: string, updates: Partial<Aligner>): Promise<Aligner> {
+    const payload = {
+      ...updates,
+      alignerNumber: updates.number,
+      endDate: updates.expectedEndDate,
+      targetHoursPerDay: updates.wearTime,
     }
-    aligners[index] = { ...aligners[index], ...updates }
-    this.saveAligners(aligners)
-    return aligners[index]
+    const res = await apiClient.put<{ aligner: any }>(`/aligners/${id}`, payload)
+    return mapAligner(res.aligner)
   }
 
   async deleteAligner(id: string): Promise<void> {
-    const aligners = this.getAligners()
-    const filtered = aligners.filter((a) => a.id !== id)
-    this.saveAligners(filtered)
+    await apiClient.delete(`/aligners/${id}`)
   }
 
   async getTreatmentByPatient(patientId: string): Promise<Treatment | null> {
-    const treatments = this.getTreatments()
-    return treatments.find((t) => t.patientId === patientId) || null
+    try {
+      const res = await apiClient.get<{ treatment: any }>(
+        `/treatments/patient/${patientId}`,
+      )
+      return res?.treatment ? mapTreatment(res.treatment) : null
+    } catch (error) {
+      console.warn('Tratamento não encontrado ou erro ao buscar tratamento', error)
+      return null
+    }
   }
 
   async createTreatment(
     treatmentData: Omit<Treatment, 'id'>,
   ): Promise<Treatment> {
-    const treatments = this.getTreatments()
-    const newTreatment: Treatment = {
-      ...treatmentData,
-      id: `treatment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const today = new Date().toISOString().slice(0, 10)
+    const payload = {
+      patientId: treatmentData.patientId,
+      name: treatmentData.name,
+      startDate: treatmentData.startDate?.slice(0, 10) || today,
+      estimatedEndDate: treatmentData.expectedEndDate?.slice(0, 10),
+      totalAligners: treatmentData.totalAligners ?? 1,
+      currentAlignerNumber: treatmentData.currentAlignerNumber ?? 1,
+      status: treatmentData.status ?? 'active',
+      notes: '',
     }
-    treatments.push(newTreatment)
-    this.saveTreatments(treatments)
-    return newTreatment
+    const res = await apiClient.post<{ treatment: any }>(`/treatments`, payload)
+    return mapTreatment(res.treatment)
   }
 
   async updateTreatment(
     id: string,
     updates: Partial<Treatment>,
   ): Promise<Treatment> {
-    const treatments = this.getTreatments()
-    const index = treatments.findIndex((t) => t.id === id)
-    if (index === -1) {
-      throw new Error(`Treatment with id ${id} not found`)
+    const payload = {
+      ...updates,
+      estimatedEndDate: updates.expectedEndDate,
     }
-    treatments[index] = { ...treatments[index], ...updates }
-    this.saveTreatments(treatments)
-    return treatments[index]
+    const res = await apiClient.put<{ treatment: any }>(`/treatments/${id}`, payload)
+    return mapTreatment(res.treatment)
   }
 
-  async getCurrentAligner(patientId: string): Promise<Aligner | null> {
-    const aligners = await this.getAlignersByPatient(patientId)
+  async getCurrentAligner(patientId: string, treatmentId?: string): Promise<Aligner | null> {
+    const treatment = await this.getTreatmentByPatient(patientId)
+    const aligners = await this.getAlignersByPatient(patientId, treatmentId || treatment?.id)
+
+    if (treatment) {
+      const current = aligners.find(
+        (a) => a.number === treatment.currentAlignerNumber && a.status !== 'completed',
+      )
+      if (current) return current
+    }
+
     return (
       aligners.find((a) => a.status === 'active') ||
       aligners
-        .filter((a) => a.status === 'pending')
+        .filter((a) => a.status === 'pending' || a.status === 'upcoming')
         .sort((a, b) => a.number - b.number)[0] ||
       null
     )
   }
 
   async confirmAlignerChange(
-    patientId: string,
+    _patientId: string,
     alignerId: string,
   ): Promise<Aligner> {
-    // Mark current aligner as completed
-    const currentAligner = await this.getCurrentAligner(patientId)
-    if (currentAligner && currentAligner.id !== alignerId) {
-      await this.updateAligner(currentAligner.id, {
-        status: 'completed',
-        actualEndDate: new Date().toISOString(),
-      })
+    const res = await apiClient.post<{ confirmedAligner: any }>(
+      `/aligners/${alignerId}/confirm`,
+      {},
+    )
+    if (!res?.confirmedAligner) {
+      throw new Error('Não foi possível confirmar a troca de alinhador')
     }
-
-    // Activate new aligner
-    const newAligner = await this.getAlignerById(alignerId)
-    if (!newAligner) {
-      throw new Error(`Aligner with id ${alignerId} not found`)
-    }
-
-    const updatedAligner = await this.updateAligner(alignerId, {
-      status: 'active',
-      startDate: new Date().toISOString(),
-      expectedEndDate: new Date(
-        Date.now() + newAligner.changeInterval * 24 * 60 * 60 * 1000,
-      ).toISOString(),
-    })
-
-    // Update treatment current aligner number
-    const treatment = await this.getTreatmentByPatient(patientId)
-    if (treatment) {
-      await this.updateTreatment(treatment.id, {
-        currentAlignerNumber: newAligner.number,
-      })
-    }
-
-    return updatedAligner
+    return mapAligner(res.confirmedAligner)
   }
 }
 
-// Export singleton instance
-// In the future, this can be replaced with an API-based implementation
-export const alignerService: IAlignerService = new AlignerServiceMock()
+export const alignerService: IAlignerService = new AlignerServiceAPI()
 
-// Future API implementation example:
-// export const alignerService: IAlignerService = new AlignerServiceAPI(baseURL)
 
 

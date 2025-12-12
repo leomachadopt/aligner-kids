@@ -16,10 +16,12 @@ const router = Router()
 router.get('/stories/preferences/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
+    const { treatmentId } = req.query
     const result = await db
       .select()
       .from(story_preferences)
       .where(eq(story_preferences.patientId, patientId))
+      .where(treatmentId ? eq(story_preferences.treatmentId, treatmentId as string) : undefined)
 
     if (result.length === 0) {
       return res.status(404).json({ error: 'Story preferences not found' })
@@ -35,7 +37,22 @@ router.get('/stories/preferences/patient/:patientId', async (req, res) => {
 // Create or update story preferences
 router.post('/stories/preferences', async (req, res) => {
   try {
-    const { patientId } = req.body
+    const {
+      patientId,
+      treatmentId,
+      environment,
+      mainCharacter,
+      mainCharacterName,
+      sidekick,
+      companion, // compat field from frontend
+      companionName,
+      theme,
+      ageGroup,
+    } = req.body
+
+    if (!patientId || !environment || !mainCharacter || !theme || !ageGroup) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes em story preferences' })
+    }
 
     // Check if preferences already exist
     const existing = await db
@@ -48,7 +65,13 @@ router.post('/stories/preferences', async (req, res) => {
       const updated = await db
         .update(story_preferences)
         .set({
-          ...req.body,
+          treatmentId: treatmentId || null,
+          environment,
+          mainCharacter,
+          mainCharacterName,
+          sidekick: sidekick || companion || null,
+          theme,
+          ageGroup,
           updatedAt: new Date(),
         })
         .where(eq(story_preferences.patientId, patientId))
@@ -61,13 +84,14 @@ router.post('/stories/preferences', async (req, res) => {
         .insert(story_preferences)
         .values({
           id: `pref-${Date.now()}`,
-          patientId: req.body.patientId,
-          environment: req.body.environment,
-          mainCharacter: req.body.mainCharacter,
-          mainCharacterName: req.body.mainCharacterName,
-          theme: req.body.theme,
-          companion: req.body.companion,
-          companionName: req.body.companionName,
+          patientId,
+          treatmentId: treatmentId || null,
+          environment,
+          mainCharacter,
+          mainCharacterName,
+          sidekick: sidekick || companion || null,
+          theme,
+          ageGroup,
         })
         .returning()
 
@@ -87,13 +111,16 @@ router.post('/stories/preferences', async (req, res) => {
 router.get('/stories/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
+    const { treatmentId } = req.query
     const result = await db
       .select()
       .from(stories)
       .where(eq(stories.patientId, patientId))
+      .where(treatmentId ? eq(stories.treatmentId, treatmentId as string) : undefined)
 
     if (result.length === 0) {
-      return res.status(404).json({ error: 'Story not found' })
+      // Retorna 200 com story null para evitar 404 ruidoso no front
+      return res.json({ story: null })
     }
 
     res.json({ story: result[0] })
@@ -111,6 +138,7 @@ router.post('/stories', async (req, res) => {
       .values({
         id: `story-${Date.now()}`,
         patientId: req.body.patientId,
+        treatmentId: req.body.treatmentId || null,
         title: req.body.title,
         description: req.body.description,
         totalChapters: req.body.totalChapters,
@@ -196,6 +224,7 @@ router.post('/chapters', async (req, res) => {
       .values({
         id: `chapter-${Date.now()}`,
         storyId: req.body.storyId,
+        treatmentId: req.body.treatmentId || null,
         chapterNumber: req.body.chapterNumber,
         title: req.body.title,
         content: req.body.content,

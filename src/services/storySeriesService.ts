@@ -72,7 +72,7 @@ export class StorySeriesService {
   }
 
   /**
-   * Cria história completa para um paciente
+   * Cria história completa para um paciente, gerando capítulos em lotes (5 em 5)
    */
   static async createStorySeries(
     patientId: string,
@@ -80,21 +80,25 @@ export class StorySeriesService {
     onProgress?: (message: string, progress: number) => void,
   ): Promise<StorySeries> {
     try {
-      // Verificar se já tem história
       if (this.hasStory(patientId)) {
         throw new Error('Paciente já possui uma história')
       }
 
-      const startTime = Date.now()
+      if (!input.totalAligners || input.totalAligners < 1) {
+        throw new Error('Tratamento sem alinhadores não permite gerar história')
+      }
 
-      // Criar série
+      const startTime = Date.now()
       const seriesId = `series-${Date.now()}`
+      const totalChapters = input.totalAligners
+      const BATCH_SIZE = 5
+
       const series: StorySeries = {
         id: seriesId,
         patientId,
-        title: '', // Será preenchido após geração
-        totalChapters: input.totalAligners,
-        totalAligners: input.totalAligners,
+        title: '', // definido ao gerar o primeiro lote
+        totalChapters,
+        totalAligners: totalChapters,
         preferences: input.preferences,
         isComplete: false,
         generationStartedAt: new Date().toISOString(),
@@ -102,57 +106,73 @@ export class StorySeriesService {
         updatedAt: new Date().toISOString(),
       }
 
-      // Salvar série
       this.saveSeries(series)
+      onProgress?.('Criando sua história mágica em lotes...', 5)
 
-      // PASSO 1: Gerar história completa com OpenAI
-      onProgress?.('Criando sua história mágica...', 10)
-      console.log('📖 Gerando história completa...')
+      const generatedChapters: StoryChapterV3[] = []
+      let storyTitle = ''
+      let generatedCount = 0
 
-      const storyData = await StorySeriesAIService.generateFullStory(
-        input.preferences,
-        input.totalAligners,
-      )
+      const totalBatches = Math.ceil(totalChapters / BATCH_SIZE)
 
-      // Atualizar título da série
-      series.title = storyData.storyTitle
-      this.saveSeries(series)
-
-      onProgress?.('História criada! Gerando narrações...', 30)
-
-      // PASSO 2: Gerar áudio para cada capítulo
-      const chapters: StoryChapterV3[] = []
-      const totalChapters = storyData.chapters.length
-
-      for (let i = 0; i < storyData.chapters.length; i++) {
-        const chapterData = storyData.chapters[i]
-        const progress = 30 + ((i + 1) / totalChapters) * 60
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startChapter = batchIndex * BATCH_SIZE + 1
+        const endChapter = Math.min(startChapter + BATCH_SIZE - 1, totalChapters)
 
         onProgress?.(
-          `Narrando capítulo ${i + 1} de ${totalChapters}...`,
-          progress,
+          `Gerando capítulos ${startChapter}-${endChapter}...`,
+          5 + (generatedCount / totalChapters) * 35,
         )
 
-        console.log(`🎙️ Gerando áudio do capítulo ${i + 1}/${totalChapters}...`)
+        const batch = await StorySeriesAIService.generateChapterBatch(
+          input.preferences,
+          totalChapters,
+          startChapter,
+          endChapter,
+          generatedChapters.map((ch) => ({
+            chapterNumber: ch.chapterNumber,
+            title: ch.title,
+            content: ch.content,
+          })),
+          storyTitle || undefined,
+        )
 
-        try {
-          // Gerar áudio
-          const audio = await OpenAITTSService.convertChapterToAudio(
-            chapterData.title,
-            chapterData.content,
+        if (!storyTitle) {
+          storyTitle = batch.storyTitle
+          series.title = storyTitle
+          this.saveSeries(series)
+        }
+
+        const tokensPerChapter =
+          batch.chapters.length > 0
+            ? Math.floor((batch.totalTokens || 0) / batch.chapters.length)
+            : 0
+
+        for (let i = 0; i < batch.chapters.length; i++) {
+          const chapterData = batch.chapters[i]
+          const progressTextGen = 5 + ((generatedCount + i) / totalChapters) * 35
+          onProgress?.(
+            `Capítulo ${chapterData.chapterNumber} pronto! Gerando narração...`,
+            progressTextGen,
           )
 
-          // Criar blob URL
-          const audioBlob = OpenAITTSService.createAudioBlobUrl(
-            audio.audioData,
-          )
+          let audioBlob: string | undefined
+          let audioDuration: number | undefined
 
-          // Estimar duração
-          const audioDuration = OpenAITTSService.estimateAudioDuration(
-            chapterData.content,
-          )
+          try {
+            const audio = await OpenAITTSService.convertChapterToAudio(
+              chapterData.title,
+              chapterData.content,
+            )
+            audioBlob = OpenAITTSService.createAudioBlobUrl(audio.audioData)
+            audioDuration = OpenAITTSService.estimateAudioDuration(chapterData.content)
+          } catch (audioError) {
+            console.warn(
+              `⚠️ Erro ao gerar áudio do capítulo ${chapterData.chapterNumber}, continuando sem áudio...`,
+              audioError,
+            )
+          }
 
-          // Criar capítulo
           const chapter: StoryChapterV3 = {
             id: `chapter-${seriesId}-${chapterData.chapterNumber}`,
             storySeriesId: seriesId,
@@ -164,7 +184,7 @@ export class StorySeriesService {
             wordCount: chapterData.wordCount,
             estimatedReadingTime: Math.ceil(chapterData.wordCount / 150),
             modelUsed: 'gpt-4o-mini',
-            tokensUsed: Math.floor(storyData.totalTokens / totalChapters),
+            tokensUsed: tokensPerChapter,
             audioUrl: audioBlob,
             audioDurationSeconds: audioDuration,
             isRead: false,
@@ -174,49 +194,31 @@ export class StorySeriesService {
             updatedAt: new Date().toISOString(),
           }
 
-          chapters.push(chapter)
-        } catch (audioError) {
-          console.warn(
-            `⚠️ Erro ao gerar áudio do capítulo ${i + 1}, continuando sem áudio...`,
-            audioError,
+          generatedChapters.push(chapter)
+          generatedCount++
+
+          onProgress?.(
+            `Capítulo ${chapterData.chapterNumber} gerado`,
+            40 + (generatedCount / totalChapters) * 55,
           )
-
-          // Criar capítulo sem áudio
-          const chapter: StoryChapterV3 = {
-            id: `chapter-${seriesId}-${chapterData.chapterNumber}`,
-            storySeriesId: seriesId,
-            patientId,
-            chapterNumber: chapterData.chapterNumber,
-            requiredAlignerNumber: chapterData.chapterNumber,
-            title: chapterData.title,
-            content: chapterData.content,
-            wordCount: chapterData.wordCount,
-            estimatedReadingTime: Math.ceil(chapterData.wordCount / 150),
-            modelUsed: 'gpt-4o-mini',
-            isRead: false,
-            readCount: 0,
-            liked: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-
-          chapters.push(chapter)
         }
       }
 
-      // Salvar capítulos
-      this.saveChapters(chapters)
+      // Salvar capítulos (preservando outros pacientes, se houver)
+      const allChapters = this.getAllChapters()
+      const remaining = allChapters.filter((c) => c.storySeriesId !== seriesId)
+      this.saveChapters([...remaining, ...generatedChapters])
 
       // Finalizar série
       series.isComplete = true
       series.generationCompletedAt = new Date().toISOString()
+      series.updatedAt = new Date().toISOString()
       this.saveSeries(series)
 
       const totalTime = Date.now() - startTime
-
-      console.log('✅ História completa gerada!', {
+      console.log('✅ História gerada em lotes!', {
         seriesId,
-        chapters: chapters.length,
+        chapters: generatedChapters.length,
         totalTimeMs: totalTime,
       })
 

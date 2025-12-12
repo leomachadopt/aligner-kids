@@ -81,10 +81,6 @@ const StorageStatus = () => {
         count: getCount('mission_templates'),
         size: getSize('mission_templates'),
       },
-      session: {
-        exists: !!localStorage.getItem('auth_session'),
-        size: getSize('auth_session'),
-      },
       totalSize: Object.keys(localStorage).reduce((sum, key) => {
         return sum + (localStorage.getItem(key)?.length || 0)
       }, 0),

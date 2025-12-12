@@ -24,7 +24,8 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await db.select().from(clinics).where(eq(clinics.id, req.params.id))
     if (result.length === 0) {
-      return res.status(404).json({ error: 'Clinic not found' })
+      // Evita 404 ruidoso no front; retorna clinic null
+      return res.json({ clinic: null })
     }
     res.json({ clinic: result[0] })
   } catch (error) {

@@ -21,7 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import type { StoryChapterV3 } from '@/types/story'
-import { StorySeriesService } from '@/services/storySeriesService'
+import { StorySeriesService as StorySeriesApiService } from '@/services/storyService.v2'
 import { AudioPlayer } from '@/components/AudioPlayer'
 import { toast } from 'sonner'
 import { Celebration } from '@/components/Confetti'
@@ -43,44 +43,49 @@ const StoryReader = () => {
     loadChapter()
   }, [storyId])
 
-  const loadChapter = () => {
+  const loadChapter = async () => {
     if (!storyId) {
       toast.error('Capítulo não especificado!')
       navigate('/my-story')
       return
     }
 
-    // Buscar capítulo do serviço
-    const loadedChapter = StorySeriesService.getChapter(storyId)
+    try {
+      const loadedChapter = await StorySeriesApiService.getChapter(storyId)
 
-    if (!loadedChapter) {
-      toast.error('Capítulo não encontrado!')
+      if (!loadedChapter) {
+        toast.error('Capítulo não encontrado!')
+        navigate('/my-story')
+        return
+      }
+
+      // Buscar todos os capítulos da série para navegação
+      const series = await StorySeriesApiService.getPatientSeries(loadedChapter.patientId)
+      if (series) {
+        const seriesChapters = await StorySeriesApiService.getSeriesChapters(series.id)
+        setAllChapters(seriesChapters)
+      }
+
+      setChapter(loadedChapter)
+      setLiked(loadedChapter.liked || false)
+
+      await StorySeriesApiService.markChapterAsRead(storyId)
+    } catch (error) {
+      console.error('Erro ao carregar capítulo:', error)
+      toast.error('Erro ao carregar capítulo')
       navigate('/my-story')
-      return
     }
-
-    // Buscar todos os capítulos da série para navegação
-    const series = StorySeriesService.getPatientSeries(loadedChapter.patientId)
-    if (series) {
-      const seriesChapters = StorySeriesService.getSeriesChapters(series.id)
-      setAllChapters(seriesChapters)
-    }
-
-    setChapter(loadedChapter)
-    setLiked(loadedChapter.liked)
-
-    // Marcar como lido
-    StorySeriesService.markChapterAsRead(storyId)
   }
 
   // ============================================
   // AÇÕES
   // ============================================
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!chapter) return
 
-    const newLiked = StorySeriesService.toggleChapterLike(chapter.id)
+    // Ainda não há endpoint de like; alterna localmente
+    const newLiked = !liked
     setLiked(newLiked)
 
     if (newLiked) {

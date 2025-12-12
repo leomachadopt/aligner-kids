@@ -34,17 +34,15 @@ const ClinicianDashboard = () => {
       }
 
       try {
-        // Buscar pacientes da clínica do ortodontista
-        const clinicPatients = AuthService.getUsersByClinic(user.clinicId)
+        // Buscar pacientes da clínica do ortodontista (versão assíncrona)
+        const clinicPatients = await AuthService.getUsersByClinicAsync(user.clinicId)
         setPatients(clinicPatients)
 
         const allAligners: Aligner[] = []
         const allTreatments: Treatment[] = []
 
         for (const patient of clinicPatients) {
-          const patientAligners = await alignerService.getAlignersByPatient(
-            patient.id,
-          )
+          const patientAligners = await alignerService.getAlignersByPatient(patient.id)
           const treatment = await alignerService.getTreatmentByPatient(patient.id)
 
           allAligners.push(...patientAligners)
@@ -274,5 +272,6 @@ const ClinicianDashboard = () => {
 }
 
 export default ClinicianDashboard
+
 
 

@@ -11,33 +11,53 @@ import { Progress } from '@/components/ui/progress'
 import { Lock, Play, Check, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { StorySeries, StoryChapterV3 } from '@/types/story'
-import { StorySeriesService } from '@/services/storySeriesService'
-import { useCurrentAligner } from '@/context/AlignerContext'
+import { StorySeriesService as StorySeriesApiService } from '@/services/storyService.v2'
+import { useCurrentAligner, useTreatment } from '@/context/AlignerContext'
+import { useAuth } from '@/context/AuthContext'
 
 const MyStory = () => {
   const navigate = useNavigate()
   const currentAligner = useCurrentAligner()
+  const treatment = useTreatment()
+  const { user } = useAuth()
   const [series, setSeries] = useState<StorySeries | null>(null)
   const [chapters, setChapters] = useState<StoryChapterV3[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const currentAlignerNumber = currentAligner?.number || 1
-  const patientId = 'current-patient' // TODO: Pegar do contexto de auth
+  const patientId = user?.id
 
   useEffect(() => {
-    loadStory()
-  }, [])
-
-  const loadStory = () => {
-    const patientSeries = StorySeriesService.getPatientSeries(patientId)
-    if (!patientSeries) {
-      navigate('/gamification')
-      return
+    const loadStory = async () => {
+      if (!patientId) {
+        setIsLoading(false)
+        navigate('/gamification')
+        return
+      }
+      try {
+        const patientSeries = await StorySeriesApiService.getPatientSeries(
+          patientId,
+          treatment?.id,
+        )
+        if (!patientSeries) {
+          navigate('/gamification')
+          return
+        }
+        setSeries(patientSeries)
+        const seriesChapters = await StorySeriesApiService.getSeriesChapters(
+          patientSeries.id,
+        )
+        setChapters(seriesChapters)
+      } catch (error) {
+        console.error('Erro ao carregar história:', error)
+        navigate('/gamification')
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setSeries(patientSeries)
-    const seriesChapters = StorySeriesService.getSeriesChapters(patientSeries.id)
-    setChapters(seriesChapters)
-  }
+    loadStory()
+  }, [patientId, treatment?.id, navigate])
 
   const handleChapterClick = (chapter: StoryChapterV3) => {
     if (chapter.requiredAlignerNumber <= currentAlignerNumber) {
@@ -45,9 +65,16 @@ const MyStory = () => {
     }
   }
 
-  if (!series) {
+  if (isLoading || !series) {
     return <div>Carregando...</div>
   }
+
+  const env = series.preferences?.environment || 'N/A'
+  const mainChar =
+    series.preferences?.mainCharacterName ||
+    series.preferences?.mainCharacter ||
+    'Personagem'
+  const theme = series.preferences?.theme || 'Tema'
 
   const unlockedCount = chapters.filter(
     (ch) => ch.requiredAlignerNumber <= currentAlignerNumber
@@ -66,13 +93,13 @@ const MyStory = () => {
           <CardTitle className="font-display text-3xl">{series.title}</CardTitle>
           <div className="flex flex-wrap gap-2 mt-4 text-white/90">
             <Badge variant="secondary" className="bg-white/20">
-              {series.preferences.environment}
+              {env}
             </Badge>
             <Badge variant="secondary" className="bg-white/20">
-              {series.preferences.mainCharacterName || series.preferences.mainCharacter}
+              {mainChar}
             </Badge>
             <Badge variant="secondary" className="bg-white/20">
-              {series.preferences.theme}
+              {theme}
             </Badge>
           </div>
         </CardHeader>

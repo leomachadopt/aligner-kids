@@ -69,10 +69,10 @@ export function getDefaultChapterMapping(
   totalAligners: number,
 ): StoryChapter[] {
   const chapters: StoryChapter[] = []
-  const chaptersPerAligner = Math.ceil(totalAligners / 10) // ~10 capítulos para todo o tratamento
+  const totalChapters = Math.max(1, totalAligners) // 1 capítulo por alinhador
 
-  for (let i = 1; i <= 10; i++) {
-    const requiredAligner = Math.ceil((i / 10) * totalAligners)
+  for (let i = 1; i <= totalChapters; i++) {
+    const requiredAligner = i
     chapters.push({
       id: `chapter-${i}`,
       chapterNumber: i,
@@ -85,5 +85,6 @@ export function getDefaultChapterMapping(
 
   return chapters
 }
+
 
 

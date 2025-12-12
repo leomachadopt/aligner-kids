@@ -40,36 +40,41 @@ export const AlignerProvider = ({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshAligners = useCallback(async () => {
-    try {
-      setError(null)
-      const patientAligners = await alignerService.getAlignersByPatient(
-        patientId,
-      )
-      setAligners(patientAligners)
-      const current = await alignerService.getCurrentAligner(patientId)
-      setCurrentAligner(current)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar alinhadores')
-    }
-  }, [patientId])
-
   const refreshTreatment = useCallback(async () => {
     try {
       setError(null)
-      const patientTreatment = await alignerService.getTreatmentByPatient(
-        patientId,
-      )
+      const patientTreatment = await alignerService.getTreatmentByPatient(patientId)
       setTreatment(patientTreatment)
+      return patientTreatment
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar tratamento')
+      return null
     }
   }, [patientId])
+
+  const refreshAligners = useCallback(
+    async (treatmentId?: string) => {
+      try {
+        setError(null)
+        const patientAligners = await alignerService.getAlignersByPatient(
+          patientId,
+          treatmentId,
+        )
+        setAligners(patientAligners)
+        const current = await alignerService.getCurrentAligner(patientId, treatmentId)
+        setCurrentAligner(current)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar alinhadores')
+      }
+    },
+    [patientId],
+  )
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
-      await Promise.all([refreshAligners(), refreshTreatment()])
+      const currentTreatment = await refreshTreatment()
+      await refreshAligners(currentTreatment?.id)
       setLoading(false)
     }
     loadData()
@@ -80,7 +85,7 @@ export const AlignerProvider = ({
       try {
         setError(null)
         const newAligner = await alignerService.createAligner(alignerData)
-        await refreshAligners()
+        await refreshAligners(treatment?.id)
         return newAligner
       } catch (err) {
         const errorMessage =
@@ -97,7 +102,7 @@ export const AlignerProvider = ({
       try {
         setError(null)
         const updated = await alignerService.updateAligner(id, updates)
-        await refreshAligners()
+        await refreshAligners(treatment?.id)
         return updated
       } catch (err) {
         const errorMessage =
@@ -113,11 +118,9 @@ export const AlignerProvider = ({
     async (alignerId: string) => {
       try {
         setError(null)
-        const updated = await alignerService.confirmAlignerChange(
-          patientId,
-          alignerId,
-        )
-        await Promise.all([refreshAligners(), refreshTreatment()])
+        const updated = await alignerService.confirmAlignerChange(patientId, alignerId)
+        const t = await refreshTreatment()
+        await refreshAligners(t?.id)
         return updated
       } catch (err) {
         const errorMessage =
@@ -171,5 +174,6 @@ export const useTreatment = () => {
   const { treatment } = useAligners()
   return treatment
 }
+
 
 

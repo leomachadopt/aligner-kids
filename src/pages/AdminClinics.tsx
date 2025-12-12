@@ -168,7 +168,7 @@ const AdminClinics = () => {
       // 2. Criar o ortodontista vinculado à clínica (sem criar sessão)
       try {
         const orthodontistResponse = await AuthService.register({
-          email: orthodontistData.email,
+          email: orthodontistData.email.trim().toLowerCase(),
           password: orthodontistData.password,
           confirmPassword: orthodontistData.confirmPassword,
           role: 'orthodontist',
@@ -189,9 +189,17 @@ const AdminClinics = () => {
         toast.success('Clínica e ortodontista criados e aprovados com sucesso!')
         toast.info(`Email do ortodontista: ${orthodontistData.email}`)
       } catch (orthodontistError) {
-        // Se falhar ao criar ortodontista, avisar mas manter clínica
-        toast.warning('Clínica criada, mas houve erro ao criar o ortodontista')
+        // Se falhar ao criar ortodontista, desfaz a clínica criada para evitar órfãos
+        try {
+          await ClinicService.deleteClinic(newClinic.id)
+          toast.error('Erro ao criar ortodontista. Clínica revertida.')
+        } catch (rollbackError) {
+          console.error('Erro ao reverter clínica após falha do ortodontista:', rollbackError)
+          toast.warning('Clínica criada, mas não foi possível criar o ortodontista (e não deu para reverter).')
+        }
+
         console.error('Erro ao criar ortodontista:', orthodontistError)
+        return
       }
 
       setIsCreateOpen(false)

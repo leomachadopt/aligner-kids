@@ -83,7 +83,10 @@ export const AlignerForm = ({
                 <Input
                   type="number"
                   {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10)
+                    field.onChange(Number.isNaN(parsed) ? 0 : parsed)
+                  }}
                   disabled={!!aligner}
                 />
               </FormControl>
@@ -124,7 +127,10 @@ export const AlignerForm = ({
                 <Input
                   type="number"
                   {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10)
+                    field.onChange(Number.isNaN(parsed) ? 0 : parsed)
+                  }}
                 />
               </FormControl>
               <FormDescription>
@@ -146,7 +152,10 @@ export const AlignerForm = ({
                   type="number"
                   step="0.5"
                   {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    const parsed = parseFloat(e.target.value)
+                    field.onChange(Number.isNaN(parsed) ? 0 : parsed)
+                  }}
                 />
               </FormControl>
               <FormDescription>
@@ -189,5 +198,6 @@ export const AlignerForm = ({
     </Form>
   )
 }
+
 
 

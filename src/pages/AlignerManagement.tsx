@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlignerForm, type AlignerFormValues } from '@/components/AlignerForm'
@@ -10,11 +10,14 @@ import type { Aligner, Treatment } from '@/types/aligner'
 import type { User } from '@/types/user'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { format } from 'date-fns'
 
 const AlignerManagement = () => {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const patientIdParam = searchParams.get('patientId')
   const { user: currentUser } = useAuth()
+  const [selectedTreatmentId, setSelectedTreatmentId] = useState<string>('')
   const [selectedPatientId, setSelectedPatientId] = useState(
     patientIdParam || '',
   )
@@ -30,12 +33,18 @@ const AlignerManagement = () => {
       if (!currentUser?.clinicId) return
 
       try {
-        // Buscar pacientes reais da clínica
-        const allUsers = AuthService.getUsersByClinic(currentUser.clinicId)
+        // Buscar pacientes reais da clínica (async)
+        const allUsers = await AuthService.getUsersByClinicAsync(currentUser.clinicId)
         const clinicPatients = allUsers.filter(
           (u) => u.role === 'patient' || u.role === 'child-patient'
         )
         setPatients(clinicPatients)
+
+        // Se veio um patientId na URL e não está selecionado ainda, setar
+        if (patientIdParam && !selectedPatientId) {
+          const exists = clinicPatients.some((p) => p.id === patientIdParam)
+          if (exists) setSelectedPatientId(patientIdParam)
+        }
 
         const allTreatments: Treatment[] = []
         const allAligners: Aligner[] = []
@@ -44,6 +53,7 @@ const AlignerManagement = () => {
           const treatment = await alignerService.getTreatmentByPatient(patient.id)
           const patientAligners = await alignerService.getAlignersByPatient(
             patient.id,
+            treatment?.id,
           )
 
           if (treatment) {
@@ -54,6 +64,12 @@ const AlignerManagement = () => {
 
         setTreatments(allTreatments)
         setAligners(allAligners)
+
+        // Selecionar tratamento do paciente selecionado, se existir
+        if (!selectedTreatmentId && allTreatments.length > 0) {
+          const t = allTreatments.find((t) => t.patientId === (patientIdParam || selectedPatientId))
+          if (t) setSelectedTreatmentId(t.id)
+        }
       } catch (error) {
         console.error('Error loading data:', error)
         toast({
@@ -84,7 +100,7 @@ const AlignerManagement = () => {
         setEditingAligner(null)
       } else {
         // Create new aligner
-        let treatment = treatments.find((t) => t.patientId === data.patientId)
+        let treatment = treatments.find((t) => t.id === selectedTreatmentId)
 
         // Se não existe tratamento, criar automaticamente
         if (!treatment) {
@@ -96,14 +112,15 @@ const AlignerManagement = () => {
           // Criar tratamento inicial (assumindo que terá múltiplos alinhadores)
           treatment = await alignerService.createTreatment({
             patientId: data.patientId,
-            startDate: new Date().toISOString(),
-            totalAligners: data.number, // Será atualizado conforme novos alinhadores forem adicionados
-            currentAlignerNumber: data.number === 1 ? 1 : 0, // Se for o alinhador #1, já marcar como atual
+            startDate: format(new Date(), 'yyyy-MM-dd'),
+            totalAligners: data.number, // inicia com o total igual ao número cadastrado
+            currentAlignerNumber: 1, // progresso inicia no 1
             status: 'active',
           })
 
           // Atualizar lista de tratamentos
           setTreatments([...treatments, treatment])
+          setSelectedTreatmentId(treatment.id)
 
           toast({
             title: 'Tratamento criado',
@@ -119,8 +136,9 @@ const AlignerManagement = () => {
         await alignerService.createAligner({
           number: data.number,
           patientId: data.patientId,
-          startDate: new Date().toISOString(),
-          expectedEndDate: expectedEndDate.toISOString(),
+          treatmentId: treatment.id,
+          startDate: format(new Date(), 'yyyy-MM-dd'),
+          expectedEndDate: format(expectedEndDate, 'yyyy-MM-dd'),
           actualEndDate: null,
           status: data.number === 1 ? 'active' : 'pending',
           changeInterval: data.changeInterval,
@@ -142,11 +160,19 @@ const AlignerManagement = () => {
 
         // Reset form
         setSelectedPatientId('')
+
+        // Fechar a tela voltando para os detalhes do paciente, quando houver paciente selecionado
+        const targetPatientId = data.patientId || patientIdParam
+        if (targetPatientId) {
+          navigate(`/patient/${targetPatientId}`)
+          return
+        }
       }
 
       // Reload data
       const patientAligners = await alignerService.getAlignersByPatient(
         selectedPatientId || patientIdParam || '',
+        selectedTreatmentId || undefined,
       )
       setAligners(patientAligners)
 
@@ -329,5 +355,6 @@ const AlignerManagement = () => {
 }
 
 export default AlignerManagement
+
 
 
