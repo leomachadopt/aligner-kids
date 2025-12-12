@@ -68,7 +68,43 @@ router.post('/treatments', async (req, res) => {
       })
       .returning()
 
-    res.json({ treatment: newTreatment[0] })
+    const treatment = newTreatment[0]
+
+    // ✅ CRIAR AUTOMATICAMENTE TODOS OS ALINHADORES
+    const daysPerAligner = req.body.daysPerAligner || 14
+    const alignersToCreate = []
+
+    for (let i = 1; i <= req.body.totalAligners; i++) {
+      const alignerStartDate = new Date(startDate)
+      alignerStartDate.setDate(alignerStartDate.getDate() + (i - 1) * daysPerAligner)
+
+      const alignerEndDate = new Date(alignerStartDate)
+      alignerEndDate.setDate(alignerEndDate.getDate() + daysPerAligner - 1)
+
+      alignersToCreate.push({
+        id: `aligner-${Date.now()}-${i}`,
+        patientId: req.body.patientId,
+        treatmentId: treatment.id,
+        alignerNumber: i,
+        startDate: alignerStartDate.toISOString().slice(0, 10),
+        endDate: alignerEndDate.toISOString().slice(0, 10),
+        actualEndDate: null,
+        status: i === 1 ? 'active' : 'pending',
+        usageHours: 0,
+        targetHoursPerDay: req.body.targetHoursPerDay || 22,
+        notes: null,
+      })
+
+      // Pequeno delay para garantir IDs únicos
+      await new Promise(resolve => setTimeout(resolve, 5))
+    }
+
+    // Inserir todos os alinhadores
+    await db.insert(aligners).values(alignersToCreate)
+
+    console.log(`✅ Tratamento criado com ${req.body.totalAligners} alinhadores`)
+
+    res.json({ treatment })
   } catch (error) {
     console.error('Error creating treatment:', error)
     res.status(500).json({ error: 'Failed to create treatment' })

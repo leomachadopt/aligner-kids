@@ -10,7 +10,6 @@ import type {
   StorySeriesInput,
 } from '@/types/story'
 import { apiClient } from '@/utils/apiClient'
-import { StorySeriesAIService } from './storySeriesAI'
 import { OpenAITTSService } from './openaiTTS'
 
 export class StorySeriesService {
@@ -116,7 +115,7 @@ export class StorySeriesService {
   }
 
   /**
-   * Cria história completa para um paciente
+   * Cria história completa para um paciente (usando backend)
    */
   static async createStorySeries(
     patientId: string,
@@ -131,104 +130,29 @@ export class StorySeriesService {
         throw new Error('Paciente já possui uma história')
       }
 
-      const startTime = Date.now()
-
       onProgress?.('🎬 Iniciando geração da história...', 0)
 
-      // Salvar preferências
-      await this.savePreferences(patientId, input.preferences, treatmentId)
-
-      // Criar série com título provisório
-      const seriesResponse = await apiClient.post<{ story: StorySeries }>('/stories', {
+      // ✅ CHAMADA SEGURA AO BACKEND (OpenAI API roda no servidor)
+      const response = await apiClient.post<{
+        success: boolean
+        story: StorySeries
+        chaptersGenerated: number
+      }>('/stories/generate', {
         patientId,
         treatmentId,
-        title: 'História Mágica',
-        description: '',
-        totalChapters: input.totalAligners,
+        preferences: input.preferences,
+        totalAligners: input.totalAligners,
       })
 
-      let series = seriesResponse.story
-      const allChapters: Array<{
-        chapterNumber: number
-        title: string
-        content: string
-      }> = []
-
-      const BATCH_SIZE = 5
-      const totalChapters = input.totalAligners
-      const totalBatches = Math.ceil(totalChapters / BATCH_SIZE)
-      let storyTitle = ''
-
-      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-        const startChapter = batchIndex * BATCH_SIZE + 1
-        const endChapter = Math.min(startChapter + BATCH_SIZE - 1, totalChapters)
-
-        onProgress?.(
-          `✨ Gerando capítulos ${startChapter}-${endChapter}...`,
-          5 + (allChapters.length / totalChapters) * 85,
-        )
-
-        const batch = await StorySeriesAIService.generateChapterBatch(
-          input.preferences,
-          totalChapters,
-          startChapter,
-          endChapter,
-          allChapters.map((ch) => ({
-            chapterNumber: ch.chapterNumber,
-            title: ch.title,
-            content: ch.content,
-          })),
-          storyTitle || undefined,
-        )
-
-        if (!storyTitle && batch.storyTitle) {
-          storyTitle = batch.storyTitle
-          // Atualizar título da série
-          const updatedSeries = await apiClient.put<{ story: StorySeries }>(
-            `/stories/${series.id}`,
-            { title: storyTitle },
-          )
-          series = updatedSeries.story
-        }
-
-        // Salvar capítulos do lote
-        for (const chapterData of batch.chapters) {
-          await apiClient.post('/chapters', {
-            storyId: series.id,
-            chapterNumber: chapterData.chapterNumber,
-            title: chapterData.title,
-            content: chapterData.content,
-            requiredAlignerNumber: chapterData.requiredAlignerNumber,
-            isUnlocked: chapterData.requiredAlignerNumber === 1,
-            isRead: false,
-          })
-          allChapters.push({
-            chapterNumber: chapterData.chapterNumber,
-            title: chapterData.title,
-            content: chapterData.content,
-          })
-
-          const progress = 5 + (allChapters.length / totalChapters) * 85
-          onProgress?.(
-            `📖 Capítulo ${chapterData.chapterNumber}/${totalChapters} salvo...`,
-            progress,
-          )
-        }
+      if (!response.success) {
+        throw new Error('Erro ao gerar história no servidor')
       }
-
-      // Finalizar série
-      await apiClient.put(`/stories/${series.id}`, {
-        isComplete: true,
-        generationCompletedAt: new Date().toISOString(),
-        title: storyTitle || series.title,
-      })
 
       onProgress?.('✅ História criada com sucesso!', 100)
 
-      const endTime = Date.now()
-      console.log(`⏱️  Geração em lotes concluída em ${Math.round((endTime - startTime) / 1000)}s`)
+      console.log(`✅ História gerada: ${response.chaptersGenerated} capítulos`)
 
-      return series
+      return response.story
     } catch (error) {
       console.error('❌ Erro ao criar história:', error)
       throw error

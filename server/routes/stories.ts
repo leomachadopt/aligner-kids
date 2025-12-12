@@ -5,6 +5,7 @@
 import { Router } from 'express'
 import { db, stories, story_chapters, story_preferences } from '../db/index'
 import { eq, and } from 'drizzle-orm'
+import { StoryGenerationService } from '../services/storyGenerationService'
 
 const router = Router()
 
@@ -285,6 +286,157 @@ router.post('/chapters/:id/read', async (req, res) => {
   } catch (error) {
     console.error('Error marking chapter as read:', error)
     res.status(500).json({ error: 'Failed to mark chapter as read' })
+  }
+})
+
+// ============================================
+// STORY GENERATION (Backend com OpenAI)
+// ============================================
+
+/**
+ * Gerar história completa para um paciente
+ * POST /stories/generate
+ */
+router.post('/stories/generate', async (req, res) => {
+  try {
+    const { patientId, treatmentId, preferences, totalAligners } = req.body
+
+    if (!patientId || !preferences || !totalAligners) {
+      return res.status(400).json({ error: 'patientId, preferences e totalAligners são obrigatórios' })
+    }
+
+    console.log(`🎨 Gerando história para paciente ${patientId}`)
+
+    // 1. Salvar preferências
+    const prefExists = await db
+      .select()
+      .from(story_preferences)
+      .where(eq(story_preferences.patientId, patientId))
+
+    if (prefExists.length > 0) {
+      await db
+        .update(story_preferences)
+        .set({
+          environment: preferences.environment,
+          mainCharacter: preferences.mainCharacter,
+          mainCharacterName: preferences.mainCharacterName,
+          sidekick: preferences.sidekick,
+          theme: preferences.theme,
+          ageGroup: preferences.ageGroup,
+          updatedAt: new Date(),
+        })
+        .where(eq(story_preferences.patientId, patientId))
+    } else {
+      await db.insert(story_preferences).values({
+        id: `pref-${Date.now()}`,
+        patientId,
+        treatmentId: treatmentId || null,
+        environment: preferences.environment,
+        mainCharacter: preferences.mainCharacter,
+        mainCharacterName: preferences.mainCharacterName,
+        sidekick: preferences.sidekick,
+        theme: preferences.theme,
+        ageGroup: preferences.ageGroup,
+      })
+    }
+
+    // 2. Criar série de história
+    const seriesResponse = await db
+      .insert(stories)
+      .values({
+        id: `story-${Date.now()}`,
+        patientId,
+        treatmentId: treatmentId || null,
+        title: 'História Mágica', // Temporário
+        totalChapters: totalAligners,
+        currentChapter: 1,
+      })
+      .returning()
+
+    const series = seriesResponse[0]
+
+    // 3. Gerar capítulos em lotes
+    const BATCH_SIZE = 5
+    const totalChapters = totalAligners
+    const totalBatches = Math.ceil(totalChapters / BATCH_SIZE)
+    let storyTitle = ''
+    const allChapters: any[] = []
+
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const startChapter = batchIndex * BATCH_SIZE + 1
+      const endChapter = Math.min(startChapter + BATCH_SIZE - 1, totalChapters)
+
+      console.log(`📝 Gerando lote ${batchIndex + 1}/${totalBatches} (capítulos ${startChapter}-${endChapter})`)
+
+      const batch = await StoryGenerationService.generateChapterBatch(
+        preferences,
+        totalChapters,
+        startChapter,
+        endChapter,
+        allChapters.map((ch) => ({
+          chapterNumber: ch.chapterNumber,
+          title: ch.title,
+          content: ch.content,
+        })),
+        storyTitle || undefined
+      )
+
+      // Salvar título (primeira vez)
+      if (!storyTitle && batch.storyTitle) {
+        storyTitle = batch.storyTitle
+        await db
+          .update(stories)
+          .set({ title: storyTitle })
+          .where(eq(stories.id, series.id))
+      }
+
+      // Salvar capítulos do lote
+      for (const chapterData of batch.chapters) {
+        await db.insert(story_chapters).values({
+          id: `chapter-${Date.now()}-${chapterData.chapterNumber}`,
+          storyId: series.id,
+          treatmentId: treatmentId || null,
+          chapterNumber: chapterData.chapterNumber,
+          requiredAlignerNumber: chapterData.requiredAlignerNumber,
+          title: chapterData.title,
+          content: chapterData.content,
+          wordCount: chapterData.wordCount,
+          isUnlocked: chapterData.chapterNumber === 1, // Só o primeiro desbloqueado
+          isRead: false,
+          audioUrl: null,
+          audioGenerated: false,
+          readCount: 0,
+        })
+
+        allChapters.push(chapterData)
+
+        // Delay para IDs únicos
+        await new Promise(resolve => setTimeout(resolve, 10))
+      }
+    }
+
+    // 4. Marcar série como completa
+    await db
+      .update(stories)
+      .set({ updatedAt: new Date() })
+      .where(eq(stories.id, series.id))
+
+    console.log(`✅ História gerada com sucesso: ${storyTitle}`)
+
+    res.json({
+      success: true,
+      story: {
+        ...series,
+        title: storyTitle,
+      },
+      chaptersGenerated: allChapters.length,
+    })
+  } catch (error) {
+    console.error('❌ Erro ao gerar história:', error)
+    res.status(500).json({
+      error: 'Failed to generate story',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
   }
 })
 
