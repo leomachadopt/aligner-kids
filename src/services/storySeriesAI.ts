@@ -49,6 +49,7 @@ const TEMPERATURE = 0.8
 
 interface ChapterContent {
   chapterNumber: number
+  requiredAlignerNumber: number
   title: string
   content: string
   wordCount: number
@@ -105,13 +106,7 @@ export class StorySeriesAIService {
     const full = await this.generateFullStory(preferences, totalChapters)
     const chapters = full.chapters.map((ch, idx) => {
       onProgress?.(idx + 1)
-      return {
-        chapterNumber: ch.chapterNumber,
-        requiredAlignerNumber: ch.chapterNumber, // 1:1 com alinhador
-        title: ch.title,
-        content: ch.content,
-        wordCount: ch.wordCount,
-      }
+      return ch // ChapterContent já tem todos os campos necessários
     })
     return chapters
   }
@@ -481,7 +476,13 @@ Se o capítulo ${endChapter} for o último (${totalChapters}), encerre a histór
         const title = match[2].trim()
         const chapterContent = match[3].trim()
         const wordCount = this.countWords(chapterContent)
-        chapters.push({ chapterNumber, title, content: chapterContent, wordCount })
+        chapters.push({
+          chapterNumber,
+          requiredAlignerNumber: chapterNumber, // 1:1 com alinhador
+          title,
+          content: chapterContent,
+          wordCount
+        })
       }
 
       // Fallback: regex sem "===" delimitando
@@ -493,7 +494,13 @@ Se o capítulo ${endChapter} for o último (${totalChapters}), encerre a histór
           const title = match[2].trim()
           const chapterContent = match[3].trim()
           const wordCount = this.countWords(chapterContent)
-          chapters.push({ chapterNumber, title, content: chapterContent, wordCount })
+          chapters.push({
+            chapterNumber,
+            requiredAlignerNumber: chapterNumber, // 1:1 com alinhador
+            title,
+            content: chapterContent,
+            wordCount
+          })
         }
       }
 
