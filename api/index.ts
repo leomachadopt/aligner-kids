@@ -1,12 +1,39 @@
 /**
  * Vercel Serverless Function Entry Point
- * Wraps Express app for serverless deployment
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getApp } from '../server/app.serverless'
+import express from 'express'
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const app = getApp()
+// Create Express app
+const app = express()
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+  next()
+})
+
+// Body parser
+app.use(express.json())
+
+// Health endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy - Express in api/index.ts',
+    timestamp: new Date().toISOString(),
+    database: process.env.DATABASE_URL ? 'connected' : 'not configured'
+  })
+})
+
+// Export handler
+export default (req: VercelRequest, res: VercelResponse) => {
   return app(req as any, res as any)
 }
