@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -62,6 +69,7 @@ const PatientDetail = () => {
     guardianName: '',
     guardianCpf: '',
     guardianPhone: '',
+    preferredLanguage: 'pt-BR',
   })
 
   useEffect(() => {
@@ -155,6 +163,7 @@ const PatientDetail = () => {
         guardianName: patient.guardianName || '',
         guardianCpf: patient.guardianCpf || '',
         guardianPhone: patient.guardianPhone || '',
+        preferredLanguage: patient.preferredLanguage || 'pt-BR',
       })
       setIsEditPatientOpen(true)
     }
@@ -169,6 +178,7 @@ const PatientDetail = () => {
         email: editPatientData.email,
         phone: editPatientData.phone,
         birthDate: editPatientData.birthDate || undefined,
+        preferredLanguage: editPatientData.preferredLanguage,
       })
 
       // Recarregar dados do paciente a partir do backend
@@ -607,6 +617,33 @@ const PatientDetail = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Idioma Preferido */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Preferências</h3>
+                  <div>
+                    <Label htmlFor="edit-preferredLanguage">Idioma Preferido</Label>
+                    <Select
+                      value={editPatientData.preferredLanguage}
+                      onValueChange={(value) =>
+                        setEditPatientData({ ...editPatientData, preferredLanguage: value })
+                      }
+                    >
+                      <SelectTrigger id="edit-preferredLanguage">
+                        <SelectValue placeholder="Selecione o idioma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                        <SelectItem value="pt-PT">🇵🇹 Português (Portugal)</SelectItem>
+                        <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                        <SelectItem value="es-ES">🇪🇸 Español (España)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      As histórias e áudios serão gerados neste idioma
+                    </p>
+                  </div>
+                </div>
               </div>
             )
           })()}

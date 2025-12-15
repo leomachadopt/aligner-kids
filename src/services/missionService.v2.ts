@@ -6,10 +6,109 @@
 import type {
   PatientMission,
   PatientPoints,
+  MissionTemplate,
+  ActivatePatientMissionInput,
+  CreateMissionTemplateInput,
+  UpdateMissionTemplateInput,
 } from '@/types/mission'
 import { apiClient } from '@/utils/apiClient'
 
+function mapTemplate(apiTemplate: any): MissionTemplate {
+  return {
+    id: apiTemplate.id,
+    name: apiTemplate.name,
+    description: apiTemplate.description,
+    category: apiTemplate.category,
+    frequency: apiTemplate.frequency,
+    completionCriteria: apiTemplate.completionCriteria,
+    targetValue: apiTemplate.targetValue ?? 1,
+    basePoints: apiTemplate.basePoints ?? 0,
+    bonusPoints: apiTemplate.bonusPoints ?? 0,
+    icon: apiTemplate.iconEmoji || apiTemplate.icon || '⭐',
+    color: apiTemplate.color || '#FFD700',
+    isActiveByDefault: apiTemplate.isActiveByDefault ?? true,
+    requiresManualValidation: apiTemplate.requiresManualValidation ?? false,
+    alignerInterval: apiTemplate.alignerInterval ?? 1,
+    availableFrom: apiTemplate.availableFrom,
+    expiresAfter: apiTemplate.expiresAfter,
+    scheduledStartDate: apiTemplate.scheduledStartDate || undefined,
+    scheduledEndDate: apiTemplate.scheduledEndDate || undefined,
+    autoActivate: apiTemplate.canAutoActivate ?? true,
+    activeDaysOfWeek: apiTemplate.repeatOn || undefined,
+    repeatSchedule: (apiTemplate.repetitionType as any) || 'none',
+    isGlobal: true,
+    createdAt: apiTemplate.createdAt || new Date().toISOString(),
+    updatedAt: apiTemplate.updatedAt || new Date().toISOString(),
+  }
+}
+
+function mapPatientMission(apiMission: any): PatientMission {
+  const statusMap: Record<string, string> = {
+    active: 'in_progress',
+  }
+  return {
+    id: apiMission.id,
+    patientId: apiMission.patientId,
+    missionTemplateId: apiMission.missionTemplateId || apiMission.templateId,
+    status: (statusMap[apiMission.status] as any) || apiMission.status || 'available',
+    progress: apiMission.progress ?? 0,
+    targetValue: apiMission.targetValue ?? apiMission.target ?? 1,
+    startedAt: apiMission.startedAt || apiMission.createdAt || new Date().toISOString(),
+    completedAt: apiMission.completedAt || undefined,
+    expiresAt: apiMission.expiresAt || undefined,
+    trigger: apiMission.trigger || undefined,
+    triggerAlignerNumber: apiMission.triggerAlignerNumber || undefined,
+    triggerDaysOffset: apiMission.triggerDaysOffset || undefined,
+    autoActivated: apiMission.autoActivated ?? true,
+    pointsEarned: apiMission.pointsEarned ?? 0,
+    customPoints: apiMission.customPoints || undefined,
+    validatedBy: apiMission.validatedBy || undefined,
+    validatedAt: apiMission.validatedAt || undefined,
+    metadata: apiMission.metadata || undefined,
+    createdAt: apiMission.createdAt || new Date().toISOString(),
+    updatedAt: apiMission.updatedAt || new Date().toISOString(),
+  }
+}
+
 export class MissionService {
+  /**
+   * Templates
+   */
+  static async getAllTemplates(): Promise<MissionTemplate[]> {
+    try {
+      const response = await apiClient.get<{ templates: any[] }>(`/missions/templates`)
+      return (response.templates || []).map(mapTemplate)
+    } catch (error) {
+      console.error('Erro ao buscar templates de missão:', error)
+      return []
+    }
+  }
+
+  static async createTemplate(input: CreateMissionTemplateInput): Promise<MissionTemplate> {
+    const payload = {
+      ...input,
+      iconEmoji: input.icon,
+    }
+    const response = await apiClient.post<{ template: any }>(`/missions/templates`, payload)
+    return mapTemplate(response.template)
+  }
+
+  static async updateTemplate(
+    id: string,
+    updates: UpdateMissionTemplateInput,
+  ): Promise<MissionTemplate> {
+    const payload = {
+      ...updates,
+      iconEmoji: updates.icon,
+    }
+    const response = await apiClient.put<{ template: any }>(`/missions/templates/${id}`, payload)
+    return mapTemplate(response.template)
+  }
+
+  static async deleteTemplate(id: string): Promise<void> {
+    await apiClient.delete(`/missions/templates/${id}`)
+  }
+
   /**
    * Buscar missões de um paciente
    */
@@ -18,11 +117,23 @@ export class MissionService {
       const response = await apiClient.get<{ missions: PatientMission[] }>(
         `/missions/patient/${patientId}`
       )
-      return response.missions
+      return (response.missions || []).map(mapPatientMission)
     } catch (error) {
       console.error('Erro ao buscar missões:', error)
       return []
     }
+  }
+
+  /**
+   * Ativar missão para paciente a partir de template
+   */
+  static async activateMissionForPatient(input: ActivatePatientMissionInput): Promise<PatientMission> {
+    const response = await apiClient.post<{ mission: any }>(`/missions/assign`, input as any)
+    return mapPatientMission(response.mission)
+  }
+
+  static async cloneMissionsToPatients(sourcePatientId: string, targetPatientIds: string[]): Promise<void> {
+    await apiClient.post('/missions/clone', { sourcePatientId, targetPatientIds })
   }
 
   /**
@@ -31,8 +142,8 @@ export class MissionService {
   static async createPatientMission(input: any): Promise<PatientMission> {
     try {
       const response = await apiClient.post<{ mission: PatientMission }>('/missions', input)
-      console.log('✅ Missão criada:', response.mission.title)
-      return response.mission
+      console.log('✅ Missão criada:', response.mission.title || response.mission.id)
+      return mapPatientMission(response.mission)
     } catch (error) {
       console.error('Erro ao criar missão:', error)
       throw error

@@ -12,6 +12,7 @@ import {
   Shield,
   Trophy,
   Database,
+  Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/user'
@@ -41,6 +42,7 @@ const orthodontistMenu = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/reports', label: 'Relatórios', icon: BarChart2 },
   { href: '/mission-config', label: 'Configurar Missões', icon: Trophy },
+  { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
 ]
 
 const superAdminMenu = [
@@ -49,6 +51,7 @@ const superAdminMenu = [
   { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
   { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
   { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
+  { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
   { href: '/admin/data', label: 'Gerenciar Dados', icon: Database },
   { href: '/storage-status', label: 'Status do Storage', icon: Database },
 ]

@@ -3,10 +3,113 @@
  */
 
 import { Router } from 'express'
-import { db, treatments, aligners } from '../db/index'
+import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
 
 const router = Router()
+
+async function assignMissionsForTreatment(patientId: string, treatmentId: string, totalAligners: number) {
+  const templates = await db.select().from(mission_templates)
+  const activeTemplates = templates.filter((t) => t.isActiveByDefault)
+
+  const missionsToInsert: any[] = []
+
+  for (const template of activeTemplates) {
+    const interval = template.alignerInterval || 1
+    for (let alignerNumber = 1; alignerNumber <= totalAligners; alignerNumber += interval) {
+      missionsToInsert.push({
+        id: `mission-${Date.now()}-${alignerNumber}-${Math.random().toString(36).slice(2, 5)}`,
+        patientId,
+        missionTemplateId: template.id,
+        status: interval === 1 && alignerNumber === 1 ? 'in_progress' : 'available',
+        progress: 0,
+        targetValue: template.targetValue || 1,
+        trigger: 'on_aligner_N_start',
+        triggerAlignerNumber: alignerNumber,
+        triggerDaysOffset: null,
+        autoActivated: true,
+        expiresAt: null,
+        pointsEarned: 0,
+        customPoints: template.basePoints,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+  }
+
+  if (missionsToInsert.length > 0) {
+    await db.insert(patient_missions).values(missionsToInsert)
+    console.log(`✅ ${missionsToInsert.length} missões criadas para o tratamento ${treatmentId}`)
+  }
+}
+
+async function applyProgramToPatient(programId: string, patientId: string, totalAligners: number) {
+  const program = await db.select().from(mission_programs).where(eq(mission_programs.id, programId))
+  if (program.length === 0) return
+
+  const programTemplates = await db
+    .select()
+    .from(mission_program_templates)
+    .where(eq(mission_program_templates.programId, programId))
+
+  if (programTemplates.length === 0) return
+
+  const missionsToInsert: any[] = []
+
+  for (const pt of programTemplates) {
+    if (!pt.isActive) continue
+
+    const templateResult = await db
+      .select()
+      .from(mission_templates)
+      .where(eq(mission_templates.id, pt.missionTemplateId))
+
+    if (templateResult.length === 0) continue
+    const template = templateResult[0]
+
+    const interval = pt.alignerInterval || 1
+    const maxAligners = totalAligners || template.targetValue || 1
+
+    for (let alignerNumber = 1; alignerNumber <= maxAligners; alignerNumber += interval) {
+      missionsToInsert.push({
+        id: `mission-${Date.now()}-${alignerNumber}-${Math.random().toString(36).slice(2, 5)}`,
+        patientId,
+        missionTemplateId: template.id,
+        status: alignerNumber === 1 ? 'in_progress' : 'available',
+        progress: 0,
+        targetValue: template.targetValue || 1,
+        trigger: pt.trigger || 'on_aligner_N_start',
+        triggerAlignerNumber: pt.triggerAlignerNumber || alignerNumber,
+        triggerDaysOffset: pt.triggerDaysOffset || null,
+        autoActivated: true,
+        expiresAt: null,
+        pointsEarned: 0,
+        customPoints: pt.customPoints || template.basePoints,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+  }
+
+  if (missionsToInsert.length > 0) {
+    await db.insert(patient_missions).values(missionsToInsert)
+    console.log(`✅ ${missionsToInsert.length} missões criadas para o tratamento ${treatmentId} via programa`)
+  }
+}
+
+async function getDefaultProgramForClinic(clinicId?: string) {
+  if (!clinicId) return null
+  const program = await db
+    .select()
+    .from(mission_programs)
+    .where(
+      and(
+        eq(mission_programs.clinicId, clinicId),
+        eq(mission_programs.isDefault, true)
+      )
+    )
+  return program.length > 0 ? program[0] : null
+}
 
 // ============================================
 // TREATMENTS
@@ -103,6 +206,27 @@ router.post('/treatments', async (req, res) => {
     await db.insert(aligners).values(alignersToCreate)
 
     console.log(`✅ Tratamento criado com ${req.body.totalAligners} alinhadores`)
+
+    // ✅ Criar missões baseadas em programa ou templates padrão
+    if (req.body.missionProgramId) {
+      await applyProgramToPatient(req.body.missionProgramId, req.body.patientId, req.body.totalAligners)
+    } else {
+      // Tentar programa default da clínica do paciente
+      let defaultProgramId: string | null = null
+      if (req.body.patientId) {
+        const patient = await db.select().from(users).where(eq(users.id, req.body.patientId))
+        if (patient.length > 0) {
+          const def = await getDefaultProgramForClinic(patient[0].clinicId || null)
+          if (def) defaultProgramId = def.id
+        }
+      }
+
+      if (defaultProgramId) {
+        await applyProgramToPatient(defaultProgramId, req.body.patientId, req.body.totalAligners)
+      } else {
+        await assignMissionsForTreatment(req.body.patientId, treatment.id, req.body.totalAligners)
+      }
+    }
 
     res.json({ treatment })
   } catch (error) {
@@ -225,13 +349,36 @@ router.get('/aligners/:id', async (req, res) => {
 // Create aligner
 router.post('/aligners', async (req, res) => {
   try {
+    const alignerNumber = req.body.alignerNumber ?? req.body.number
+    const patientId = req.body.patientId
+    const treatmentId = req.body.treatmentId
+
+    // Verificar se já existe alinhador com esse número para o mesmo paciente/tratamento
+    if (alignerNumber && (patientId || treatmentId)) {
+      const existing = await db
+        .select()
+        .from(aligners)
+        .where(
+          and(
+            treatmentId ? eq(aligners.treatmentId, treatmentId) : eq(aligners.patientId, patientId),
+            eq(aligners.alignerNumber, alignerNumber)
+          )
+        )
+
+      if (existing.length > 0) {
+        return res.status(400).json({
+          error: `Já existe um alinhador #${alignerNumber} para este ${treatmentId ? 'tratamento' : 'paciente'}`
+        })
+      }
+    }
+
     const newAligner = await db
       .insert(aligners)
       .values({
         id: `aligner-${Date.now()}`,
         patientId: req.body.patientId,
         treatmentId: req.body.treatmentId || null,
-        alignerNumber: req.body.alignerNumber ?? req.body.number,
+        alignerNumber,
         startDate: req.body.startDate || new Date().toISOString(),
         endDate: req.body.endDate || req.body.expectedEndDate || new Date().toISOString(),
         actualEndDate: req.body.actualEndDate || null,
@@ -351,6 +498,21 @@ router.post('/aligners/:id/confirm', async (req, res) => {
           updatedAt: new Date(),
         })
         .where(eq(aligners.id, nextAligner[0].id))
+
+      // Ativar missões cujo gatilho é iniciar este alinhador
+      await db
+        .update(patient_missions)
+        .set({
+          status: 'in_progress',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(patient_missions.patientId, aligner.patientId),
+            eq(patient_missions.trigger, 'on_aligner_N_start'),
+            eq(patient_missions.triggerAlignerNumber, nextAligner[0].alignerNumber),
+          ),
+        )
 
       res.json({
         confirmedAligner: aligner,

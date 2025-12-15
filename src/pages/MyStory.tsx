@@ -116,7 +116,8 @@ const MyStory = () => {
 
           <div className="space-y-3">
             {chapters.map((chapter) => {
-              const isUnlocked = chapter.requiredAlignerNumber <= currentAlignerNumber
+              // Usar o campo isUnlocked do banco de dados em vez de recalcular
+              const isUnlocked = chapter.isUnlocked
               const isRead = chapter.isRead
 
               return (

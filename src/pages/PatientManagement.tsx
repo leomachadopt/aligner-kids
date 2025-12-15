@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -51,6 +58,8 @@ const PatientManagement = () => {
     guardianName: '',
     guardianCpf: '',
     guardianPhone: '',
+    // Preferências
+    preferredLanguage: 'pt-BR',
   })
 
   // Estados do diálogo de exclusão
@@ -120,6 +129,7 @@ const PatientManagement = () => {
       guardianName: '',
       guardianCpf: '',
       guardianPhone: '',
+      preferredLanguage: 'pt-BR',
     })
     setPatientType('patient')
     setIsCreateOpen(true)
@@ -163,6 +173,7 @@ const PatientManagement = () => {
         guardianCpf: patientType === 'child-patient' ? formData.guardianCpf : undefined,
         guardianPhone: patientType === 'child-patient' ? formData.guardianPhone : undefined,
         clinicId: user.clinicId,
+        preferredLanguage: formData.preferredLanguage,
       }, false) // false = não criar sessão
 
       toast.success('Paciente cadastrado com sucesso!')
@@ -545,6 +556,33 @@ const PatientManagement = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Idioma Preferido */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Preferências</h3>
+                  <div>
+                    <Label htmlFor="preferredLanguage">Idioma Preferido</Label>
+                    <Select
+                      value={formData.preferredLanguage}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, preferredLanguage: value })
+                      }
+                    >
+                      <SelectTrigger id="preferredLanguage">
+                        <SelectValue placeholder="Selecione o idioma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                        <SelectItem value="pt-PT">🇵🇹 Português (Portugal)</SelectItem>
+                        <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                        <SelectItem value="es-ES">🇪🇸 Español (España)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      As histórias e áudios serão gerados neste idioma
+                    </p>
+                  </div>
+                </div>
 
                 {/* Senha */}
                 <div>

@@ -50,6 +50,7 @@ const Register = () => {
   const [guardianName, setGuardianName] = useState('')
   const [guardianCpf, setGuardianCpf] = useState('')
   const [guardianPhone, setGuardianPhone] = useState('')
+  const [preferredLanguage, setPreferredLanguage] = useState('pt-BR')
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -80,6 +81,7 @@ const Register = () => {
         guardianCpf: guardianCpf || undefined,
         guardianPhone: guardianPhone || undefined,
         treatmentCode: treatmentCode || undefined,
+        preferredLanguage,
       })
 
       toast.success('Cadastro realizado com sucesso!')
@@ -143,6 +145,27 @@ const Register = () => {
                 onChange={(e) => setTreatmentCode(e.target.value)}
                 disabled={isLoading}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="preferredLanguage">Idioma Preferido</Label>
+              <Select
+                value={preferredLanguage}
+                onValueChange={setPreferredLanguage}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="preferredLanguage">
+                  <SelectValue placeholder="Selecione o idioma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                  <SelectItem value="pt-PT">🇵🇹 Português (Portugal)</SelectItem>
+                  <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                  <SelectItem value="es-ES">🇪🇸 Español (España)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                As histórias e áudios serão gerados neste idioma.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox

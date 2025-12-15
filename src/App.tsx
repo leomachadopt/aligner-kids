@@ -37,6 +37,7 @@ import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
 import DebugAuth from './pages/DebugAuth'
 import StorageStatus from './pages/StorageStatus'
+import MissionPrograms from './pages/MissionPrograms'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import '@/utils/debugAuth' // Debug helper para testar autenticação
 import '@/utils/testAuth' // Test auth flow
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="/patient/:id" element={<PatientDetail />} />
                 <Route path="/aligner-management" element={<AlignerManagement />} />
                 <Route path="/mission-config" element={<MissionConfig />} />
+                <Route path="/mission-programs" element={<MissionPrograms />} />
               </Route>
             </Route>
 

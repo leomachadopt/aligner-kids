@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { MissionService } from '@/services/missionService'
+import { MissionService } from '@/services/missionService.v2'
 import type {
   MissionTemplate,
   MissionCategory,

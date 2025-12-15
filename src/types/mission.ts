@@ -73,6 +73,7 @@ export interface MissionTemplate {
   // Configuração
   isActiveByDefault: boolean   // Se está ativa por padrão em novas clínicas
   requiresManualValidation: boolean // Se precisa validação do ortodontista
+  alignerInterval?: number     // A cada quantos alinhadores (default 1)
 
   // Disponibilidade
   availableFrom?: 'start' | 'aligner_1' | 'aligner_5' | 'week_1' | 'month_1'
@@ -88,6 +89,33 @@ export interface MissionTemplate {
   // Metadados
   isGlobal: boolean            // Se é template global ou customizado
   createdBy?: string           // ID do criador (se customizado)
+  createdAt: string
+  updatedAt: string
+}
+
+// Programas de Missões (presets)
+export interface MissionProgram {
+  id: string
+  clinicId?: string | null
+  name: string
+  description?: string | null
+  isDefault: boolean
+  createdBy?: string | null
+  createdAt: string
+  updatedAt: string
+  templates?: MissionProgramTemplate[]
+}
+
+export interface MissionProgramTemplate {
+  id: string
+  programId: string
+  missionTemplateId: string
+  isActive: boolean
+  alignerInterval: number
+  trigger?: MissionTrigger
+  triggerAlignerNumber?: number
+  triggerDaysOffset?: number
+  customPoints?: number
   createdAt: string
   updatedAt: string
 }

@@ -12,7 +12,7 @@ const router = Router()
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, confirmPassword, role, fullName, cpf, birthDate, phone, guardianName, guardianCpf, guardianPhone, cro, clinicId } = req.body
+    const { email, password, confirmPassword, role, fullName, cpf, birthDate, phone, guardianName, guardianCpf, guardianPhone, cro, clinicId, preferredLanguage } = req.body
 
     // Validations
     if (password !== confirmPassword) {
@@ -47,6 +47,7 @@ router.post('/register', async (req, res) => {
       guardianPhone: guardianPhone || null,
       cro: cro || null,
       clinicId: clinicId || null,
+      preferredLanguage: preferredLanguage || 'pt-BR',
       isApproved: role === 'orthodontist' ? false : true,
     }).returning()
 
@@ -153,6 +154,40 @@ router.get('/users', async (_req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error)
     res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
+// Update user profile
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { fullName, email, phone, birthDate, preferredLanguage } = req.body
+
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, id))
+    if (existingUser.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Update user
+    const updated = await db
+      .update(users)
+      .set({
+        fullName: fullName || existingUser[0].fullName,
+        email: email || existingUser[0].email,
+        phone: phone || existingUser[0].phone,
+        birthDate: birthDate || existingUser[0].birthDate,
+        preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error) {
+    console.error('Error updating user:', error)
+    res.status(500).json({ error: 'Failed to update user' })
   }
 })
 

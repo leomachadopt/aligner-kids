@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, stories, story_chapters, story_preferences } from '../db/index'
+import { db, stories, story_chapters, story_preferences, users } from '../db/index'
 import { eq, and } from 'drizzle-orm'
 import { StoryGenerationService } from '../services/storyGenerationService'
 import { OpenAITTSService } from '../services/openaiTTS'
@@ -306,7 +306,16 @@ router.post('/stories/generate', async (req, res) => {
       return res.status(400).json({ error: 'patientId, preferences e totalAligners são obrigatórios' })
     }
 
-    console.log(`🎨 Gerando história para paciente ${patientId}`)
+    // Buscar idioma preferido do paciente
+    const patient = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, patientId))
+      .limit(1)
+
+    const patientLanguage = patient[0]?.preferredLanguage || 'pt-BR'
+
+    console.log(`🎨 Gerando história para paciente ${patientId} (idioma: ${patientLanguage})`)
 
     // 1. Salvar preferências
     const prefExists = await db
@@ -370,7 +379,10 @@ router.post('/stories/generate', async (req, res) => {
       console.log(`📝 Gerando lote ${batchIndex + 1}/${totalBatches} (capítulos ${startChapter}-${endChapter})`)
 
       const batch = await StoryGenerationService.generateChapterBatch(
-        preferences,
+        {
+          ...preferences,
+          language: patientLanguage, // Adicionar idioma do paciente
+        },
         totalChapters,
         startChapter,
         endChapter,

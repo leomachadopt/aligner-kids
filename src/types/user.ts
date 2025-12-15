@@ -26,6 +26,9 @@ export interface User {
   // Vínculo com clínica (multi-tenancy)
   clinicId?: string
 
+  // Preferências
+  preferredLanguage?: string // ISO language code (pt-BR, en-US, es-ES, etc.)
+
   // Status
   isActive: boolean
   isApproved: boolean
@@ -59,6 +62,9 @@ export interface RegisterInput {
 
   // Código de tratamento (opcional - vincula paciente a ortodontista)
   treatmentCode?: string
+
+  // Preferências
+  preferredLanguage?: string // ISO language code (pt-BR, en-US, es-ES, etc.)
 }
 
 export interface LoginInput {
@@ -85,6 +91,7 @@ export interface UpdateUserInput {
   phone?: string
   birthDate?: string
   clinicName?: string
+  preferredLanguage?: string
 }
 
 export interface ChangePasswordInput {

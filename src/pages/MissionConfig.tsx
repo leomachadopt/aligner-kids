@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/context/AuthContext'
-import { MissionService } from '@/services/missionService'
+import { MissionService } from '@/services/missionService.v2'
 import { AuthService } from '@/services/authService'
 import type {
   MissionTemplate,
@@ -57,17 +57,25 @@ const MissionConfig = () => {
   }, [selectedPatient])
 
   const loadData = async () => {
-    if (!user?.clinicId) return
-
     try {
-      // Buscar pacientes da clínica
-      const allUsers = AuthService.getUsersByClinic(user.clinicId)
-      const clinicPatients = allUsers.filter(
-        (u) => u.role === 'patient' || u.role === 'child-patient'
+      // Buscar pacientes da clínica (API)
+      let clinicPatients: User[] = []
+      if (user?.clinicId) {
+        clinicPatients = await AuthService.getUsersByClinicAsync(user.clinicId)
+      } else {
+        // fallback para super-admin sem clínica: busca todos e filtra pacientes
+        const allUsers = await AuthService.getAllUsersAsync()
+        clinicPatients = allUsers.filter(
+          (u) => u.role === 'patient' || u.role === 'child-patient'
+        )
+      }
+      // Filtra apenas pacientes e ignora qualquer papel errado que venha da API
+      const onlyPatients = clinicPatients.filter(
+        (u) => (u.role === 'patient' || u.role === 'child-patient') && u.isActive && (!user?.clinicId || u.clinicId === user.clinicId)
       )
-      setPatients(clinicPatients)
+      setPatients(onlyPatients)
 
-      // Buscar templates de missões
+      // Buscar templates de missões (API)
       const allMissions = await MissionService.getAllTemplates()
       setMissions(allMissions)
     } catch (error) {

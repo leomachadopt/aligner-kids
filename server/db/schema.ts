@@ -18,6 +18,7 @@ export const users = pgTable('users', {
   cpf: varchar('cpf', { length: 20 }),
   birthDate: varchar('birth_date', { length: 10 }),
   phone: varchar('phone', { length: 50 }),
+  preferredLanguage: varchar('preferred_language', { length: 10 }).default('pt-BR'),
 
   // Guardian info (for child-patient)
   guardianName: varchar('guardian_name', { length: 255 }),
@@ -192,6 +193,9 @@ export const mission_templates = pgTable('mission_templates', {
   iconEmoji: varchar('icon_emoji', { length: 10 }),
   color: varchar('color', { length: 7 }),
 
+  // Aplicação por alinhador
+  alignerInterval: integer('aligner_interval').default(1).notNull(),
+
   // Behavior
   isActiveByDefault: boolean('is_active_by_default').default(true),
   requiresManualValidation: boolean('requires_manual_validation').default(false),
@@ -244,6 +248,35 @@ export const patient_points = pgTable('patient_points', {
   badges: jsonb('badges').default([]),
   streak: integer('streak').default(0),
   lastActivityAt: timestamp('last_activity_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// MISSION PROGRAMS (presets)
+// ============================================
+
+export const mission_programs = pgTable('mission_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  isDefault: boolean('is_default').default(false),
+  createdBy: varchar('created_by', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const mission_program_templates = pgTable('mission_program_templates', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  missionTemplateId: varchar('mission_template_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true),
+  alignerInterval: integer('aligner_interval').default(1).notNull(),
+  trigger: varchar('trigger', { length: 100 }),
+  triggerAlignerNumber: integer('trigger_aligner_number'),
+  triggerDaysOffset: integer('trigger_days_offset'),
+  customPoints: integer('custom_points'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
