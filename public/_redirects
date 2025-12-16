@@ -1,0 +1,8 @@
+# Redirects for SPA (Single Page Application)
+# This ensures that all routes are handled by index.html
+
+# API routes should go to the API
+/api/*  /api/:splat  200
+
+# Everything else goes to index.html for client-side routing
+/*  /index.html  200

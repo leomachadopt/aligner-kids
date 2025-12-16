@@ -64,16 +64,23 @@ function persistSession(session: AuthResponse): void {
 }
 
 function getSession(): AuthResponse | null {
-  if (sessionCache) return sessionCache
+  if (sessionCache) {
+    console.log('✅ Sessão recuperada do cache')
+    return sessionCache
+  }
 
   if (typeof window === 'undefined') return null
 
   try {
     const stored = localStorage.getItem(SESSION_STORAGE_KEY)
-    if (!stored) return null
+    if (!stored) {
+      console.log('⚠️ Nenhuma sessão encontrada no localStorage')
+      return null
+    }
 
     const parsed = JSON.parse(stored) as AuthResponse | null
     if (!parsed?.user) {
+      console.log('⚠️ Sessão inválida (sem usuário)')
       localStorage.removeItem(SESSION_STORAGE_KEY)
       return null
     }
@@ -81,15 +88,17 @@ function getSession(): AuthResponse | null {
     const normalized = normalizeSession(parsed)
     const expiresAt = new Date(normalized.expiresAt).getTime()
     if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      console.log('⚠️ Sessão expirada')
       localStorage.removeItem(SESSION_STORAGE_KEY)
       return null
     }
 
+    console.log('✅ Sessão restaurada:', { user: parsed.user.email, role: parsed.user.role })
     sessionCache = normalized
     apiClient.setToken(normalized.token)
     return normalized
   } catch (error) {
-    console.error('Erro ao restaurar sessão do storage:', error)
+    console.error('❌ Erro ao restaurar sessão do storage:', error)
     localStorage.removeItem(SESSION_STORAGE_KEY)
     return null
   }

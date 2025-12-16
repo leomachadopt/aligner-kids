@@ -19,6 +19,8 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, isLoading, isAuthenticated } = useAuth()
 
+  console.log('🔒 ProtectedRoute:', { isLoading, isAuthenticated, user: user?.email, role: user?.role })
+
   // Loading state
   if (isLoading) {
     return (
@@ -33,6 +35,7 @@ export const ProtectedRoute = ({
 
   // Não autenticado
   if (!isAuthenticated || !user) {
+    console.log('❌ Usuário não autenticado, redirecionando para:', redirectTo)
     return <Navigate to={redirectTo} replace />
   }
 
