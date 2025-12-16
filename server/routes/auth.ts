@@ -177,7 +177,7 @@ router.get('/users', async (_req, res) => {
 router.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { fullName, email, phone, birthDate, preferredLanguage } = req.body
+    const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl } = req.body
 
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id))
@@ -194,6 +194,7 @@ router.put('/users/:id', async (req, res) => {
         phone: phone || existingUser[0].phone,
         birthDate: birthDate || existingUser[0].birthDate,
         preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
+        profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -363,6 +364,58 @@ router.get('/users/clinic/:clinicId', async (req, res) => {
   } catch (error) {
     console.error('Error getting clinic users:', error)
     res.status(500).json({ error: 'Failed to get users' })
+  }
+})
+
+// Change password
+router.put('/users/:id/password', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { currentPassword, newPassword, confirmPassword } = req.body
+
+    // Validations
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' })
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'As senhas não coincidem' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' })
+    }
+
+    // Get user
+    const result = await db.select().from(users).where(eq(users.id, id))
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    const user = result[0]
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash)
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Senha atual incorreta' })
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10)
+
+    // Update password
+    await db
+      .update(users)
+      .set({
+        password_hash: newPasswordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+
+    res.json({ message: 'Senha alterada com sucesso' })
+  } catch (error) {
+    console.error('Error changing password:', error)
+    res.status(500).json({ error: 'Failed to change password' })
   }
 })
 

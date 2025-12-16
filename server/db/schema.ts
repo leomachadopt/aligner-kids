@@ -32,6 +32,9 @@ export const users = pgTable('users', {
   // Clinic relationship
   clinicId: varchar('clinic_id', { length: 255 }),
 
+  // Profile photo
+  profilePhotoUrl: text('profile_photo_url'),
+
   // Status
   isActive: boolean('is_active').default(true).notNull(),
   isApproved: boolean('is_approved').default(false).notNull(),

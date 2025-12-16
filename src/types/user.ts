@@ -26,6 +26,9 @@ export interface User {
   // Vínculo com clínica (multi-tenancy)
   clinicId?: string
 
+  // Profile photo
+  profilePhotoUrl?: string
+
   // Preferências
   preferredLanguage?: string // ISO language code (pt-BR, en-US, es-ES, etc.)
 
@@ -92,6 +95,7 @@ export interface UpdateUserInput {
   birthDate?: string
   clinicName?: string
   preferredLanguage?: string
+  profilePhotoUrl?: string
 }
 
 export interface ChangePasswordInput {

@@ -17,6 +17,7 @@ import { GamificationStats } from '@/components/GamificationStats'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { useUserRole } from '@/context/UserRoleContext'
+import { useAuth } from '@/context/AuthContext'
 
 const pageTitles: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
@@ -49,6 +50,7 @@ export const Header = () => {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const { role, isChild } = useUserRole()
+  const { user } = useAuth()
 
   const handleScroll = () => {
     setScrolled(window.scrollY > 10)
@@ -61,6 +63,16 @@ export const Header = () => {
 
   const titles = isChild ? childPageTitles : pageTitles
   const pageTitle = titles[location.pathname] || 'App Alinhadores'
+
+  // Obter iniciais do nome
+  const getInitials = (name: string) => {
+    if (!name) return 'U'
+    const names = name.split(' ')
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
 
   return (
     <header
@@ -101,10 +113,10 @@ export const Header = () => {
                   )}
                 >
                   <AvatarImage
-                    src="https://img.usecurling.com/ppl/thumbnail?gender=male&seed=child"
-                    alt="User Avatar"
+                    src={user?.profilePhotoUrl || undefined}
+                    alt={user?.fullName || 'User Avatar'}
                   />
-                  <AvatarFallback>U</AvatarFallback>
+                  <AvatarFallback>{getInitials(user?.fullName || '')}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
