@@ -312,27 +312,32 @@ const MissionConfig = () => {
   )
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div>
-        <h1 className="text-3xl font-bold">Atribuir Missões aos Pacientes</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="rounded-2xl border-2 border-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 bg-gradient-to-br from-yellow-50 via-orange-50 to-pink-50 p-6 shadow-xl">
+        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+          <Award className="h-10 w-10 text-yellow-600" />
+          Atribuir Missões aos Pacientes
+        </h1>
+        <p className="text-sm text-gray-600 mt-2 font-medium">
           Selecione um paciente e atribua missões com gatilhos automáticos baseados no tratamento
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Lista de Pacientes */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-md">
+                <Users className="h-5 w-5 text-white" />
+              </div>
               Pacientes ({patients.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {patients.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
+                <p className="text-sm text-gray-600 text-center py-8 font-medium">
                   Nenhum paciente cadastrado
                 </p>
               ) : (
@@ -340,14 +345,14 @@ const MissionConfig = () => {
                   <button
                     key={patient.id}
                     onClick={() => setSelectedPatient(patient)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all hover-scale ${
                       selectedPatient?.id === patient.id
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'hover:bg-accent'
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg'
+                        : 'bg-white border-purple-200 hover:border-purple-400 hover:shadow-md'
                     }`}
                   >
-                    <div className="font-medium">{patient.fullName}</div>
-                    <div className="text-xs opacity-80">{patient.email}</div>
+                    <div className="font-bold text-base">{patient.fullName}</div>
+                    <div className={`text-xs mt-1 ${selectedPatient?.id === patient.id ? 'opacity-90' : 'text-gray-500'}`}>{patient.email}</div>
                   </button>
                 ))
               )}
@@ -358,10 +363,10 @@ const MissionConfig = () => {
         {/* Missões do Paciente e Disponíveis */}
         <div className="lg:col-span-2 space-y-6">
           {!selectedPatient ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
+            <Card className="rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shadow-lg">
+              <CardContent className="text-center py-16">
+                <Users className="mx-auto h-20 w-20 text-gray-300 mb-4" />
+                <p className="text-gray-600 font-medium text-lg">
                   Selecione um paciente para atribuir missões
                 </p>
               </CardContent>
@@ -369,21 +374,22 @@ const MissionConfig = () => {
           ) : (
             <>
               {/* Missões Ativas do Paciente */}
-              <Card>
+              <Card className="rounded-2xl border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50 shadow-xl">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5" />
+                    <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center shadow-md">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
                       Missões de {selectedPatient.fullName}
-                      <span className="text-sm font-normal text-muted-foreground">
+                      <span className="text-base font-medium text-gray-600">
                         ({patientMissions.length})
                       </span>
                     </CardTitle>
                     {patientMissions.length > 0 && (
                       <Button
-                        variant="outline"
-                        size="sm"
                         onClick={handleOpenCloneDialog}
+                        className="rounded-full px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 font-bold shadow-md hover-bounce"
                       >
                         <Copy className="h-4 w-4 mr-2" />
                         Clonar para Outros Pacientes

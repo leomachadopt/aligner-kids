@@ -249,93 +249,112 @@ const PatientDetail = () => {
     }))
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link to="/patient-management">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">
-            {patient.fullName}
-          </h1>
-          <p className="text-muted-foreground">{patient.email}</p>
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="rounded-2xl border-2 border-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-gradient-to-br from-cyan-50 via-blue-50 to-purple-50 p-6 shadow-xl">
+        <div className="flex items-center gap-6">
+          <Button asChild className="rounded-full h-14 w-14 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-lg hover-bounce">
+            <Link to="/patient-management">
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {patient.fullName}
+            </h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">{patient.email}</p>
+          </div>
+          {patient.role === 'child-patient' && (
+            <Badge className="bg-gradient-to-r from-pink-400 to-purple-400 text-white font-bold text-lg px-4 py-2">
+              Criança
+            </Badge>
+          )}
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-xl">
           <CardHeader>
-            <CardTitle>Informações do Tratamento</CardTitle>
+            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              Informações do Tratamento
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {!treatment ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
+              <div className="text-center py-12">
+                <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <p className="text-gray-600 font-medium text-lg mb-4">
                   Este paciente ainda não possui um tratamento iniciado.
                 </p>
-                <Button asChild>
+                <Button asChild className="rounded-full px-6 py-6 text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover-bounce">
                   <Link to="/aligner-management">Cadastrar Tratamento</Link>
                 </Button>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge
-                      variant={
-                        treatment.status === 'active'
-                          ? 'default'
-                          : treatment.status === 'completed'
-                            ? 'default'
-                            : 'secondary'
-                      }
-                    >
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="p-4 rounded-xl bg-white border-2 border-blue-200 shadow-sm">
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Status</p>
+                    <Badge className={`
+                      font-bold text-sm px-3 py-1
+                      ${treatment.status === 'active' ? 'bg-gradient-to-r from-green-400 to-teal-400 text-white' : ''}
+                      ${treatment.status === 'completed' ? 'bg-gradient-to-r from-blue-400 to-purple-400 text-white' : ''}
+                      ${treatment.status === 'paused' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : ''}
+                      ${treatment.status === 'cancelled' ? 'bg-gradient-to-r from-red-400 to-pink-400 text-white' : ''}
+                    `}>
                       {treatment.status === 'active' && 'Ativo'}
                       {treatment.status === 'completed' && 'Concluído'}
                       {treatment.status === 'paused' && 'Pausado'}
                       {treatment.status === 'cancelled' && 'Cancelado'}
                     </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Progresso</p>
-                    <p className="text-lg font-semibold">{progress.toFixed(0)}%</p>
+                  <div className="p-4 rounded-xl bg-white border-2 border-purple-200 shadow-sm">
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Progresso</p>
+                    <p className="text-3xl font-extrabold text-gray-800">{progress.toFixed(0)}%</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Alinhador Atual
-                    </p>
-                    <p className="text-lg font-semibold">
-                      #{treatment.currentAlignerNumber} de {treatment.totalAligners}
+                  <div className="p-4 rounded-xl bg-white border-2 border-cyan-200 shadow-sm">
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Alinhador Atual</p>
+                    <p className="text-2xl font-extrabold text-gray-800">
+                      #{treatment.currentAlignerNumber} <span className="text-gray-400">de</span> {treatment.totalAligners}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Data de Início
-                    </p>
-                    <p className="text-lg font-semibold">
+                  <div className="p-4 rounded-xl bg-white border-2 border-blue-200 shadow-sm">
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Data de Início</p>
+                    <p className="text-lg font-bold text-gray-800">
                       {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 </div>
 
                 {currentAligner && (
-                  <div className="mt-4 p-4 rounded-lg border">
+                  <div className={`mt-4 p-5 rounded-xl border-2 shadow-md ${isOverdue ? 'border-red-300 bg-gradient-to-br from-red-50 to-pink-50' : 'border-green-300 bg-gradient-to-br from-green-50 to-teal-50'}`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold">
+                        <p className="text-xl font-bold text-gray-800">
                           Alinhador #{currentAligner.number}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-gray-600 font-medium mt-1">
                           {isOverdue
-                            ? 'Atrasado para troca'
-                            : `${calculateDaysUntilChange(currentAligner)} dias até a próxima troca`}
+                            ? '⚠️ Atrasado para troca'
+                            : `⏰ ${calculateDaysUntilChange(currentAligner)} dias até a próxima troca`}
                         </p>
                       </div>
-                      {isOverdue && (
-                        <Badge variant="destructive">Atrasado</Badge>
+                      {isOverdue ? (
+                        <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-4 py-2 text-base">
+                          Atrasado
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold px-4 py-2 text-base">
+                          No Prazo
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -347,15 +366,22 @@ const PatientDetail = () => {
 
         {/* Phases Section */}
         {treatment && phases.length > 0 && (
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Fases do Tratamento</CardTitle>
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  Fases do Tratamento
+                </CardTitle>
                 <Button
                   onClick={() => setIsNewPhaseModalOpen(true)}
-                  size="sm"
+                  className="rounded-full px-6 py-3 text-base font-bold bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 shadow-md hover-bounce"
                 >
-                  Iniciar Nova Fase
+                  ➕ Iniciar Nova Fase
                 </Button>
               </div>
             </CardHeader>
@@ -405,46 +431,55 @@ const PatientDetail = () => {
           />
         </div>
 
-        <Card>
+        <Card className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl">
           <CardHeader>
-            <CardTitle>Ações</CardTitle>
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              Ações
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <Button
-              variant="outline"
-              className="w-full"
+              className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-md hover-bounce"
               onClick={handleEditPatient}
             >
               Editar Dados do Paciente
             </Button>
+            <Button
+              className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 shadow-md hover-bounce"
+              onClick={() => setIsChatOpen(true)}
+            >
+              💬 Abrir Chat
+            </Button>
             {!treatment ? (
-              <Button className="w-full" asChild>
+              <Button className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-md hover-bounce" asChild>
                 <Link to={`/aligner-management?patientId=${id}`}>
-                  Cadastrar Novo Tratamento
+                  ➕ Cadastrar Novo Tratamento
                 </Link>
               </Button>
             ) : (
               <>
                 <Button
-                  variant="outline"
-                  className="w-full"
+                  className="w-full rounded-xl py-6 text-base font-bold bg-white border-2 border-purple-300 text-purple-700 hover:bg-purple-50 shadow-sm hover-scale"
                   onClick={() => setIsViewTreatmentOpen(true)}
                 >
-                  Visualizar Tratamento Atual
+                  👁️ Visualizar Tratamento Atual
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full"
+                  className="w-full rounded-xl py-6 text-base font-bold bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 shadow-sm hover-scale"
                   onClick={handleListTreatments}
                 >
-                  Listar Todos os Tratamentos
+                  📋 Listar Todos os Tratamentos
                 </Button>
                 <Button
-                  variant="destructive"
-                  className="w-full"
+                  className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-md hover-bounce"
                   onClick={() => setIsDeleteTreatmentOpen(true)}
                 >
-                  Excluir Tratamento
+                  🗑️ Excluir Tratamento
                 </Button>
               </>
             )}

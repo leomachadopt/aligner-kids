@@ -130,34 +130,36 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] gap-4 animate-fade-in-up">
+    <div className="flex h-[calc(100vh-10rem)] gap-6 animate-fade-in-up">
       {/* Sidebar - User List */}
-      <Card className="w-80 flex flex-col">
+      <Card className="w-96 flex flex-col rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
             Conversas
           </CardTitle>
-          <div className="relative mt-2">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="relative mt-3">
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             <Input
               placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
+              className="pl-11 h-12 rounded-xl border-2 border-green-200 focus:border-green-400 bg-white font-medium"
             />
           </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-2">
+        <CardContent className="flex-1 overflow-y-auto p-3">
           {filteredUsers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center py-12">
+              <Users className="h-16 w-16 mx-auto text-gray-300 mb-3" />
+              <p className="text-sm text-gray-600 font-medium">
                 Nenhum usuário encontrado
               </p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {filteredUsers.map((u) => (
                 <button
                   key={u.id}
@@ -168,34 +170,44 @@ const Chat = () => {
                       role: u.role,
                     })
                   }
-                  className={`w-full p-3 rounded-lg hover:bg-muted transition-colors text-left ${
-                    selectedUser?.id === u.id ? 'bg-muted' : ''
+                  className={`w-full p-4 rounded-xl border-2 transition-all hover-scale text-left ${
+                    selectedUser?.id === u.id
+                      ? 'bg-gradient-to-r from-green-500 to-teal-500 border-green-500 text-white shadow-lg'
+                      : 'bg-white border-green-200 hover:border-green-400 hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <Avatar>
-                        <AvatarFallback>{getInitials(u.fullName)}</AvatarFallback>
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-400 text-white font-bold">
+                          {getInitials(u.fullName)}
+                        </AvatarFallback>
                       </Avatar>
                       {u.unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-md">
                           {u.unreadCount}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm truncate">
+                        <p className="font-bold text-base truncate">
                           {u.fullName}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge className={`text-xs font-bold px-2 py-0.5 ${
+                          selectedUser?.id === u.id
+                            ? 'bg-white/20 text-white border-white/30'
+                            : 'bg-gradient-to-r from-blue-400 to-purple-400 text-white border-0'
+                        }`}>
                           {getRoleLabel(u.role)}
                         </Badge>
                       </div>
                       {u.lastMessage && (
-                        <p className="text-xs text-muted-foreground truncate mt-1">
+                        <p className={`text-xs truncate mt-1 ${
+                          selectedUser?.id === u.id ? 'text-white/90' : 'text-gray-500'
+                        }`}>
                           {u.lastMessage.content}
                         </p>
                       )}
@@ -217,13 +229,15 @@ const Chat = () => {
             otherUserRole={selectedUser.role}
           />
         ) : (
-          <Card className="h-full flex items-center justify-center">
-            <CardContent className="text-center">
-              <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
+          <Card className="h-full flex items-center justify-center rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl">
+            <CardContent className="text-center py-16">
+              <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center shadow-lg">
+                <MessageSquare className="h-12 w-12 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
                 Selecione uma conversa
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-gray-600 font-medium text-lg">
                 {user?.role === 'patient' || user?.role === 'child-patient'
                   ? 'Escolha um ortodontista para conversar'
                   : 'Escolha um paciente para conversar'}

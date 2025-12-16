@@ -145,37 +145,47 @@ const MissionPrograms = () => {
   }, [programTemplates, templatesMap])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Layers className="h-6 w-6" />
-            Programas de Missões
-          </h1>
-          <p className="text-muted-foreground">
-            Monte um conjunto padrão de missões para aplicar aos pacientes automaticamente e visualize o cronograma por alinhador.
-          </p>
+    <div className="space-y-8">
+      <div className="rounded-2xl border-2 border-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+              <Layers className="h-10 w-10 text-indigo-600" />
+              Programas de Missões
+            </h1>
+            <p className="text-sm text-gray-600 mt-2 font-medium">
+              Monte um conjunto padrão de missões para aplicar aos pacientes automaticamente e visualize o cronograma por alinhador.
+            </p>
+          </div>
+          <Button onClick={() => setIsNewDialogOpen(true)} className="rounded-full px-6 py-6 text-lg font-bold bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg hover-bounce">
+            <Plus className="h-5 w-5 mr-2" />
+            Novo Programa
+          </Button>
         </div>
-        <Button onClick={() => setIsNewDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Programa
-        </Button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle>Programas</CardTitle>
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 rounded-2xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-teal-50 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center shadow-md">
+                <Layers className="h-6 w-6 text-white" />
+              </div>
+              Programas
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-500" /> Carregando...
               </div>
             )}
             {!loading && programs.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                Nenhum programa encontrado para esta clínica.
+              <div className="text-center py-8">
+                <Layers className="h-16 w-16 mx-auto text-gray-300 mb-3" />
+                <p className="text-sm text-gray-600 font-medium">
+                  Nenhum programa encontrado para esta clínica.
+                </p>
               </div>
             )}
             {programs.map((p) => (
@@ -183,15 +193,29 @@ const MissionPrograms = () => {
                 key={p.id}
                 onClick={() => loadProgramTemplates(p.id, programs)}
                 className={cn(
-                  'w-full rounded-lg border px-3 py-2 text-left transition',
-                  selectedProgramId === p.id ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                  'w-full rounded-xl border-2 px-4 py-3 text-left transition-all hover-scale',
+                  selectedProgramId === p.id
+                    ? 'bg-gradient-to-r from-cyan-500 to-teal-500 border-cyan-500 text-white shadow-lg'
+                    : 'bg-white border-cyan-200 hover:border-cyan-400 hover:shadow-md'
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{p.name}</span>
-                  {p.isDefault && <Badge variant="secondary" className="text-[10px]">Padrão</Badge>}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-bold text-base">{p.name}</span>
+                  {p.isDefault && (
+                    <Badge className={cn(
+                      "text-xs font-bold px-2 py-0.5",
+                      selectedProgramId === p.id
+                        ? "bg-white/20 text-white border-white/30"
+                        : "bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-0"
+                    )}>
+                      Padrão
+                    </Badge>
+                  )}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className={cn(
+                  "text-xs font-medium",
+                  selectedProgramId === p.id ? "text-white/90" : "text-gray-600"
+                )}>
                   {p.description || 'Sem descrição'}
                 </div>
               </button>
@@ -199,51 +223,58 @@ const MissionPrograms = () => {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl">
           <CardHeader className="flex items-start justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-md">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
                 Cronograma por alinhador
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600 mt-1 font-medium">
                 Visualize quando cada missão é ativada ao longo dos primeiros {MAX_ALIGNERS_PREVIEW} alinhadores.
               </p>
             </div>
             {selectedProgramId && (
-              <Button variant="outline" size="sm">
+              <Button className="rounded-full px-6 py-3 font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-md hover-scale">
                 Editar Programa
               </Button>
             )}
           </CardHeader>
           <CardContent>
             {groupedRows.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Selecione um programa para ver o cronograma.</div>
+              <div className="text-center py-12">
+                <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-3" />
+                <p className="text-sm text-gray-600 font-medium">Selecione um programa para ver o cronograma.</p>
+              </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto bg-white rounded-xl border-2 border-purple-100 shadow-sm">
                 <div className="min-w-[720px]">
                   <div className="grid" style={{ gridTemplateColumns: `220px repeat(${MAX_ALIGNERS_PREVIEW}, 1fr)` }}>
-                    <div className="text-xs font-semibold text-muted-foreground px-2 py-1">Missão</div>
+                    <div className="text-xs font-bold uppercase text-purple-700 px-3 py-3 bg-gradient-to-r from-purple-100 to-pink-100">Missão</div>
                     {Array.from({ length: MAX_ALIGNERS_PREVIEW }, (_, i) => (
-                      <div key={i} className="text-xs font-semibold text-center text-muted-foreground px-1 py-1">
+                      <div key={i} className="text-xs font-bold text-center text-purple-700 px-1 py-3 bg-gradient-to-r from-purple-100 to-pink-100 border-l border-purple-200">
                         A{i + 1}
                       </div>
                     ))}
                     {groupedRows.map((row, idx) => (
                       <Fragment key={row.mission.id}>
                         <div
-                          className="flex items-center gap-2 border-t px-2 py-2"
-                          style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }}
+                          className={cn(
+                            "flex items-center gap-3 border-t-2 border-purple-100 px-3 py-3",
+                            idx % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-purple-50/30 to-pink-50/30'
+                          )}
                         >
                           <div
-                            className="h-3 w-3 rounded-full"
+                            className="h-4 w-4 rounded-full shadow-sm border-2 border-white"
                             style={{ backgroundColor: row.mission.color || '#E5E7EB' }}
                           />
                           <div>
-                            <div className="text-sm font-medium">{row.mission.name}</div>
-            <div className="text-[11px] text-muted-foreground">
-              1x alinhador • {row.mission.basePoints} pts
-            </div>
+                            <div className="text-sm font-bold text-gray-800">{row.mission.name}</div>
+                            <div className="text-[11px] font-medium text-gray-600">
+                              1x alinhador • {row.mission.basePoints} pts
+                            </div>
                           </div>
                         </div>
                         {Array.from({ length: MAX_ALIGNERS_PREVIEW }, (_, a) => a + 1).map((aligner) => {
@@ -252,9 +283,9 @@ const MissionPrograms = () => {
                             <div
                               key={`${row.mission.id}-${aligner}`}
                               className={cn(
-                                'border-t flex items-center justify-center px-1 py-2 text-xs cursor-pointer',
-                                idx % 2 === 0 ? '' : 'bg-muted/50',
-                                'hover:bg-accent/40'
+                                'border-t-2 border-l border-purple-100 flex items-center justify-center px-1 py-3 text-xs cursor-pointer transition-all',
+                                idx % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-purple-50/30 to-pink-50/30',
+                                'hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:shadow-inner'
                               )}
                               onClick={async () => {
                                 if (!selectedProgramId) return
@@ -309,11 +340,11 @@ const MissionPrograms = () => {
                               }}
                             >
                               {isActive ? (
-                                <Badge style={{ backgroundColor: row.mission.color || '#E5E7EB' }} className="text-[11px]">
+                                <Badge style={{ backgroundColor: row.mission.color || '#E5E7EB' }} className="text-[11px] font-bold text-white shadow-sm">
                                   Ativa
                                 </Badge>
                               ) : (
-                                <span className="text-[11px] text-muted-foreground">-</span>
+                                <span className="text-[11px] font-medium text-gray-400">-</span>
                               )}
                             </div>
                           )

@@ -219,45 +219,48 @@ const AlignerManagement = () => {
   )
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link to={patientIdParam ? `/patient/${patientIdParam}` : '/patient-management'}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">
-            {editingAligner
-              ? 'Editar Alinhador'
-              : 'Cadastrar Novo Alinhador'}
-          </h1>
-          <p className="text-muted-foreground">
-            {editingAligner
-              ? 'Atualize as informações do alinhador'
-              : 'Cadastre um novo alinhador para um paciente'}
-          </p>
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="rounded-2xl border-2 border-gradient-to-r from-teal-400 via-green-400 to-blue-400 bg-gradient-to-br from-teal-50 via-green-50 to-blue-50 p-6 shadow-xl">
+        <div className="flex items-center gap-6">
+          <Button asChild className="rounded-full h-14 w-14 bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 shadow-lg hover-bounce">
+            <Link to={patientIdParam ? `/patient/${patientIdParam}` : '/patient-management'}>
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-teal-600 via-green-600 to-blue-600 bg-clip-text text-transparent">
+              {editingAligner ? 'Editar Alinhador' : 'Cadastrar Novo Alinhador'}
+            </h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              {editingAligner
+                ? 'Atualize as informações do alinhador'
+                : 'Cadastre um novo alinhador para um paciente'}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
+                <Plus className="h-6 w-6 text-white" />
+              </div>
               {editingAligner ? 'Editar' : 'Cadastrar'} Alinhador
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!patientIdParam && !selectedPatientId && !editingAligner && (
               <div className="mb-6">
-                <label htmlFor="patient-select" className="text-sm font-medium mb-2 block">
+                <label htmlFor="patient-select" className="text-sm font-bold uppercase text-gray-600 mb-3 block">
                   Selecione o Paciente *
                 </label>
                 <select
                   id="patient-select"
                   value={selectedPatientId}
                   onChange={(e) => setSelectedPatientId(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  className="w-full rounded-xl border-2 border-green-200 bg-white px-4 py-3 font-medium focus:border-green-400 focus:outline-none"
                 >
                   <option value="">-- Escolha um paciente --</option>
                   {patients.map((patient) => (
@@ -270,9 +273,9 @@ const AlignerManagement = () => {
             )}
 
             {(selectedPatientId || patientIdParam) && (
-              <div className="mb-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">
-                  Paciente selecionado: {
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 shadow-sm">
+                <p className="text-sm font-bold text-gray-800">
+                  🎯 Paciente selecionado: {
                     patients.find((p) => p.id === (selectedPatientId || patientIdParam))?.fullName
                   }
                 </p>
