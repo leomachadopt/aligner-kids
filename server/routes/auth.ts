@@ -70,6 +70,8 @@ router.post('/login', async (req, res) => {
   try {
     const { credential, password } = req.body
 
+    console.log('🔐 POST /api/auth/login - Tentativa de login:', { credential })
+
     // Find user by email, CPF or CRO
     const allUsers = await db.select().from(users)
     const user = allUsers.find(u =>
@@ -79,24 +81,38 @@ router.post('/login', async (req, res) => {
     )
 
     if (!user) {
+      console.log('❌ Usuário não encontrado para:', credential)
       return res.status(401).json({ error: 'Credenciais inválidas' })
     }
+
+    console.log('👤 Usuário encontrado:', user.email, user.fullName)
+    console.log('🔑 Senha recebida:', password)
+    console.log('🔒 Hash armazenado (primeiros 30 chars):', user.password_hash.substring(0, 30))
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash)
+    console.log('🔍 Resultado da comparação bcrypt:', isPasswordValid)
+
     if (!isPasswordValid) {
+      console.log('❌ Senha inválida para:', user.email)
       return res.status(401).json({ error: 'Credenciais inválidas' })
     }
 
+    console.log('✅ Senha válida')
+
     // Check if active
     if (!user.isActive) {
+      console.log('❌ Conta desativada:', user.email)
       return res.status(403).json({ error: 'Conta desativada. Entre em contato com o suporte.' })
     }
 
     // Check if approved (orthodontists)
     if (!user.isApproved) {
+      console.log('❌ Conta não aprovada:', user.email)
       return res.status(403).json({ error: 'Sua conta está pendente de aprovação. Aguarde o contato da administração.' })
     }
+
+    console.log('✅ Login bem-sucedido para:', user.email)
 
     // Update last login
     await db.update(users).set({

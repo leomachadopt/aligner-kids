@@ -245,48 +245,57 @@ const PatientManagement = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de Pacientes</h1>
-          <p className="text-muted-foreground">
-            Visualize e gerencie todos os pacientes
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/aligner-management">Cadastrar Alinhador</Link>
-          </Button>
-          <Button onClick={handleCreatePatient}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Cadastrar Paciente
-          </Button>
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="rounded-2xl border-2 border-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Gerenciamento de Pacientes
+            </h1>
+            <p className="text-sm text-gray-600 mt-1 font-medium">
+              Visualize e gerencie todos os pacientes
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button asChild className="rounded-full px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 font-bold shadow-md hover-bounce">
+              <Link to="/aligner-management">Cadastrar Alinhador</Link>
+            </Button>
+            <Button onClick={handleCreatePatient} className="rounded-full px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 font-bold shadow-md hover-bounce">
+              <UserPlus className="h-5 w-5 mr-2" />
+              Cadastrar Paciente
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Card>
+      <Card className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50 shadow-lg">
         <CardHeader>
-          <CardTitle>Buscar Paciente</CardTitle>
+          <CardTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center shadow-md">
+              <Search className="h-5 w-5 text-white" />
+            </div>
+            Buscar Paciente
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Digite o nome do paciente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-12 h-12 rounded-xl border-2 border-purple-200 focus:border-purple-400 bg-white font-medium"
             />
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4">
+      <div className="grid gap-6">
         {filteredPatients.length === 0 ? (
-          <Card>
+          <Card className="rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shadow-lg">
             <CardContent className="py-12 text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
+              <Users className="mx-auto h-20 w-20 text-gray-300 mb-4" />
+              <p className="text-gray-600 font-medium text-lg">
                 {searchTerm
                   ? 'Nenhum paciente encontrado com esse nome.'
                   : 'Nenhum paciente cadastrado ainda.'}
@@ -305,67 +314,79 @@ const PatientManagement = () => {
               ? (treatment.currentAlignerNumber / treatment.totalAligners) * 100
               : 0
 
+            const statusColors = {
+              'Sem Tratamento': { bg: 'bg-gray-50', border: 'border-gray-200', badge: 'from-gray-400 to-gray-500' },
+              'Concluído': { bg: 'bg-green-50', border: 'border-green-200', badge: 'from-green-400 to-teal-400' },
+              'Atrasado': { bg: 'bg-red-50', border: 'border-red-200', badge: 'from-red-400 to-pink-400' },
+              'Em Tratamento': { bg: 'bg-blue-50', border: 'border-blue-200', badge: 'from-blue-400 to-purple-400' },
+              'Sem alinhador ativo': { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'from-yellow-400 to-orange-400' },
+            }
+
+            const colors = statusColors[status.label as keyof typeof statusColors] || statusColors['Sem Tratamento']
+
             return (
-              <Card key={patient.id} className="hover:shadow-md transition-shadow">
+              <Card key={patient.id} className={`rounded-2xl border-2 ${colors.border} ${colors.bg} shadow-lg hover-scale transition-all`}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-xl font-semibold">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-2xl font-bold text-gray-800">
                           {patient.fullName}
                         </h3>
-                        <Badge variant={status.variant}>{status.label}</Badge>
+                        <Badge className={`bg-gradient-to-r ${colors.badge} text-white font-bold px-3 py-1`}>
+                          {status.label}
+                        </Badge>
                         {patient.role === 'child-patient' && (
-                          <Badge variant="outline">Criança</Badge>
+                          <Badge className="bg-gradient-to-r from-pink-400 to-purple-400 text-white font-bold px-3 py-1">
+                            Criança
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600 font-medium">
                         {patient.email}
                       </p>
                       {treatment ? (
-                        <div className="flex items-center gap-4 mt-4">
+                        <div className="flex items-center gap-6 mt-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs text-gray-500 font-bold uppercase">
                               Progresso
                             </p>
-                            <p className="text-lg font-semibold">
-                              {treatment.currentAlignerNumber} /{' '}
-                              {treatment.totalAligners} alinhadores
+                            <p className="text-xl font-extrabold text-gray-800">
+                              {treatment.currentAlignerNumber} / {treatment.totalAligners}
                             </p>
                           </div>
                           <div className="flex-1">
-                            <div className="w-full bg-muted rounded-full h-2">
+                            <div className="w-full bg-gray-200 rounded-full h-3">
                               <div
-                                className="bg-primary h-2 rounded-full"
+                                className={`bg-gradient-to-r ${colors.badge} h-3 rounded-full transition-all`}
                                 style={{ width: `${progress}%` }}
                               />
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-2xl font-extrabold text-gray-800">
                               {progress.toFixed(0)}%
                             </p>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground mt-4">
+                        <p className="text-sm text-gray-600 mt-4 font-medium">
                           Nenhum tratamento iniciado ainda
                         </p>
                       )}
                     </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button variant="outline" asChild>
+                    <div className="flex gap-3 ml-4">
+                      <Button asChild className="rounded-full px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 font-bold shadow-md hover-bounce">
                         <Link to={`/patient/${patient.id}`}>
                           Ver Detalhes
                         </Link>
                       </Button>
                       <Button
-                        variant="outline"
                         size="icon"
                         onClick={() => handleDeleteClick(patient)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="rounded-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-md hover-bounce"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>

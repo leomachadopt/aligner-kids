@@ -1,33 +1,64 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2, Circle, MapPin, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTreatment, useCurrentAligner, useAligners } from '@/context/AlignerContext'
+import { useAuth } from '@/context/AuthContext'
 import { calculateTreatmentProgress } from '@/utils/alignerCalculations'
 import { TreatmentTimeline } from '@/components/TreatmentTimeline'
+import { PhaseService } from '@/services/phaseService'
+import type { TreatmentPhase } from '@/types/aligner'
 
 const MyTreatment = () => {
+  const { user } = useAuth()
   const treatment = useTreatment()
   const currentAligner = useCurrentAligner()
   const { aligners } = useAligners()
-  
+  const [phases, setPhases] = useState<TreatmentPhase[]>([])
+  const [loadingPhases, setLoadingPhases] = useState(true)
+
   const currentAlignerNumber = currentAligner?.number || 0
   const totalAligners = treatment?.totalAligners || 24
   const progressPercentage = calculateTreatmentProgress(treatment)
 
-  // Generate treatment steps based on milestones
-  const milestones = [
-    { name: 'Início da Aventura', alignerNumber: 1 },
-    { name: `Alinhador #${Math.floor(totalAligners * 0.25)}`, alignerNumber: Math.floor(totalAligners * 0.25) },
-    { name: `Alinhador #${Math.floor(totalAligners * 0.5)}`, alignerNumber: Math.floor(totalAligners * 0.5) },
-    { name: `Alinhador #${Math.floor(totalAligners * 0.75)}`, alignerNumber: Math.floor(totalAligners * 0.75) },
-    { name: 'Fim da Jornada!', alignerNumber: totalAligners },
-  ]
+  // Buscar fases do tratamento
+  useEffect(() => {
+    const loadPhases = async () => {
+      if (!treatment?.id) {
+        setLoadingPhases(false)
+        return
+      }
 
-  const treatmentSteps = milestones.map((milestone) => ({
-    name: milestone.name,
-    completed: currentAlignerNumber >= milestone.alignerNumber,
-  }))
+      try {
+        const phasesData = await PhaseService.getPhasesByTreatment(treatment.id)
+        setPhases(phasesData)
+      } catch (error) {
+        console.error('Erro ao carregar fases:', error)
+      } finally {
+        setLoadingPhases(false)
+      }
+    }
+
+    loadPhases()
+  }, [treatment?.id])
+
+  // Generate treatment steps based on phases
+  const treatmentSteps = phases.length > 0
+    ? phases.map((phase) => ({
+        name: phase.phaseName,
+        description: `Alinhadores ${phase.startAlignerNumber} a ${phase.endAlignerNumber}`,
+        completed: phase.status === 'completed',
+        active: phase.status === 'active',
+      }))
+    : [
+        // Fallback to milestones if no phases
+        { name: 'Início da Aventura', description: 'Alinhador 1', completed: currentAlignerNumber >= 1, active: currentAlignerNumber === 1 },
+        { name: `Progresso Inicial`, description: `Alinhador ${Math.floor(totalAligners * 0.25)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.25), active: false },
+        { name: `Meio da Jornada`, description: `Alinhador ${Math.floor(totalAligners * 0.5)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.5), active: false },
+        { name: `Reta Final`, description: `Alinhador ${Math.floor(totalAligners * 0.75)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.75), active: false },
+        { name: 'Fim da Jornada!', description: `Alinhador ${totalAligners}`, completed: currentAlignerNumber >= totalAligners, active: false },
+      ]
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -75,47 +106,64 @@ const MyTreatment = () => {
 
       <Card className="border-2 border-purple-400 hover-scale">
         <CardHeader className="bg-gradient-to-r from-purple-400 to-pink-400">
-          <CardTitle className="text-white drop-shadow-lg">Mapa do Tesouro</CardTitle>
+          <CardTitle className="text-white drop-shadow-lg flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Mapa do Tesouro {phases.length > 0 && `(${phases.length} Fases)`}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="relative pl-6">
-            <div className="absolute left-[34px] top-0 h-full w-1 border-l-2 border-dashed border-primary-child"></div>
-            {treatmentSteps.map((step, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "relative mb-8 flex items-center transition-all duration-300 hover-scale",
-                  step.completed && "animate-fade-in"
-                )}
-              >
+          {loadingPhases ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Carregando fases...</p>
+            </div>
+          ) : (
+            <div className="relative pl-6">
+              <div className="absolute left-[34px] top-0 h-full w-1 border-l-2 border-dashed border-primary-child"></div>
+              {treatmentSteps.map((step, index) => (
                 <div
+                  key={index}
                   className={cn(
-                    "z-10 flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-md",
-                    step.completed && "bg-green-100 animate-bounce-slow"
+                    "relative mb-8 flex items-center transition-all duration-300 hover-scale",
+                    step.completed && "animate-fade-in",
+                    step.active && "scale-105"
                   )}
                 >
-                  {step.completed ? (
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                  ) : (
-                    <MapPin className="h-8 w-8 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="ml-4">
-                  <p
+                  <div
                     className={cn(
-                      'text-lg font-semibold',
-                      step.completed ? 'text-foreground' : 'text-muted-foreground',
+                      "z-10 flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-md",
+                      step.completed && "bg-green-100 animate-bounce-slow",
+                      step.active && "bg-blue-100 border-2 border-blue-500 animate-glow"
                     )}
                   >
-                    {step.name}
-                  </p>
-                  {step.completed && (
-                    <p className="text-sm text-green-600 font-medium">✓ Completado</p>
-                  )}
+                    {step.completed ? (
+                      <CheckCircle2 className="h-8 w-8 text-green-500" />
+                    ) : step.active ? (
+                      <Sparkles className="h-8 w-8 text-blue-500 animate-pulse" />
+                    ) : (
+                      <MapPin className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="ml-4">
+                    <p
+                      className={cn(
+                        'text-lg font-semibold',
+                        step.completed ? 'text-foreground' : step.active ? 'text-blue-600' : 'text-muted-foreground',
+                      )}
+                    >
+                      {step.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                    {step.completed && (
+                      <p className="text-sm text-green-600 font-medium">✓ Completado</p>
+                    )}
+                    {step.active && (
+                      <p className="text-sm text-blue-600 font-medium">→ Em Andamento</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -74,11 +74,48 @@ export const treatments = pgTable('treatments', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
   name: varchar('name', { length: 255 }),
+
+  // Overall treatment info (container)
+  overallStatus: varchar('overall_status', { length: 50 }).default('active').notNull(), // 'active' | 'completed' | 'paused' | 'cancelled'
+  totalPhasesPlanned: integer('total_phases_planned').default(1).notNull(),
+  currentPhaseNumber: integer('current_phase_number').default(1).notNull(),
+  totalAlignersOverall: integer('total_aligners_overall').default(20).notNull(), // Default 20 for migration
+  currentAlignerOverall: integer('current_aligner_overall').default(1).notNull(),
+
   startDate: varchar('start_date', { length: 10 }).notNull(),
   expectedEndDate: varchar('expected_end_date', { length: 10 }),
-  currentAlignerNumber: integer('current_aligner_number').default(1).notNull(),
+
+  // Legacy fields (for backwards compatibility during migration)
+  currentAlignerNumber: integer('current_aligner_number').default(1),
+  totalAligners: integer('total_aligners'),
+  status: varchar('status', { length: 50 }).default('active'),
+
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const treatment_phases = pgTable('treatment_phases', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  treatmentId: varchar('treatment_id', { length: 255 }).notNull(),
+  phaseNumber: integer('phase_number').notNull(),
+  phaseName: varchar('phase_name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // Aligner numbering for this phase
+  startAlignerNumber: integer('start_aligner_number').notNull(),
+  endAlignerNumber: integer('end_aligner_number').notNull(),
   totalAligners: integer('total_aligners').notNull(),
-  status: varchar('status', { length: 50 }).default('active').notNull(),
+  currentAlignerNumber: integer('current_aligner_number').default(0).notNull(),
+
+  // Phase status
+  status: varchar('status', { length: 50 }).default('pending').notNull(), // 'pending' | 'active' | 'completed' | 'paused' | 'cancelled'
+
+  // Dates
+  startDate: varchar('start_date', { length: 10 }),
+  expectedEndDate: varchar('expected_end_date', { length: 10 }),
+  actualEndDate: varchar('actual_end_date', { length: 10 }),
+
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -87,8 +124,10 @@ export const treatments = pgTable('treatments', {
 export const aligners = pgTable('aligners', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
-  treatmentId: varchar('treatment_id', { length: 255 }),
-  alignerNumber: integer('aligner_number').notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }), // FK to treatment (container) - for gamification
+  phaseId: varchar('phase_id', { length: 255 }), // FK to treatment_phases - for phase tracking
+  alignerNumber: integer('aligner_number').notNull(), // Global number (continues across phases)
+  alignerNumberInPhase: integer('aligner_number_in_phase'), // Number within the phase (1, 2, 3... resets per phase)
   startDate: varchar('start_date', { length: 10 }).notNull(),
   endDate: varchar('end_date', { length: 10 }).notNull(),
   actualEndDate: varchar('actual_end_date', { length: 10 }),
@@ -291,6 +330,57 @@ export const story_prompts = pgTable('story_prompts', {
   systemPrompt: text('system_prompt').notNull(),
   userPromptTemplate: text('user_prompt_template').notNull(),
   isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// PHOTOS & PROGRESS TRACKING
+// ============================================
+
+export const progress_photos = pgTable('progress_photos', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }).notNull(),
+  phaseId: varchar('phase_id', { length: 255 }),
+  alignerNumber: integer('aligner_number'), // Alinhador em que a foto foi tirada
+
+  // Photo metadata
+  photoType: varchar('photo_type', { length: 50 }).notNull(), // 'frontal' | 'right' | 'left'
+  photoUrl: text('photo_url').notNull(),
+  thumbnailUrl: text('thumbnail_url'),
+
+  // File info
+  fileName: varchar('file_name', { length: 255 }),
+  fileSize: integer('file_size'), // in bytes
+  mimeType: varchar('mime_type', { length: 100 }),
+
+  // Capture info
+  capturedAt: timestamp('captured_at').notNull(),
+  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+
+  // Clinical notes
+  clinicianNotes: text('clinician_notes'),
+  hasIssues: boolean('has_issues').default(false),
+
+  // Metadata
+  metadata: jsonb('metadata'), // For additional info (device, location, etc.)
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// MESSAGES & CHAT
+// ============================================
+
+export const messages = pgTable('messages', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  senderId: varchar('sender_id', { length: 255 }).notNull(),
+  receiverId: varchar('receiver_id', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  readAt: timestamp('read_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

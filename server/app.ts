@@ -15,6 +15,9 @@ import clinicsRoutes from './routes/clinics'
 import alignersRoutes from './routes/aligners'
 import storiesRoutes from './routes/stories'
 import missionsRoutes from './routes/missions'
+import phasesRoutes from './routes/phases'
+import messagesRoutes from './routes/messages'
+import photosRoutes from './routes/photos'
 
 // Load environment variables
 dotenv.config()
@@ -59,16 +62,17 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error('Not allowed by CORS'))
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
   credentials: true,
 }
 
 app.use(cors(corsOptions))
-app.use(express.json())
+app.use(express.json({ limit: '10mb' })) // Aumentar limite para fotos em base64
+app.use(express.urlencoded({ limit: '10mb', extended: true }))
 app.use(cookieParser())
 
-// Health check
-app.get('/health', async (req, res) => {
+// Health check handler
+const healthCheck = async (req: express.Request, res: express.Response) => {
   try {
     // Test database connection
     const result = await db.select().from(users).limit(1)
@@ -85,7 +89,11 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
     })
   }
-})
+}
+
+// Health check - disponível em ambos /health e /api/health
+app.get('/health', healthCheck)
+app.get('/api/health', healthCheck)
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -93,6 +101,9 @@ app.use('/api/clinics', clinicsRoutes)
 app.use('/api', alignersRoutes)
 app.use('/api', storiesRoutes)
 app.use('/api', missionsRoutes)
+app.use('/api/phases', phasesRoutes)
+app.use('/api/messages', messagesRoutes)
+app.use('/api/photos', photosRoutes)
 
 // 404 handler
 app.use((req, res) => {

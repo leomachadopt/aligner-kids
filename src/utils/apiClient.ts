@@ -27,30 +27,58 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retries = 3,
+    backoff = 1000
   ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        }
+
+        // Add authorization header if token exists
+        if (this.token) {
+          headers['Authorization'] = `Bearer ${this.token}`
+        }
+
+        const response = await fetch(`${this.baseURL}${endpoint}`, {
+          ...options,
+          headers,
+          credentials: 'include', // Include cookies
+        })
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: 'Unknown error' }))
+          throw new Error(
+            errorData.error || `HTTP error! status: ${response.status}`
+          )
+        }
+
+        return response.json()
+      } catch (error) {
+        const isLastAttempt = attempt === retries - 1
+        const isNetworkError =
+          error instanceof TypeError && error.message === 'Failed to fetch'
+
+        // Se for o último retry ou não for erro de rede, joga o erro
+        if (isLastAttempt || !isNetworkError) {
+          throw error
+        }
+
+        // Aguarda antes de tentar novamente (exponential backoff)
+        console.log(
+          `🔄 Tentativa ${attempt + 1}/${retries} falhou. Tentando novamente em ${backoff}ms...`
+        )
+        await new Promise((resolve) => setTimeout(resolve, backoff))
+        backoff *= 2 // Dobra o tempo de espera a cada tentativa
+      }
     }
 
-    // Add authorization header if token exists
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
-    }
-
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: 'include', // Include cookies
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-    }
-
-    return response.json()
+    throw new Error('Max retries reached')
   }
 
   async get<T>(endpoint: string): Promise<T> {

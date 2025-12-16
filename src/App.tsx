@@ -39,6 +39,7 @@ import DebugAuth from './pages/DebugAuth'
 import StorageStatus from './pages/StorageStatus'
 import MissionPrograms from './pages/MissionPrograms'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { BackendStatusIndicator } from './components/BackendStatusIndicator'
 import '@/utils/debugAuth' // Debug helper para testar autenticação
 import '@/utils/testAuth' // Test auth flow
 import '@/utils/storageMonitor' // Monitor de localStorage para detectar perdas de dados
@@ -56,6 +57,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <BackendStatusIndicator />
             <Routes>
             {/* Rotas Públicas */}
             <Route path="/" element={<Index />} />

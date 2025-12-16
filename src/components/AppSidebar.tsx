@@ -71,17 +71,17 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
   const currentMenu = userRole ? (menuItems[userRole] || patientMenu) : patientMenu
 
   return (
-    <aside className="hidden h-screen w-64 flex-col border-r bg-card md:flex">
-      <div className="flex h-20 items-center justify-center border-b px-6">
+    <aside className="hidden h-screen w-72 flex-col border-r border-border/60 bg-background/80 backdrop-blur-md shadow-[0_15px_50px_-25px_rgba(0,0,0,0.35)] md:flex">
+      <div className="flex h-20 items-center justify-center border-b border-border/60 px-6">
         <Link to="/dashboard" className="flex items-center gap-2">
           <img
             src="https://img.usecurling.com/i?q=angel-aligners&color=azure"
             alt="Logo"
-            className="h-8 w-auto"
+            className="h-8 w-auto rounded-lg shadow-sm"
           />
           <span
             className={cn(
-              'text-lg font-bold',
+              'text-lg font-bold tracking-tight',
               isChild && 'font-display text-xl',
             )}
           >
@@ -89,23 +89,23 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
           </span>
         </Link>
       </div>
-      <nav className="flex-1 space-y-2 p-4">
+      <nav className="flex-1 space-y-2 p-5">
         {currentMenu.map((item) => (
           <Link
             key={item.href}
             to={item.href}
             className={cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
               location.pathname === item.href
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                ? 'bg-primary/10 text-foreground border border-primary/20 shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent',
               isChild && 'rounded-xl py-3 text-base font-bold hover:scale-105',
               isChild &&
                 location.pathname === item.href &&
                 'shadow-lg shadow-primary/30',
             )}
           >
-            <item.icon className="h-5 w-5" />
+            <item.icon className="h-5 w-5 text-primary" />
             <span>{item.label}</span>
           </Link>
         ))}

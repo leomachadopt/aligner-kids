@@ -36,7 +36,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin || '*'
   res.setHeader('Access-Control-Allow-Origin', origin)
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Cache-Control')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
 
   if (req.method === 'OPTIONS') {
@@ -59,14 +59,18 @@ function getDb() {
   return drizzle(sql, { schema: { users } })
 }
 
-// Health endpoint
-app.get('/api/health', (req, res) => {
+// Health check handler
+const healthCheck = (req: any, res: any) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: process.env.DATABASE_URL ? 'connected' : 'not configured'
   })
-})
+}
+
+// Health endpoints - disponível em ambos /health e /api/health
+app.get('/health', healthCheck)
+app.get('/api/health', healthCheck)
 
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {

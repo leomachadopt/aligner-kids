@@ -110,6 +110,18 @@ class AlignerServiceAPI implements IAlignerService {
     }
   }
 
+  async getTreatmentsByPatient(patientId: string): Promise<Treatment[]> {
+    try {
+      const res = await apiClient.get<{ treatments: any[] }>(
+        `/treatments/patient/${patientId}/all`,
+      )
+      return (res?.treatments || []).map(mapTreatment)
+    } catch (error) {
+      console.error('Erro ao buscar tratamentos:', error)
+      return []
+    }
+  }
+
   async createTreatment(
     treatmentData: Omit<Treatment, 'id'>,
   ): Promise<Treatment> {
@@ -140,6 +152,10 @@ class AlignerServiceAPI implements IAlignerService {
     return mapTreatment(res.treatment)
   }
 
+  async deleteTreatment(id: string): Promise<void> {
+    await apiClient.delete(`/treatments/${id}`)
+  }
+
   async getCurrentAligner(patientId: string, treatmentId?: string): Promise<Aligner | null> {
     const treatment = await this.getTreatmentByPatient(patientId)
     const aligners = await this.getAlignersByPatient(patientId, treatmentId || treatment?.id)
@@ -164,14 +180,67 @@ class AlignerServiceAPI implements IAlignerService {
     _patientId: string,
     alignerId: string,
   ): Promise<Aligner> {
-    const res = await apiClient.post<{ confirmedAligner: any }>(
+    const res = await apiClient.post<{
+      success: boolean
+      confirmedAligner: any
+      nextAligner?: any
+      phaseCompleted?: boolean
+      treatmentCompleted?: boolean
+      error?: string
+      daysRemaining?: number
+    }>(
       `/aligners/${alignerId}/confirm`,
       {},
     )
+
+    if (res?.error) {
+      throw new Error(res.error)
+    }
+
     if (!res?.confirmedAligner) {
       throw new Error('Não foi possível confirmar a troca de alinhador')
     }
     return mapAligner(res.confirmedAligner)
+  }
+
+  /**
+   * Inicia o tratamento, ativando o primeiro alinhador da primeira fase
+   */
+  async startTreatment(treatmentId: string): Promise<{
+    success: boolean
+    message: string
+    treatment: any
+    currentPhase: any
+    currentAligner: any
+  }> {
+    const res = await apiClient.post<{
+      success: boolean
+      message: string
+      treatment: any
+      currentPhase: any
+      currentAligner: any
+    }>(`/treatments/${treatmentId}/start`, {})
+
+    return res
+  }
+
+  /**
+   * Verifica se um alinhador pode ser ativado (se a data já passou)
+   */
+  async canActivateAligner(alignerId: string): Promise<{
+    canActivate: boolean
+    daysRemaining: number
+    nextActivationDate: string
+    currentStatus: string
+  }> {
+    const res = await apiClient.get<{
+      canActivate: boolean
+      daysRemaining: number
+      nextActivationDate: string
+      currentStatus: string
+    }>(`/aligners/${alignerId}/can-activate`)
+
+    return res
   }
 }
 

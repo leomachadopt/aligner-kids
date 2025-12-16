@@ -24,12 +24,18 @@ import { ArrowLeft } from 'lucide-react'
 import { alignerService } from '@/services/alignerService'
 import { AuthService } from '@/services/authService'
 import { ClinicService } from '@/services/clinicService'
+import { PhaseService } from '@/services/phaseService'
 import { useAuth } from '@/context/AuthContext'
-import type { Treatment, Aligner } from '@/types/aligner'
+import type { Treatment, Aligner, TreatmentPhase } from '@/types/aligner'
 import type { User } from '@/types/user'
 import type { Clinic } from '@/types/clinic'
 import { COUNTRY_INFO } from '@/types/clinic'
 import { TreatmentTimeline } from '@/components/TreatmentTimeline'
+import { PhaseCard } from '@/components/PhaseCard'
+import { NewPhaseModal } from '@/components/NewPhaseModal'
+import { EditPhaseModal } from '@/components/EditPhaseModal'
+import { ChatModal } from '@/components/ChatModal'
+import { PatientPhotosView } from '@/components/PatientPhotosView'
 import {
   calculateTreatmentProgress,
   isAlignerOverdue,
@@ -52,14 +58,18 @@ const PatientDetail = () => {
   const [patient, setPatient] = useState<User | null>(null)
   const [treatment, setTreatment] = useState<Treatment | null>(null)
   const [aligners, setAligners] = useState<Aligner[]>([])
+  const [phases, setPhases] = useState<TreatmentPhase[]>([])
   const [loading, setLoading] = useState(true)
   const [clinic, setClinic] = useState<Clinic | null>(null)
-  const [isEditTreatmentOpen, setIsEditTreatmentOpen] = useState(false)
-  const [editTreatmentData, setEditTreatmentData] = useState({
-    totalAligners: 0,
-    status: 'active' as 'active' | 'completed' | 'paused' | 'cancelled',
-  })
+  const [isNewPhaseModalOpen, setIsNewPhaseModalOpen] = useState(false)
+  const [isEditPhaseModalOpen, setIsEditPhaseModalOpen] = useState(false)
+  const [editingPhase, setEditingPhase] = useState<TreatmentPhase | null>(null)
   const [isEditPatientOpen, setIsEditPatientOpen] = useState(false)
+  const [isViewTreatmentOpen, setIsViewTreatmentOpen] = useState(false)
+  const [isDeleteTreatmentOpen, setIsDeleteTreatmentOpen] = useState(false)
+  const [isListTreatmentsOpen, setIsListTreatmentsOpen] = useState(false)
+  const [allTreatments, setAllTreatments] = useState<Treatment[]>([])
+  const [isChatOpen, setIsChatOpen] = useState(false)
   const [editPatientData, setEditPatientData] = useState({
     fullName: '',
     email: '',
@@ -110,6 +120,16 @@ const PatientDetail = () => {
 
         setTreatment(patientTreatment)
         setAligners(patientAligners)
+
+        // Load phases if treatment exists
+        if (patientTreatment) {
+          try {
+            const treatmentPhases = await PhaseService.getPhasesByTreatment(patientTreatment.id)
+            setPhases(treatmentPhases)
+          } catch (error) {
+            console.error('Error loading phases:', error)
+          }
+        }
       } catch (error) {
         console.error('Error loading patient data:', error)
         toast.error('Erro ao carregar dados do paciente')
@@ -121,34 +141,35 @@ const PatientDetail = () => {
     loadData()
   }, [id, currentUser])
 
-  const handleEditTreatment = () => {
-    if (treatment) {
-      setEditTreatmentData({
-        totalAligners: treatment.totalAligners,
-        status: treatment.status,
-      })
-      setIsEditTreatmentOpen(true)
-    }
-  }
-
-  const handleSaveTreatment = async () => {
+  const handleDeleteTreatment = async () => {
     if (!treatment || !id) return
 
     try {
-      await alignerService.updateTreatment(treatment.id, {
-        totalAligners: editTreatmentData.totalAligners,
-        status: editTreatmentData.status,
-      })
+      await alignerService.deleteTreatment(treatment.id)
 
       // Recarregar dados
-      const updatedTreatment = await alignerService.getTreatmentByPatient(id)
-      setTreatment(updatedTreatment)
+      setTreatment(null)
+      setAligners([])
+      setPhases([])
 
-      toast.success('Tratamento atualizado com sucesso!')
-      setIsEditTreatmentOpen(false)
+      toast.success('Tratamento excluído com sucesso!')
+      setIsDeleteTreatmentOpen(false)
     } catch (error) {
-      console.error('Error updating treatment:', error)
-      toast.error('Erro ao atualizar tratamento')
+      console.error('Error deleting treatment:', error)
+      toast.error('Erro ao excluir tratamento')
+    }
+  }
+
+  const handleListTreatments = async () => {
+    if (!id) return
+
+    try {
+      const treatments = await alignerService.getTreatmentsByPatient(id)
+      setAllTreatments(treatments)
+      setIsListTreatmentsOpen(true)
+    } catch (error) {
+      console.error('Error loading treatments:', error)
+      toast.error('Erro ao carregar tratamentos')
     }
   }
 
@@ -324,6 +345,66 @@ const PatientDetail = () => {
           </CardContent>
         </Card>
 
+        {/* Phases Section */}
+        {treatment && phases.length > 0 && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Fases do Tratamento</CardTitle>
+                <Button
+                  onClick={() => setIsNewPhaseModalOpen(true)}
+                  size="sm"
+                >
+                  Iniciar Nova Fase
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {phases.map((phase) => (
+                <PhaseCard
+                  key={phase.id}
+                  phase={phase}
+                  isActive={phase.status === 'active'}
+                  onEdit={() => {
+                    setEditingPhase(phase)
+                    setIsEditPhaseModalOpen(true)
+                  }}
+                  onStart={async () => {
+                    try {
+                      await PhaseService.startPhase(phase.id)
+                      toast.success('Fase iniciada com sucesso!')
+                      // Reload phases
+                      const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+                      setPhases(updatedPhases)
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar fase')
+                    }
+                  }}
+                  onComplete={async () => {
+                    try {
+                      await PhaseService.completePhase(phase.id)
+                      toast.success('Fase concluída com sucesso!')
+                      // Reload phases
+                      const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+                      setPhases(updatedPhases)
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : 'Erro ao concluir fase')
+                    }
+                  }}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Patient Photos Section */}
+        <div className="lg:col-span-2">
+          <PatientPhotosView
+            patientId={patient.id}
+            patientName={patient.fullName}
+          />
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle>Ações</CardTitle>
@@ -336,21 +417,42 @@ const PatientDetail = () => {
             >
               Editar Dados do Paciente
             </Button>
-            <Button className="w-full" asChild>
-              <Link to={`/aligner-management?patientId=${id}`}>
-                Cadastrar Alinhador
-              </Link>
-            </Button>
-            {treatment && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleEditTreatment}
-              >
-                Editar Tratamento
+            {!treatment ? (
+              <Button className="w-full" asChild>
+                <Link to={`/aligner-management?patientId=${id}`}>
+                  Cadastrar Novo Tratamento
+                </Link>
               </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsViewTreatmentOpen(true)}
+                >
+                  Visualizar Tratamento Atual
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleListTreatments}
+                >
+                  Listar Todos os Tratamentos
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => setIsDeleteTreatmentOpen(true)}
+                >
+                  Excluir Tratamento
+                </Button>
+              </>
             )}
-            <Button variant="outline" className="w-full" disabled>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setIsChatOpen(true)}
+            >
               Enviar Mensagem
             </Button>
           </CardContent>
@@ -382,69 +484,6 @@ const PatientDetail = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Dialog: Editar Tratamento */}
-      <Dialog open={isEditTreatmentOpen} onOpenChange={setIsEditTreatmentOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Tratamento</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do tratamento de {patient.fullName}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="total-aligners">Total de Alinhadores</Label>
-              <Input
-                id="total-aligners"
-                type="number"
-                min="1"
-                value={editTreatmentData.totalAligners}
-                onChange={(e) =>
-                  setEditTreatmentData({
-                    ...editTreatmentData,
-                    totalAligners: parseInt(e.target.value, 10) || 0,
-                  })
-                }
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Quantidade total de alinhadores planejados para o tratamento
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="treatment-status">Status do Tratamento</Label>
-              <select
-                id="treatment-status"
-                value={editTreatmentData.status}
-                onChange={(e) =>
-                  setEditTreatmentData({
-                    ...editTreatmentData,
-                    status: e.target.value as any,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="active">Ativo</option>
-                <option value="paused">Pausado</option>
-                <option value="completed">Concluído</option>
-                <option value="cancelled">Cancelado</option>
-              </select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditTreatmentOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveTreatment}>Salvar Alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog: Editar Dados do Paciente */}
       <Dialog open={isEditPatientOpen} onOpenChange={setIsEditPatientOpen}>
@@ -656,6 +695,329 @@ const PatientDetail = () => {
               Cancelar
             </Button>
             <Button onClick={handleSavePatient}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Phase Modal */}
+      {treatment && (
+        <NewPhaseModal
+          open={isNewPhaseModalOpen}
+          onOpenChange={setIsNewPhaseModalOpen}
+          treatmentId={treatment.id}
+          patientName={patient?.fullName || ''}
+          lastPhase={phases[phases.length - 1] || null}
+          onSuccess={async () => {
+            // Reload phases after creating new one
+            try {
+              const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+              setPhases(updatedPhases)
+            } catch (error) {
+              console.error('Error reloading phases:', error)
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Phase Modal */}
+      {editingPhase && (
+        <EditPhaseModal
+          open={isEditPhaseModalOpen}
+          onOpenChange={setIsEditPhaseModalOpen}
+          phase={editingPhase}
+          onSuccess={async () => {
+            // Reload phases after editing
+            try {
+              if (treatment) {
+                const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+                setPhases(updatedPhases)
+              }
+            } catch (error) {
+              console.error('Error reloading phases:', error)
+            }
+          }}
+        />
+      )}
+
+      {/* Dialog: Visualizar Tratamento */}
+      {treatment && (
+        <Dialog open={isViewTreatmentOpen} onOpenChange={setIsViewTreatmentOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Detalhes do Tratamento</DialogTitle>
+              <DialogDescription>
+                Informações completas do tratamento de {patient?.fullName}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">ID do Tratamento</p>
+                  <p className="text-sm font-mono">{treatment.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Status</p>
+                  <Badge
+                    variant={
+                      treatment.status === 'active'
+                        ? 'default'
+                        : treatment.status === 'completed'
+                          ? 'default'
+                          : 'secondary'
+                    }
+                  >
+                    {treatment.status === 'active' && 'Ativo'}
+                    {treatment.status === 'completed' && 'Concluído'}
+                    {treatment.status === 'paused' && 'Pausado'}
+                    {treatment.status === 'cancelled' && 'Cancelado'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Data de Início</p>
+                  <p className="text-sm">
+                    {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Data de Término</p>
+                  <p className="text-sm">
+                    {treatment.endDate
+                      ? new Date(treatment.endDate).toLocaleDateString('pt-BR')
+                      : 'Em andamento'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Total de Alinhadores</p>
+                  <p className="text-lg font-semibold">{treatment.totalAligners}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Alinhador Atual</p>
+                  <p className="text-lg font-semibold">#{treatment.currentAlignerNumber}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Progresso</p>
+                  <p className="text-lg font-semibold">{progress.toFixed(0)}%</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Fase Atual</p>
+                  <p className="text-lg font-semibold">#{treatment.currentPhaseNumber || 1}</p>
+                </div>
+              </div>
+
+              {phases.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">Fases</p>
+                  <div className="space-y-2">
+                    {phases.map((phase) => (
+                      <div
+                        key={phase.id}
+                        className="flex items-center justify-between p-2 rounded border"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold">{phase.phaseName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Alinhadores #{phase.startAlignerNumber} a #{phase.endAlignerNumber}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={phase.status === 'active' ? 'default' : 'secondary'}
+                        >
+                          {PhaseService.getStatusLabel(phase.status)}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setIsViewTreatmentOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog: Confirmar Exclusão de Tratamento */}
+      {treatment && (
+        <Dialog open={isDeleteTreatmentOpen} onOpenChange={setIsDeleteTreatmentOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Excluir Tratamento</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir este tratamento?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20">
+                <p className="text-sm font-semibold text-destructive mb-2">⚠️ Atenção!</p>
+                <p className="text-sm text-muted-foreground">
+                  Esta ação não pode ser desfeita. Todos os dados relacionados ao tratamento
+                  serão permanentemente excluídos:
+                </p>
+                <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                  <li>{phases.length} fase(s) do tratamento</li>
+                  <li>{aligners.length} alinhador(es) cadastrado(s)</li>
+                  <li>Histórico de uso e progresso</li>
+                  <li>Dados de gamificação relacionados</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-sm font-semibold">Tratamento:</p>
+                <p className="text-xs text-muted-foreground">ID: {treatment.id}</p>
+                <p className="text-xs text-muted-foreground">
+                  Paciente: {patient?.fullName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Início: {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteTreatmentOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteTreatment}>
+                Excluir Tratamento
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Chat Modal */}
+      {patient && (
+        <ChatModal
+          open={isChatOpen}
+          onOpenChange={setIsChatOpen}
+          otherUserId={patient.id}
+          otherUserName={patient.fullName}
+          otherUserRole={patient.role}
+        />
+      )}
+
+      {/* Dialog: Listar Todos os Tratamentos */}
+      <Dialog open={isListTreatmentsOpen} onOpenChange={setIsListTreatmentsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Todos os Tratamentos</DialogTitle>
+            <DialogDescription>
+              Histórico completo de tratamentos de {patient?.fullName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {allTreatments.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Nenhum tratamento encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {allTreatments.map((t, index) => {
+                  const isCurrent = treatment?.id === t.id
+                  const treatmentProgress = calculateTreatmentProgress(t)
+
+                  return (
+                    <Card
+                      key={t.id}
+                      className={isCurrent ? 'border-blue-500 border-2' : ''}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">
+                                {t.name || `Tratamento ${allTreatments.length - index}`}
+                              </h3>
+                              {isCurrent && (
+                                <Badge variant="default">Atual</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground font-mono mt-1">
+                              ID: {t.id}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={
+                              t.status === 'active'
+                                ? 'default'
+                                : t.status === 'completed'
+                                  ? 'default'
+                                  : 'secondary'
+                            }
+                          >
+                            {t.status === 'active' && 'Ativo'}
+                            {t.status === 'completed' && 'Concluído'}
+                            {t.status === 'paused' && 'Pausado'}
+                            {t.status === 'cancelled' && 'Cancelado'}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Data de Início</p>
+                            <p className="font-medium">
+                              {new Date(t.startDate).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Total Alinhadores</p>
+                            <p className="font-medium">{t.totalAligners}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Alinhador Atual</p>
+                            <p className="font-medium">#{t.currentAlignerNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Progresso</p>
+                            <p className="font-medium">{treatmentProgress.toFixed(0)}%</p>
+                          </div>
+                        </div>
+
+                        {t.endDate && (
+                          <div className="mt-3 pt-3 border-t">
+                            <p className="text-xs text-muted-foreground">
+                              Concluído em: {new Date(t.endDate).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {allTreatments.length > 0 && (
+              <div className="rounded-lg bg-muted p-3 text-sm">
+                <p className="font-semibold">Total: {allTreatments.length} tratamento(s)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {allTreatments.filter(t => t.status === 'active').length} ativo(s) • {' '}
+                  {allTreatments.filter(t => t.status === 'completed').length} concluído(s) • {' '}
+                  {allTreatments.filter(t => t.status === 'paused').length} pausado(s)
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setIsListTreatmentsOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

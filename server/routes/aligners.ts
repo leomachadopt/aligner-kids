@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users } from '../db/index'
+import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users, treatment_phases } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
 
 const router = Router()
@@ -115,7 +115,24 @@ async function getDefaultProgramForClinic(clinicId?: string) {
 // TREATMENTS
 // ============================================
 
-// Get patient's treatment
+// Get all patient's treatments
+router.get('/treatments/patient/:patientId/all', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const result = await db
+      .select()
+      .from(treatments)
+      .where(eq(treatments.patientId, patientId))
+      .orderBy(desc(treatments.createdAt))
+
+    res.json({ treatments: result })
+  } catch (error) {
+    console.error('Error fetching treatments:', error)
+    res.status(500).json({ error: 'Failed to fetch treatments' })
+  }
+})
+
+// Get patient's treatment (most recent)
 router.get('/treatments/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
@@ -432,6 +449,7 @@ router.put('/aligners/:id', async (req, res) => {
 })
 
 // Confirm aligner change (mark current as completed, activate next)
+// Com validação de data e transição automática de fases
 router.post('/aligners/:id/confirm', async (req, res) => {
   try {
     const alignerId = req.params.id
@@ -448,37 +466,54 @@ router.post('/aligners/:id/confirm', async (req, res) => {
 
     const aligner = alignerResult[0]
 
+    // ✅ VALIDAÇÃO: Verificar se a data de término já passou
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const endDate = new Date(aligner.endDate)
+    endDate.setHours(0, 0, 0, 0)
+
+    if (today < endDate) {
+      const diffTime = endDate.getTime() - today.getTime()
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      return res.status(400).json({
+        error: 'Ainda não é possível trocar o alinhador',
+        daysRemaining,
+        canActivateAt: aligner.endDate
+      })
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10)
+
     // Mark as completed
     await db
       .update(aligners)
       .set({
         status: 'completed',
-        endDate: new Date().toISOString(),
+        actualEndDate: todayStr,
         updatedAt: new Date(),
       })
       .where(eq(aligners.id, alignerId))
 
-    // Update treatment current aligner number (prefer treatmentId if exists)
-    if (aligner.treatmentId) {
-      await db
-        .update(treatments)
-        .set({
-          currentAlignerNumber: aligner.alignerNumber + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(treatments.id, aligner.treatmentId))
-    } else {
-      await db
-        .update(treatments)
-        .set({
-          currentAlignerNumber: aligner.alignerNumber + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(treatments.patientId, aligner.patientId))
+    // ✅ BUSCAR FASE ATUAL (se existir)
+    let currentPhase = null
+    if (aligner.phaseId) {
+      const phaseResult = await db
+        .select()
+        .from(treatment_phases)
+        .where(eq(treatment_phases.id, aligner.phaseId))
+
+      if (phaseResult.length > 0) {
+        currentPhase = phaseResult[0]
+      }
     }
 
+    // ✅ VERIFICAR SE É O ÚLTIMO ALINHADOR DA FASE
+    const isLastInPhase = currentPhase && aligner.alignerNumber === currentPhase.endAlignerNumber
+
     // Find and activate next aligner
-    const nextAligner = await db
+    const nextAlignerResult = await db
       .select()
       .from(aligners)
       .where(
@@ -489,15 +524,97 @@ router.post('/aligners/:id/confirm', async (req, res) => {
         )
       )
 
-    if (nextAligner.length > 0) {
+    if (nextAlignerResult.length > 0) {
+      const nextAligner = nextAlignerResult[0]
+
+      // ✅ SE É O ÚLTIMO DA FASE, MARCAR FASE COMO COMPLETA E ATIVAR PRÓXIMA FASE
+      let nextPhase = null
+      if (isLastInPhase && currentPhase) {
+        console.log(`📦 Completando fase ${currentPhase.phaseNumber}: ${currentPhase.phaseName}`)
+
+        // Marcar fase atual como completa
+        await db
+          .update(treatment_phases)
+          .set({
+            status: 'completed',
+            actualEndDate: todayStr,
+            updatedAt: new Date(),
+          })
+          .where(eq(treatment_phases.id, currentPhase.id))
+
+        // Buscar próxima fase
+        const nextPhaseResult = await db
+          .select()
+          .from(treatment_phases)
+          .where(
+            and(
+              eq(treatment_phases.treatmentId, aligner.treatmentId!),
+              eq(treatment_phases.phaseNumber, currentPhase.phaseNumber + 1)
+            )
+          )
+
+        if (nextPhaseResult.length > 0) {
+          nextPhase = nextPhaseResult[0]
+
+          console.log(`🚀 Iniciando fase ${nextPhase.phaseNumber}: ${nextPhase.phaseName}`)
+
+          // Ativar próxima fase
+          await db
+            .update(treatment_phases)
+            .set({
+              status: 'active',
+              startDate: todayStr,
+              currentAlignerNumber: 1,
+              updatedAt: new Date(),
+            })
+            .where(eq(treatment_phases.id, nextPhase.id))
+
+          // Atualizar tratamento com a nova fase
+          if (aligner.treatmentId) {
+            await db
+              .update(treatments)
+              .set({
+                currentPhaseNumber: nextPhase.phaseNumber,
+                currentAlignerOverall: aligner.alignerNumber + 1,
+                updatedAt: new Date(),
+              })
+              .where(eq(treatments.id, aligner.treatmentId))
+          }
+        }
+      } else {
+        // Atualizar progresso dentro da mesma fase
+        if (currentPhase) {
+          const alignerNumberInPhase = (currentPhase.currentAlignerNumber || 0) + 1
+          await db
+            .update(treatment_phases)
+            .set({
+              currentAlignerNumber: alignerNumberInPhase,
+              updatedAt: new Date(),
+            })
+            .where(eq(treatment_phases.id, currentPhase.id))
+        }
+
+        // Update treatment current aligner number
+        if (aligner.treatmentId) {
+          await db
+            .update(treatments)
+            .set({
+              currentAlignerOverall: aligner.alignerNumber + 1,
+              updatedAt: new Date(),
+            })
+            .where(eq(treatments.id, aligner.treatmentId))
+        }
+      }
+
+      // Ativar próximo alinhador
       await db
         .update(aligners)
         .set({
           status: 'active',
-          startDate: new Date().toISOString(),
+          startDate: todayStr,
           updatedAt: new Date(),
         })
-        .where(eq(aligners.id, nextAligner[0].id))
+        .where(eq(aligners.id, nextAligner.id))
 
       // Ativar missões cujo gatilho é iniciar este alinhador
       await db
@@ -510,37 +627,50 @@ router.post('/aligners/:id/confirm', async (req, res) => {
           and(
             eq(patient_missions.patientId, aligner.patientId),
             eq(patient_missions.trigger, 'on_aligner_N_start'),
-            eq(patient_missions.triggerAlignerNumber, nextAligner[0].alignerNumber),
+            eq(patient_missions.triggerAlignerNumber, nextAligner.alignerNumber),
           ),
         )
 
       res.json({
+        success: true,
         confirmedAligner: aligner,
-        nextAligner: nextAligner[0]
+        nextAligner,
+        phaseCompleted: isLastInPhase,
+        completedPhase: isLastInPhase ? currentPhase : null,
+        newPhase: nextPhase,
       })
     } else {
       // No more aligners - treatment complete
+      console.log(`🏁 Tratamento completado!`)
+
+      // Marcar fase final como completa (se existir)
+      if (currentPhase) {
+        await db
+          .update(treatment_phases)
+          .set({
+            status: 'completed',
+            actualEndDate: todayStr,
+            updatedAt: new Date(),
+          })
+          .where(eq(treatment_phases.id, currentPhase.id))
+      }
+
+      // Marcar tratamento como completo
       if (aligner.treatmentId) {
         await db
           .update(treatments)
           .set({
-            status: 'completed',
+            overallStatus: 'completed',
             updatedAt: new Date(),
           })
           .where(eq(treatments.id, aligner.treatmentId))
-      } else {
-        await db
-          .update(treatments)
-          .set({
-            status: 'completed',
-            updatedAt: new Date(),
-          })
-          .where(eq(treatments.patientId, aligner.patientId))
       }
 
       res.json({
+        success: true,
         confirmedAligner: aligner,
-        treatmentCompleted: true
+        treatmentCompleted: true,
+        completedPhase: currentPhase
       })
     }
   } catch (error) {
@@ -557,6 +687,214 @@ router.delete('/aligners/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting aligner:', error)
     res.status(500).json({ error: 'Failed to delete aligner' })
+  }
+})
+
+// ============================================
+// TREATMENT START & ALIGNER ACTIVATION
+// ============================================
+
+/**
+ * POST /treatments/:id/start
+ * Inicia o tratamento, ativando o primeiro alinhador da primeira fase
+ */
+router.post('/treatments/:id/start', async (req, res) => {
+  try {
+    const treatmentId = req.params.id
+
+    // Buscar o tratamento
+    const treatmentResult = await db
+      .select()
+      .from(treatments)
+      .where(eq(treatments.id, treatmentId))
+
+    if (treatmentResult.length === 0) {
+      return res.status(404).json({ error: 'Tratamento não encontrado' })
+    }
+
+    const treatment = treatmentResult[0]
+
+    // Verificar se já foi iniciado
+    if (treatment.overallStatus === 'active' && treatment.currentAlignerOverall > 1) {
+      return res.status(400).json({ error: 'Tratamento já foi iniciado' })
+    }
+
+    // Buscar a primeira fase
+    const phases = await db
+      .select()
+      .from(treatment_phases)
+      .where(eq(treatment_phases.treatmentId, treatmentId))
+      .orderBy(treatment_phases.phaseNumber)
+
+    if (phases.length === 0) {
+      return res.status(400).json({ error: 'Nenhuma fase encontrada para este tratamento' })
+    }
+
+    const firstPhase = phases[0]
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Ativar a primeira fase
+    await db
+      .update(treatment_phases)
+      .set({
+        status: 'active',
+        startDate: today,
+        currentAlignerNumber: 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(treatment_phases.id, firstPhase.id))
+
+    // Buscar o primeiro alinhador global
+    const firstAlignerResult = await db
+      .select()
+      .from(aligners)
+      .where(
+        and(
+          eq(aligners.treatmentId, treatmentId),
+          eq(aligners.alignerNumber, firstPhase.startAlignerNumber)
+        )
+      )
+
+    if (firstAlignerResult.length === 0) {
+      return res.status(400).json({ error: 'Primeiro alinhador não encontrado' })
+    }
+
+    const firstAligner = firstAlignerResult[0]
+
+    // Ativar o primeiro alinhador
+    await db
+      .update(aligners)
+      .set({
+        status: 'active',
+        startDate: today,
+        updatedAt: new Date(),
+      })
+      .where(eq(aligners.id, firstAligner.id))
+
+    // Atualizar o tratamento
+    await db
+      .update(treatments)
+      .set({
+        overallStatus: 'active',
+        currentPhaseNumber: 1,
+        currentAlignerOverall: firstPhase.startAlignerNumber,
+        startDate: today,
+        updatedAt: new Date(),
+      })
+      .where(eq(treatments.id, treatmentId))
+
+    // Ativar missões do primeiro alinhador
+    await db
+      .update(patient_missions)
+      .set({
+        status: 'in_progress',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(patient_missions.patientId, treatment.patientId),
+          eq(patient_missions.trigger, 'on_aligner_N_start'),
+          eq(patient_missions.triggerAlignerNumber, firstPhase.startAlignerNumber)
+        )
+      )
+
+    console.log(`✅ Tratamento ${treatmentId} iniciado - Alinhador ${firstPhase.startAlignerNumber} ativado`)
+
+    res.json({
+      success: true,
+      message: 'Tratamento iniciado com sucesso',
+      treatment: {
+        ...treatment,
+        overallStatus: 'active',
+        currentPhaseNumber: 1,
+        currentAlignerOverall: firstPhase.startAlignerNumber,
+        startDate: today,
+      },
+      currentPhase: {
+        ...firstPhase,
+        status: 'active',
+        startDate: today,
+        currentAlignerNumber: 1,
+      },
+      currentAligner: {
+        ...firstAligner,
+        status: 'active',
+        startDate: today,
+      }
+    })
+  } catch (error) {
+    console.error('❌ Erro ao iniciar tratamento:', error)
+    res.status(500).json({ error: 'Falha ao iniciar tratamento' })
+  }
+})
+
+/**
+ * GET /aligners/:id/can-activate
+ * Verifica se o alinhador pode ser ativado (se a data já passou)
+ * Retorna: { canActivate: boolean, daysRemaining: number, nextActivationDate: string }
+ */
+router.get('/aligners/:id/can-activate', async (req, res) => {
+  try {
+    const alignerId = req.params.id
+
+    // Buscar o alinhador
+    const alignerResult = await db
+      .select()
+      .from(aligners)
+      .where(eq(aligners.id, alignerId))
+
+    if (alignerResult.length === 0) {
+      return res.status(404).json({ error: 'Alinhador não encontrado' })
+    }
+
+    const aligner = alignerResult[0]
+
+    console.log(`📅 Verificando alinhador #${aligner.alignerNumber}:`, {
+      status: aligner.status,
+      startDate: aligner.startDate,
+      endDate: aligner.endDate
+    })
+
+    // Se já está completado, não pode ativar
+    if (aligner.status === 'completed') {
+      return res.json({
+        canActivate: false,
+        daysRemaining: 0,
+        nextActivationDate: aligner.startDate,
+        currentStatus: aligner.status
+      })
+    }
+
+    // Para alinhadores ativos, verificar a data de término para trocar
+    // Para alinhadores pendentes, verificar a data de início
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const targetDate = new Date(aligner.status === 'active' ? aligner.endDate : aligner.startDate)
+    targetDate.setHours(0, 0, 0, 0)
+
+    const diffTime = targetDate.getTime() - today.getTime()
+    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    const canActivate = daysRemaining <= 0
+
+    console.log(`📊 Resultado:`, {
+      canActivate,
+      daysRemaining: Math.max(0, daysRemaining),
+      today: today.toISOString().slice(0, 10),
+      targetDate: targetDate.toISOString().slice(0, 10),
+      checkingField: aligner.status === 'active' ? 'endDate' : 'startDate'
+    })
+
+    res.json({
+      canActivate,
+      daysRemaining: Math.max(0, daysRemaining),
+      nextActivationDate: aligner.startDate,
+      currentStatus: aligner.status
+    })
+  } catch (error) {
+    console.error('❌ Erro ao verificar ativação de alinhador:', error)
+    res.status(500).json({ error: 'Falha ao verificar ativação' })
   }
 })
 

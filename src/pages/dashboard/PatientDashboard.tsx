@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -31,10 +32,15 @@ import {
   ShieldCheck,
   Star,
   Rocket,
+  Play,
+  Lock,
 } from 'lucide-react'
 import { useUserRole } from '@/context/UserRoleContext'
-import { useCurrentAligner, useTreatment } from '@/context/AlignerContext'
+import { useCurrentAligner, useTreatment, useAligners } from '@/context/AlignerContext'
+import { useAuth } from '@/context/AuthContext'
 import { AlignerTracker } from '@/components/AlignerTracker'
+import { PendingPhotosAlert } from '@/components/PendingPhotosAlert'
+import { PatientMissions } from '@/components/PatientMissions'
 import {
   calculateDaysUntilChange,
   calculateTreatmentProgress,
@@ -74,12 +80,86 @@ const badges = [
 
 const PatientDashboard = () => {
   const { isChild } = useUserRole()
+  const { user } = useAuth()
   const currentAligner = useCurrentAligner()
   const treatment = useTreatment()
+  const { aligners, confirmAlignerChange } = useAligners()
   const daysUntilChange = currentAligner
     ? calculateDaysUntilChange(currentAligner)
     : 0
   const progress = calculateTreatmentProgress(treatment)
+
+  const [canActivate, setCanActivate] = React.useState(false)
+  const [daysRemaining, setDaysRemaining] = React.useState(0)
+  const [isStartingTreatment, setIsStartingTreatment] = React.useState(false)
+  const [isConfirmingChange, setIsConfirmingChange] = React.useState(false)
+
+  // Verificar se pode ativar o próximo alinhador
+  React.useEffect(() => {
+    const checkCanActivate = async () => {
+      if (!currentAligner?.id) return
+
+      try {
+        const response = await fetch(`/api/aligners/${currentAligner.id}/can-activate`)
+        const data = await response.json()
+        console.log('📅 Verificação de ativação:', data)
+        setCanActivate(data.canActivate)
+        setDaysRemaining(data.daysRemaining || 0)
+      } catch (error) {
+        console.error('Erro ao verificar ativação:', error)
+      }
+    }
+
+    checkCanActivate()
+    // Verificar a cada 1 hora
+    const interval = setInterval(checkCanActivate, 60 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [currentAligner?.id])
+
+  // Verificar se o tratamento precisa ser iniciado
+  const needsToStart = treatment && !treatment.startDate
+
+  const handleStartTreatment = async () => {
+    if (!treatment?.id) return
+
+    setIsStartingTreatment(true)
+    try {
+      const response = await fetch(`/api/treatments/${treatment.id}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('🎉 Tratamento iniciado com sucesso!')
+        window.location.reload()
+      } else {
+        alert('Erro ao iniciar tratamento: ' + (data.error || 'Erro desconhecido'))
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar tratamento:', error)
+      alert('Erro ao iniciar tratamento')
+    } finally {
+      setIsStartingTreatment(false)
+    }
+  }
+
+  const handleConfirmChange = async () => {
+    if (!currentAligner?.id) return
+
+    setIsConfirmingChange(true)
+    try {
+      await confirmAlignerChange(currentAligner.id)
+      alert('🎉 Alinhador trocado com sucesso!')
+      window.location.reload()
+    } catch (error: any) {
+      console.error('Erro ao confirmar troca:', error)
+      alert(error.message || 'Erro ao confirmar troca de alinhador')
+    } finally {
+      setIsConfirmingChange(false)
+    }
+  }
 
   if (isChild) {
     return (
@@ -95,35 +175,69 @@ const PatientDashboard = () => {
           />
         </div>
 
+        {/* Alert de Fotos Pendentes */}
+        {user?.id && <PendingPhotosAlert patientId={user.id} />}
+
         <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
           <CardHeader>
             <CardTitle className="font-display text-2xl font-bold text-center">
-              Próxima Missão: Trocar Alinhador!
+              {needsToStart ? '🚀 Pronto para Começar?' : 'Próxima Missão: Trocar Alinhador!'}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-6xl font-bold text-primary-child">
-              {daysUntilChange} {daysUntilChange === 1 ? 'dia' : 'dias'}
-            </p>
-            <p className="text-muted-foreground font-semibold">
-              Alinhador #{currentAligner?.number || 'N/A'}
-              {treatment && ` de ${treatment.totalAligners}`}
-            </p>
-            {currentAligner && (
-              <Button
-                onClick={() => {
-                  // TODO: Implement confirm change logic
-                }}
-                className="mt-4 bg-primary-child hover:bg-primary-child/90 text-lg font-bold px-8 py-6 rounded-full"
-              >
-                <Rocket className="mr-2" />
-                Troquei!
-              </Button>
+            {needsToStart ? (
+              <>
+                <p className="text-lg mb-4 text-gray-700">
+                  Clique no botão abaixo para iniciar sua jornada do sorriso!
+                </p>
+                <Button
+                  onClick={handleStartTreatment}
+                  disabled={isStartingTreatment}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white text-xl font-bold px-12 py-8 rounded-full shadow-xl hover:scale-105 transition-all"
+                >
+                  <Play className="mr-2 h-6 w-6" />
+                  {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-6xl font-bold text-primary-child">
+                  {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                </p>
+                <p className="text-muted-foreground font-semibold">
+                  Alinhador #{currentAligner?.number || 'N/A'}
+                  {treatment && ` de ${treatment.totalAligners}`}
+                </p>
+                {currentAligner && (
+                  <Button
+                    onClick={handleConfirmChange}
+                    disabled={!canActivate || isConfirmingChange}
+                    className="mt-4 bg-primary-child hover:bg-primary-child/90 text-lg font-bold px-8 py-6 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {!canActivate ? (
+                      <>
+                        <Lock className="mr-2" />
+                        Faltam {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                      </>
+                    ) : isConfirmingChange ? (
+                      'Trocando...'
+                    ) : (
+                      <>
+                        <Rocket className="mr-2" />
+                        Troquei!
+                      </>
+                    )}
+                  </Button>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
-          <div className="grid gap-6 md:grid-cols-2">
+        {/* Missões Ativas */}
+        {user?.id && <PatientMissions patientId={user.id} variant="full" />}
+
+        <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Progresso da Missão</CardTitle>
@@ -209,25 +323,51 @@ const PatientDashboard = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Próxima Troca</CardTitle>
+              <CardTitle>{needsToStart ? 'Iniciar Tratamento' : 'Próxima Troca'}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-5xl font-bold text-primary">
-                {daysUntilChange} {daysUntilChange === 1 ? 'dia' : 'dias'}
-              </p>
-              <p className="text-muted-foreground">
-                Alinhador #{currentAligner?.number || 'N/A'}
-                {treatment && ` de ${treatment.totalAligners}`}
-              </p>
-              {currentAligner && (
-                <Button
-                  className="mt-4 w-full"
-                  onClick={() => {
-                    // TODO: Implement confirm change logic
-                  }}
-                >
-                  Confirmar Troca
-                </Button>
+              {needsToStart ? (
+                <>
+                  <p className="mb-4 text-muted-foreground">
+                    Clique no botão abaixo para iniciar seu tratamento
+                  </p>
+                  <Button
+                    onClick={handleStartTreatment}
+                    disabled={isStartingTreatment}
+                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-5xl font-bold text-primary">
+                    {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Alinhador #{currentAligner?.number || 'N/A'}
+                    {treatment && ` de ${treatment.totalAligners}`}
+                  </p>
+                  {currentAligner && (
+                    <Button
+                      className="mt-4 w-full"
+                      onClick={handleConfirmChange}
+                      disabled={!canActivate || isConfirmingChange}
+                    >
+                      {!canActivate ? (
+                        <>
+                          <Lock className="mr-2 h-4 w-4" />
+                          Aguardar {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                        </>
+                      ) : isConfirmingChange ? (
+                        'Confirmando...'
+                      ) : (
+                        'Confirmar Troca'
+                      )}
+                    </Button>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -258,6 +398,10 @@ const PatientDashboard = () => {
           </Card>
         </div>
       </div>
+
+      {/* Missões Ativas */}
+      {user?.id && <PatientMissions patientId={user.id} variant="full" />}
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -7,11 +7,9 @@ import {
   Rocket,
   Sparkles,
   Trophy,
-  Mountain,
-  Trees,
-  Castle,
   Flag,
-  Star,
+  Play,
+  Lock,
 } from 'lucide-react'
 import { Celebration } from './Confetti'
 import { useGamification } from '@/context/GamificationContext'
@@ -26,49 +24,82 @@ export const AdventureJourney = () => {
   const totalAligners = treatment?.totalAligners || 9 // Default to 9 if no treatment
   const currentAligner = currentAlignerData?.number || 1
   const [showCelebration, setShowCelebration] = useState(false)
+  const [canActivate, setCanActivate] = useState(false)
+  const [daysRemaining, setDaysRemaining] = useState(0)
+  const [isStartingTreatment, setIsStartingTreatment] = useState(false)
+  const [isConfirmingChange, setIsConfirmingChange] = useState(false)
 
   const { aligners } = useAligners()
 
-  const handleNextAligner = async () => {
-    if (currentAligner < totalAligners) {
-      // Find next aligner
-      const nextAligner = aligners.find(
-        (a) => a.number === currentAligner + 1 && a.status === 'pending'
-      )
+  // Verificar se pode ativar o próximo alinhador
+  useEffect(() => {
+    const checkCanActivate = async () => {
+      if (!currentAlignerData?.id) return
 
-      if (nextAligner) {
-        try {
-          await confirmAlignerChange(nextAligner.id)
-          setShowCelebration(true)
-          addCoins(50)
-          addXP(25)
-        } catch (error) {
-          console.error('Error confirming aligner change:', error)
-        }
+      try {
+        const response = await fetch(`/api/aligners/${currentAlignerData.id}/can-activate`)
+        const data = await response.json()
+        setCanActivate(data.canActivate)
+        setDaysRemaining(data.daysRemaining || 0)
+      } catch (error) {
+        console.error('Erro ao verificar ativação:', error)
       }
+    }
+
+    checkCanActivate()
+    // Verificar a cada 1 hora
+    const interval = setInterval(checkCanActivate, 60 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [currentAlignerData?.id])
+
+  // Verificar se o tratamento precisa ser iniciado
+  const needsToStart = treatment && !treatment.startDate
+
+  const handleStartTreatment = async () => {
+    if (!treatment?.id) return
+
+    setIsStartingTreatment(true)
+    try {
+      const response = await fetch(`/api/treatments/${treatment.id}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('🎉 Tratamento iniciado com sucesso!')
+        window.location.reload()
+      } else {
+        alert('Erro ao iniciar tratamento: ' + (data.error || 'Erro desconhecido'))
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar tratamento:', error)
+      alert('Erro ao iniciar tratamento')
+    } finally {
+      setIsStartingTreatment(false)
+    }
+  }
+
+  const handleNextAligner = async () => {
+    if (!currentAlignerData?.id) return
+
+    setIsConfirmingChange(true)
+    try {
+      await confirmAlignerChange(currentAlignerData.id)
+      setShowCelebration(true)
+      addCoins(50)
+      addXP(25)
+      setTimeout(() => window.location.reload(), 2000)
+    } catch (error: any) {
+      console.error('Error confirming aligner change:', error)
+      alert(error.message || 'Erro ao confirmar troca de alinhador')
+    } finally {
+      setIsConfirmingChange(false)
     }
   }
 
   const journeySteps = Array.from({ length: totalAligners }, (_, i) => i + 1)
-
-  // Gerar temas dinamicamente baseado no total de alinhadores
-  const getJourneyThemes = (total: number) => {
-    const quarterSize = Math.ceil(total / 4)
-    return [
-      { range: [1, quarterSize], icon: Trees, color: 'bg-green-400', label: 'Floresta Inicial' },
-      { range: [quarterSize + 1, quarterSize * 2], icon: Mountain, color: 'bg-blue-400', label: 'Montanhas' },
-      { range: [quarterSize * 2 + 1, quarterSize * 3], icon: Castle, color: 'bg-purple-400', label: 'Reino Mágico' },
-      { range: [quarterSize * 3 + 1, total], icon: Star, color: 'bg-yellow-400', label: 'Céu Estrelado' },
-    ]
-  }
-
-  const JOURNEY_THEMES = getJourneyThemes(totalAligners)
-
-  const getThemeForStep = (step: number) => {
-    return JOURNEY_THEMES.find(
-      (theme) => step >= theme.range[0] && step <= theme.range[1],
-    )
-  }
 
   return (
     <>
@@ -89,36 +120,6 @@ export const AdventureJourney = () => {
         <CardContent className="p-6">
           {/* Mapa Visual da Jornada */}
           <div className="relative mb-8 overflow-x-auto rounded-xl bg-gradient-to-br from-sky-100 via-blue-50 to-purple-50 p-6">
-            <div className="mb-4 flex justify-center gap-8">
-              {JOURNEY_THEMES.map((theme) => {
-                const ThemeIcon = theme.icon
-                const isActive =
-                  currentAligner >= theme.range[0] && currentAligner <= theme.range[1]
-                return (
-                  <div
-                    key={theme.label}
-                    className={cn(
-                      'flex flex-col items-center gap-2 rounded-lg p-3 transition-all',
-                      isActive && 'scale-110',
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'rounded-full p-3',
-                        theme.color,
-                        isActive && 'animate-bounce-slow shadow-lg',
-                      )}
-                    >
-                      <ThemeIcon className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-700">
-                      {theme.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
             {/* Linha do Caminho */}
             <div className="relative">
               <div className="absolute left-0 right-0 top-8 h-1 bg-gradient-to-r from-green-400 via-blue-400 via-purple-400 to-yellow-400 opacity-30" />
@@ -128,7 +129,6 @@ export const AdventureJourney = () => {
                   const isCompleted = step < currentAligner
                   const isCurrent = step === currentAligner
                   const isFuture = step > currentAligner
-                  const theme = getThemeForStep(step)
                   // Milestone a cada 1/4 dos alinhadores
                   const milestoneInterval = Math.ceil(totalAligners / 4)
                   const isMilestone = step % milestoneInterval === 0
@@ -151,8 +151,8 @@ export const AdventureJourney = () => {
                       {isCurrent && (
                         <Sparkles className="h-7 w-7 animate-pulse text-primary-child" />
                       )}
-                      {isFuture && isMilestone && theme && (
-                        <theme.icon className="h-6 w-6 text-gray-400" />
+                      {isFuture && isMilestone && (
+                        <Flag className="h-6 w-6 text-gray-400" />
                       )}
                       <span
                         className={cn(
@@ -204,14 +204,36 @@ export const AdventureJourney = () => {
               </p>
             </div>
 
-            {currentAligner < totalAligners ? (
+            {needsToStart ? (
+              <Button
+                onClick={handleStartTreatment}
+                disabled={isStartingTreatment}
+                size="lg"
+                className="rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-12 py-8 text-xl font-bold text-white shadow-xl hover:scale-110 hover:shadow-2xl transition-all"
+              >
+                <Play className="mr-2 h-8 w-8" />
+                {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+              </Button>
+            ) : currentAligner < totalAligners ? (
               <Button
                 onClick={handleNextAligner}
+                disabled={!canActivate || isConfirmingChange}
                 size="lg"
-                className="rounded-full bg-gradient-to-r from-green-400 to-blue-400 px-8 py-6 text-lg font-bold text-white shadow-lg hover:scale-105 hover:shadow-xl transition-all hover-bounce"
+                className="rounded-full bg-gradient-to-r from-green-400 to-blue-400 px-8 py-6 text-lg font-bold text-white shadow-lg hover:scale-105 hover:shadow-xl transition-all hover-bounce disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Rocket className="mr-2 h-6 w-6" />
-                Passei para o próximo alinhador!
+                {!canActivate ? (
+                  <>
+                    <Lock className="mr-2 h-6 w-6" />
+                    Faltam {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}!
+                  </>
+                ) : isConfirmingChange ? (
+                  'Trocando...'
+                ) : (
+                  <>
+                    <Rocket className="mr-2 h-6 w-6" />
+                    Passei para o próximo alinhador!
+                  </>
+                )}
               </Button>
             ) : (
               <div className="rounded-xl bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 p-6 animate-bounce-slow">

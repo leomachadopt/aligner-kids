@@ -33,12 +33,14 @@ export default function Layout() {
 
   return (
     <AlignerProvider patientId={patientId}>
-      <div className="flex min-h-screen bg-muted/40">
+      <div className="flex min-h-screen bg-gradient-to-br from-background to-muted/50">
         <AppSidebar userRole={role} />
         <div className="flex flex-1 flex-col">
           <Header />
-          <main className="flex-1 p-4 sm:p-6">
-            <Outlet />
+          <main className="flex-1 p-4 sm:p-8">
+            <div className="mx-auto w-full max-w-6xl space-y-6">
+              <Outlet />
+            </div>
           </main>
           <Footer />
         </div>
