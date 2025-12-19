@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm'
 const router = Router()
 
 // Get all clinics
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const allClinics = await db.select().from(clinics)
     res.json({ clinics: allClinics })

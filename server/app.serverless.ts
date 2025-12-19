@@ -31,7 +31,7 @@ export function getApp(): Application {
   app.use(cookieParser())
 
   // Health check
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (_req, res) => {
     res.json({
       status: 'healthy - Express working!',
       timestamp: new Date().toISOString(),
@@ -43,7 +43,7 @@ export function getApp(): Application {
   // API Routes will be added here
 
   // Error handler
-  app.use((err: any, req: any, res: any, next: any) => {
+  app.use((err: any, _req: any, res: any, _next: any) => {
     console.error('Express error:', err)
     res.status(500).json({
       error: 'Internal server error',

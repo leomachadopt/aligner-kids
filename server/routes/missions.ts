@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates, users } from '../db/index'
+import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates } from '../db/index'
 import { eq, and } from 'drizzle-orm'
 
 const router = Router()
@@ -224,26 +224,69 @@ router.post('/missions/:id/complete', async (req, res) => {
 
     const mission = missionResult[0]
 
+    // Get template (to resolve reward when customPoints is not set)
+    const templateResult = await db
+      .select()
+      .from(mission_templates)
+      .where(eq(mission_templates.id, mission.missionTemplateId))
+
+    const template = templateResult[0]
+    const rewardCoins = mission.customPoints ?? template?.basePoints ?? 0
+    const rewardXp = Math.floor(rewardCoins / 2)
+
     // Mark as completed
     const updated = await db
       .update(patient_missions)
       .set({
         status: 'completed',
         progress: mission.targetValue || mission.progress || 1,
-        completedAt: new Date().toISOString(),
+        completedAt: new Date(),
+        pointsEarned: rewardCoins,
         updatedAt: new Date(),
       })
       .where(eq(patient_missions.id, missionId))
       .returning()
 
-    // Award points
-    await db
-      .update(patient_points)
-      .set({
-        totalPoints: db.$count(patient_points.totalPoints) + (mission.customPoints || 0),
-        updatedAt: new Date(),
-      })
+    // Award coins/xp (create record if missing)
+    const currentPoints = await db
+      .select()
+      .from(patient_points)
       .where(eq(patient_points.patientId, mission.patientId))
+
+    if (currentPoints.length === 0) {
+      const xp = rewardXp
+      const level = Math.floor(xp / 100) + 1
+      await db.insert(patient_points).values({
+        id: `points-${Date.now()}`,
+        patientId: mission.patientId,
+        coins: rewardCoins,
+        xp,
+        level,
+        // legacy mirrors
+        totalPoints: rewardCoins,
+        currentLevel: level,
+        updatedAt: new Date(),
+        lastActivityAt: new Date(),
+      })
+    } else {
+      const prev = currentPoints[0]
+      const newCoins = (prev.coins || 0) + rewardCoins
+      const newXp = (prev.xp || 0) + rewardXp
+      const newLevel = Math.floor(newXp / 100) + 1
+      await db
+        .update(patient_points)
+        .set({
+          coins: newCoins,
+          xp: newXp,
+          level: newLevel,
+          // legacy mirrors
+          totalPoints: newCoins,
+          currentLevel: newLevel,
+          lastActivityAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(patient_points.patientId, mission.patientId))
+    }
 
     res.json({ mission: updated[0] })
   } catch (error) {
@@ -564,6 +607,9 @@ router.get('/points/patient/:patientId', async (req, res) => {
           coins: 0,
           xp: 0,
           level: 1,
+          // legacy mirrors
+          totalPoints: 0,
+          currentLevel: 1,
         })
         .returning()
 
@@ -601,6 +647,10 @@ router.post('/points/patient/:patientId/add', async (req, res) => {
           coins,
           xp,
           level: Math.floor(xp / 100) + 1,
+          // legacy mirrors
+          totalPoints: coins,
+          currentLevel: Math.floor(xp / 100) + 1,
+          lastActivityAt: new Date(),
         })
         .returning()
     } else {
@@ -615,6 +665,10 @@ router.post('/points/patient/:patientId/add', async (req, res) => {
           coins: newCoins,
           xp: newXp,
           level: newLevel,
+          // legacy mirrors
+          totalPoints: newCoins,
+          currentLevel: newLevel,
+          lastActivityAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(patient_points.patientId, patientId))
@@ -633,11 +687,19 @@ router.put('/points/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
 
+    const nextXp = req.body.xp ?? 0
+    const nextLevel = Math.floor(nextXp / 100) + 1
+    const nextCoins = req.body.coins ?? 0
+
     const updated = await db
       .update(patient_points)
       .set({
         ...req.body,
-        level: Math.floor((req.body.xp || 0) / 100) + 1,
+        level: nextLevel,
+        // legacy mirrors
+        totalPoints: nextCoins,
+        currentLevel: nextLevel,
+        lastActivityAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(patient_points.patientId, patientId))

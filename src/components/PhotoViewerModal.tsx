@@ -42,6 +42,11 @@ interface PhotoViewerModalProps {
   photoTypeLabel: string
   onDelete?: (photoId: string) => void
   canDelete?: boolean
+  activePhotoFrame?: {
+    frameStyle?: string
+    overlayUrl?: string
+    exportMode?: string
+  } | null
 }
 
 const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
@@ -57,6 +62,7 @@ export function PhotoViewerModal({
   photoTypeLabel,
   onDelete,
   canDelete = false,
+  activePhotoFrame = null,
 }: PhotoViewerModalProps) {
   const [zoom, setZoom] = useState(100)
   const [rotation, setRotation] = useState(0)
@@ -65,13 +71,118 @@ export function PhotoViewerModal({
   if (!photo) return null
 
   const handleDownload = () => {
-    // Create a link and trigger download
+    const fileName = `${photoTypeLabel}-alinhador-${photo.alignerNumber || 'inicial'}-${format(new Date(photo.capturedAt), 'yyyy-MM-dd')}.jpg`
+
+    // If we have an active frame configured for burn export, generate via canvas
+    if (activePhotoFrame && (activePhotoFrame.exportMode || 'burn') === 'burn') {
+      exportWithFrame(photo.photoUrl, fileName, activePhotoFrame).catch(() => {
+        // fallback
+        const link = document.createElement('a')
+        link.href = photo.photoUrl
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      })
+      return
+    }
+
     const link = document.createElement('a')
     link.href = photo.photoUrl
-    link.download = `${photoTypeLabel}-alinhador-${photo.alignerNumber || 'inicial'}-${format(new Date(photo.capturedAt), 'yyyy-MM-dd')}.jpg`
+    link.download = fileName
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  async function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  function drawRainbowFrame(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    const thickness = Math.max(18, Math.floor(Math.min(w, h) * 0.06))
+    const radius = Math.floor(Math.min(w, h) * 0.04)
+
+    const grad = ctx.createLinearGradient(0, 0, w, h)
+    grad.addColorStop(0, '#ff4d4d')
+    grad.addColorStop(0.2, '#ffa94d')
+    grad.addColorStop(0.4, '#ffd43b')
+    grad.addColorStop(0.6, '#69db7c')
+    grad.addColorStop(0.8, '#4dabf7')
+    grad.addColorStop(1, '#b197fc')
+
+    ctx.save()
+    ctx.lineWidth = thickness
+    ctx.strokeStyle = grad
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+
+    const x = thickness / 2
+    const y = thickness / 2
+    const rw = w - thickness
+    const rh = h - thickness
+
+    // Rounded rect path
+    ctx.beginPath()
+    ctx.moveTo(x + radius, y)
+    ctx.lineTo(x + rw - radius, y)
+    ctx.quadraticCurveTo(x + rw, y, x + rw, y + radius)
+    ctx.lineTo(x + rw, y + rh - radius)
+    ctx.quadraticCurveTo(x + rw, y + rh, x + rw - radius, y + rh)
+    ctx.lineTo(x + radius, y + rh)
+    ctx.quadraticCurveTo(x, y + rh, x, y + rh - radius)
+    ctx.lineTo(x, y + radius)
+    ctx.quadraticCurveTo(x, y, x + radius, y)
+    ctx.closePath()
+    ctx.stroke()
+
+    // Inner subtle white stroke
+    ctx.lineWidth = Math.max(6, Math.floor(thickness * 0.25))
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)'
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  async function exportWithFrame(
+    photoUrl: string,
+    fileName: string,
+    frame: { frameStyle?: string; overlayUrl?: string },
+  ) {
+    const img = await loadImage(photoUrl)
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth || img.width
+    canvas.height = img.naturalHeight || img.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas não suportado')
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+    if (frame.overlayUrl) {
+      const overlay = await loadImage(frame.overlayUrl)
+      ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height)
+    } else if ((frame.frameStyle || 'rainbow') === 'rainbow') {
+      drawRainbowFrame(ctx, canvas.width, canvas.height)
+    }
+
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92),
+    )
+    if (!blob) throw new Error('Falha ao exportar imagem')
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const handleZoomIn = () => {
@@ -127,16 +238,47 @@ export function PhotoViewerModal({
 
           {/* Image Viewer */}
           <div className="relative overflow-auto max-h-[70vh] bg-black/5 rounded-lg flex items-center justify-center p-4">
-            <img
-              src={photo.photoUrl}
-              alt={photoTypeLabel}
-              className="transition-all duration-300 ease-in-out"
+            <div
+              className="relative"
               style={{
                 transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                maxWidth: '100%',
-                maxHeight: '60vh',
+                transformOrigin: 'center center',
               }}
-            />
+            >
+              <img
+                src={photo.photoUrl}
+                alt={photoTypeLabel}
+                className="block transition-all duration-300 ease-in-out"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '60vh',
+                }}
+              />
+
+              {/* Moldura visível (preview) */}
+              {activePhotoFrame && (activePhotoFrame.exportMode || 'burn') === 'burn' && (
+                <>
+                  {activePhotoFrame.overlayUrl ? (
+                    <img
+                      src={activePhotoFrame.overlayUrl}
+                      alt="Moldura"
+                      className="absolute inset-0 h-full w-full pointer-events-none"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (activePhotoFrame.frameStyle || 'rainbow') === 'rainbow' ? (
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        borderRadius: 12,
+                        border: '14px solid transparent',
+                        background:
+                          'linear-gradient(#0000, #0000) padding-box, linear-gradient(135deg, #ff4d4d, #ffa94d, #ffd43b, #69db7c, #4dabf7, #b197fc) border-box',
+                      }}
+                    />
+                  ) : null}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Controls */}

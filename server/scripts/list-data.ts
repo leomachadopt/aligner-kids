@@ -17,13 +17,12 @@ async function listData() {
     const allUsers = await db
       .select()
       .from(users)
-      .where()
       .orderBy(desc(users.createdAt))
       .limit(5)
 
     console.log('👥 PACIENTES (últimos 5):')
     allUsers.forEach(u => {
-      console.log(`   ${u.id} | ${u.name} | ${u.role} | ${u.createdAt}`)
+      console.log(`   ${u.id} | ${u.fullName} | ${u.role} | ${u.createdAt}`)
     })
     console.log('')
 

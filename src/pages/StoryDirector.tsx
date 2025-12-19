@@ -3,7 +3,7 @@
  * Wizard multi-step para selecionar ambiente, personagens e tema
  */
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   Wand2,
   Loader2,
+  Lock,
 } from 'lucide-react'
 import type {
   StoryPreferencesInput,
@@ -34,6 +35,7 @@ import { StorySeriesService as StorySeriesApiService } from '@/services/storySer
 import { useTreatment } from '@/context/AlignerContext'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
+import { StoryOptionsService } from '@/services/storyOptionsService'
 
 const StoryDirector = () => {
   const navigate = useNavigate()
@@ -43,6 +45,11 @@ const StoryDirector = () => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationMessage, setGenerationMessage] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
+  const [dbOptions, setDbOptions] = useState<{
+    environments: any[]
+    characters: any[]
+    themes: any[]
+  } | null>(null)
 
   // Estado das preferências
   const [preferences, setPreferences] = useState<Partial<StoryPreferencesInput>>({
@@ -50,6 +57,23 @@ const StoryDirector = () => {
   })
 
   const totalAligners = treatment?.totalAligners || 0
+  useEffect(() => {
+    const loadOptions = async () => {
+      if (!user?.id) return
+      try {
+        const res = await StoryOptionsService.getOptions(user.id)
+        setDbOptions(res as any)
+      } catch (e) {
+        // ignore
+      }
+    }
+    loadOptions()
+  }, [user?.id])
+
+  const environmentsForUI = useMemo(() => dbOptions?.environments || STORY_ENVIRONMENTS, [dbOptions])
+  const themesForUI = useMemo(() => dbOptions?.themes || STORY_THEMES, [dbOptions])
+  const charactersForUI = useMemo(() => dbOptions?.characters || STORY_CHARACTERS, [dbOptions])
+
 
   const totalSteps = 5
   const progress = (currentStep / totalSteps) * 100
@@ -174,6 +198,7 @@ const StoryDirector = () => {
           <StepEnvironment
             selected={preferences.environment}
             onSelect={(env) => setPreferences({ ...preferences, environment: env })}
+            options={environmentsForUI as any}
           />
         )
       case 2:
@@ -183,6 +208,7 @@ const StoryDirector = () => {
             onSelect={(char) =>
               setPreferences({ ...preferences, mainCharacter: char })
             }
+            options={charactersForUI as any}
           />
         )
       case 3:
@@ -196,6 +222,7 @@ const StoryDirector = () => {
               setPreferences({ ...preferences, sidekick: undefined })
               goToNext()
             }}
+            options={charactersForUI as any}
           />
         )
       case 4:
@@ -203,6 +230,7 @@ const StoryDirector = () => {
           <StepTheme
             selected={preferences.theme}
             onSelect={(theme) => setPreferences({ ...preferences, theme })}
+            options={themesForUI as any}
           />
         )
       case 5:
@@ -351,35 +379,59 @@ function getStepTitle(step: number): string {
 interface StepEnvironmentProps {
   selected?: StoryEnvironment
   onSelect: (env: StoryEnvironment) => void
+  options?: any[]
 }
 
-function StepEnvironment({ selected, onSelect }: StepEnvironmentProps) {
+function StepEnvironment({ selected, onSelect, options }: StepEnvironmentProps) {
+  const list = options || STORY_ENVIRONMENTS
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {STORY_ENVIRONMENTS.map((env) => (
+      {list.map((env: any) => (
         <button
           key={env.id}
-          onClick={() => onSelect(env.id)}
+          onClick={() => !env.isLocked && onSelect(env.id)}
+          disabled={Boolean(env.isLocked)}
           className={cn(
             'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
             selected === env.id
               ? 'border-primary-child bg-primary-child/10 shadow-lg'
               : 'border-gray-300 hover:border-primary-child/50',
+            env.isLocked && 'opacity-60 cursor-not-allowed hover:scale-100',
           )}
         >
+          {env.isLocked && (
+            <div className="absolute -mt-4 -ml-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-white text-xs">
+              <Lock className="h-3 w-3" />
+              Bloqueado
+            </div>
+          )}
           <div
             className={cn(
-              'text-6xl transition-transform group-hover:scale-110',
+              'transition-transform group-hover:scale-110',
               selected === env.id && 'animate-bounce',
+              env.isLocked && 'group-hover:scale-100',
             )}
           >
-            {env.icon}
+            {env.imageUrl ? (
+              <img
+                src={env.imageUrl}
+                alt={env.name}
+                className="h-24 w-24 object-contain"
+              />
+            ) : (
+              <span className="text-6xl">{env.icon}</span>
+            )}
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">{env.name}</p>
             <p className="text-sm text-muted-foreground mt-1">
               {env.description}
             </p>
+            {env.isUnlockedByReward && (
+              <p className="mt-2 text-xs font-semibold text-primary-child">
+                Desbloqueado por prêmio
+              </p>
+            )}
           </div>
         </button>
       ))}
@@ -390,35 +442,59 @@ function StepEnvironment({ selected, onSelect }: StepEnvironmentProps) {
 interface StepCharacterProps {
   selected?: StoryCharacter
   onSelect: (char: StoryCharacter) => void
+  options?: any[]
 }
 
-function StepCharacter({ selected, onSelect }: StepCharacterProps) {
+function StepCharacter({ selected, onSelect, options }: StepCharacterProps) {
+  const list = options || STORY_CHARACTERS
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {STORY_CHARACTERS.map((char) => (
+      {list.map((char: any) => (
         <button
           key={char.id}
-          onClick={() => onSelect(char.id)}
+          onClick={() => !char.isLocked && onSelect(char.id)}
+          disabled={Boolean(char.isLocked)}
           className={cn(
             'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
             selected === char.id
               ? 'border-primary-child bg-primary-child/10 shadow-lg'
               : 'border-gray-300 hover:border-primary-child/50',
+            char.isLocked && 'opacity-60 cursor-not-allowed hover:scale-100',
           )}
         >
+          {char.isLocked && (
+            <div className="absolute -mt-4 -ml-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-white text-xs">
+              <Lock className="h-3 w-3" />
+              Bloqueado
+            </div>
+          )}
           <div
             className={cn(
-              'text-6xl transition-transform group-hover:scale-110',
+              'transition-transform group-hover:scale-110',
               selected === char.id && 'animate-bounce',
+              char.isLocked && 'group-hover:scale-100',
             )}
           >
-            {char.icon}
+            {char.imageUrl ? (
+              <img
+                src={char.imageUrl}
+                alt={char.name}
+                className="h-24 w-24 object-contain"
+              />
+            ) : (
+              <span className="text-6xl">{char.icon}</span>
+            )}
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">{char.name}</p>
             <p className="text-sm text-muted-foreground mt-1">
               {char.description}
             </p>
+            {char.isUnlockedByReward && (
+              <p className="mt-2 text-xs font-semibold text-primary-child">
+                Desbloqueado por prêmio
+              </p>
+            )}
           </div>
         </button>
       ))}
@@ -430,9 +506,11 @@ interface StepSidekickProps {
   selected?: StoryCharacter
   onSelect: (char?: StoryCharacter) => void
   onSkip: () => void
+  options?: any[]
 }
 
-function StepSidekick({ selected, onSelect, onSkip }: StepSidekickProps) {
+function StepSidekick({ selected, onSelect, onSkip, options }: StepSidekickProps) {
+  const list = options || STORY_CHARACTERS
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
@@ -445,30 +523,52 @@ function StepSidekick({ selected, onSelect, onSkip }: StepSidekickProps) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {STORY_CHARACTERS.map((char) => (
+        {list.map((char: any) => (
           <button
             key={char.id}
-            onClick={() => onSelect(char.id)}
+            onClick={() => !char.isLocked && onSelect(char.id)}
+            disabled={Boolean(char.isLocked)}
             className={cn(
               'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
               selected === char.id
                 ? 'border-primary-child bg-primary-child/10 shadow-lg'
                 : 'border-gray-300 hover:border-primary-child/50',
+              char.isLocked && 'opacity-60 cursor-not-allowed hover:scale-100',
             )}
           >
+            {char.isLocked && (
+              <div className="absolute -mt-4 -ml-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-white text-xs">
+                <Lock className="h-3 w-3" />
+                Bloqueado
+              </div>
+            )}
             <div
               className={cn(
-                'text-6xl transition-transform group-hover:scale-110',
+                'transition-transform group-hover:scale-110',
                 selected === char.id && 'animate-bounce',
+                char.isLocked && 'group-hover:scale-100',
               )}
             >
-              {char.icon}
+              {char.imageUrl ? (
+                <img
+                  src={char.imageUrl}
+                  alt={char.name}
+                  className="h-24 w-24 object-contain"
+                />
+              ) : (
+                <span className="text-6xl">{char.icon}</span>
+              )}
             </div>
             <div className="text-center">
               <p className="font-bold text-lg">{char.name}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {char.description}
               </p>
+              {char.isUnlockedByReward && (
+                <p className="mt-2 text-xs font-semibold text-primary-child">
+                  Desbloqueado por prêmio
+                </p>
+              )}
             </div>
           </button>
         ))}
@@ -480,35 +580,59 @@ function StepSidekick({ selected, onSelect, onSkip }: StepSidekickProps) {
 interface StepThemeProps {
   selected?: StoryTheme
   onSelect: (theme: StoryTheme) => void
+  options?: any[]
 }
 
-function StepTheme({ selected, onSelect }: StepThemeProps) {
+function StepTheme({ selected, onSelect, options }: StepThemeProps) {
+  const list = options || STORY_THEMES
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {STORY_THEMES.map((theme) => (
+      {list.map((theme: any) => (
         <button
           key={theme.id}
-          onClick={() => onSelect(theme.id)}
+          onClick={() => !theme.isLocked && onSelect(theme.id)}
+          disabled={Boolean(theme.isLocked)}
           className={cn(
             'group flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:scale-105',
             selected === theme.id
               ? 'border-primary-child bg-primary-child/10 shadow-lg'
               : 'border-gray-300 hover:border-primary-child/50',
+            theme.isLocked && 'opacity-60 cursor-not-allowed hover:scale-100',
           )}
         >
+          {theme.isLocked && (
+            <div className="absolute -mt-4 -ml-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-white text-xs">
+              <Lock className="h-3 w-3" />
+              Bloqueado
+            </div>
+          )}
           <div
             className={cn(
-              'text-6xl transition-transform group-hover:scale-110',
+              'transition-transform group-hover:scale-110',
               selected === theme.id && 'animate-bounce',
+              theme.isLocked && 'group-hover:scale-100',
             )}
           >
-            {theme.icon}
+            {theme.imageUrl ? (
+              <img
+                src={theme.imageUrl}
+                alt={theme.name}
+                className="h-24 w-24 object-contain"
+              />
+            ) : (
+              <span className="text-6xl">{theme.icon}</span>
+            )}
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">{theme.name}</p>
             <p className="text-sm text-muted-foreground mt-1">
               {theme.description}
             </p>
+            {theme.isUnlockedByReward && (
+              <p className="mt-2 text-xs font-semibold text-primary-child">
+                Desbloqueado por prêmio
+              </p>
+            )}
           </div>
         </button>
       ))}

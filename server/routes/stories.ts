@@ -4,7 +4,7 @@
 
 import { Router } from 'express'
 import { db, stories, story_chapters, story_preferences, users } from '../db/index'
-import { eq, and } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { StoryGenerationService } from '../services/storyGenerationService'
 import { OpenAITTSService } from '../services/openaiTTS'
 
@@ -19,11 +19,14 @@ router.get('/stories/preferences/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
     const { treatmentId } = req.query
+    const conditions = [eq(story_preferences.patientId, patientId)]
+    if (treatmentId) {
+      conditions.push(eq(story_preferences.treatmentId, treatmentId as string))
+    }
     const result = await db
       .select()
       .from(story_preferences)
-      .where(eq(story_preferences.patientId, patientId))
-      .where(treatmentId ? eq(story_preferences.treatmentId, treatmentId as string) : undefined)
+      .where(and(...conditions))
 
     if (result.length === 0) {
       return res.status(404).json({ error: 'Story preferences not found' })
@@ -47,7 +50,6 @@ router.post('/stories/preferences', async (req, res) => {
       mainCharacterName,
       sidekick,
       companion, // compat field from frontend
-      companionName,
       theme,
       ageGroup,
     } = req.body
@@ -114,11 +116,14 @@ router.get('/stories/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
     const { treatmentId } = req.query
+    const conditions = [eq(stories.patientId, patientId)]
+    if (treatmentId) {
+      conditions.push(eq(stories.treatmentId, treatmentId as string))
+    }
     const result = await db
       .select()
       .from(stories)
-      .where(eq(stories.patientId, patientId))
-      .where(treatmentId ? eq(stories.treatmentId, treatmentId as string) : undefined)
+      .where(and(...conditions))
 
     if (result.length === 0) {
       // Retorna 200 com story null para evitar 404 ruidoso no front
@@ -141,10 +146,9 @@ router.post('/stories', async (req, res) => {
         id: `story-${Date.now()}`,
         patientId: req.body.patientId,
         treatmentId: req.body.treatmentId || null,
-        title: req.body.title,
-        description: req.body.description,
+        storyTitle: req.body.title,
         totalChapters: req.body.totalChapters,
-        isActive: true,
+        currentChapter: 1,
       })
       .returning()
 

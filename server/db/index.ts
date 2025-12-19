@@ -3,10 +3,14 @@
  * Lazy loading for serverless compatibility
  */
 
+import dotenv from 'dotenv'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import type { NeonHttpDatabase } from 'drizzle-orm/neon-http'
 import * as schema from './schema'
+
+// Ensure env vars are loaded for scripts (seed/migrations) and server runtime
+dotenv.config()
 
 let _db: NeonHttpDatabase<typeof schema> | null = null
 
@@ -36,7 +40,7 @@ export function getDb() {
 
 // Export for backward compatibility
 export const db = new Proxy({} as NeonHttpDatabase<typeof schema>, {
-  get(target, prop) {
+  get(_target, prop) {
     return getDb()[prop as keyof NeonHttpDatabase<typeof schema>]
   }
 })

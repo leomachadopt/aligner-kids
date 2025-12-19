@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express'
-import { db, progress_photos, treatments, users, aligners, patient_missions, mission_templates, patient_points } from '../db/index'
+import { db, progress_photos, treatments, patient_missions, mission_templates, patient_points } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 

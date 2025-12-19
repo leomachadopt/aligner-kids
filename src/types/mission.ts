@@ -189,25 +189,29 @@ export interface PatientMission {
  * Progresso de Pontuação do Paciente
  */
 export interface PatientPoints {
+  // Canonical (backend v2 / database)
+  id?: string
   patientId: string
-  totalPoints: number
-  currentLevel: number
-  pointsToNextLevel: number
-
-  // Estatísticas
-  missionsCompleted: number
-  missionsInProgress: number
-  missionsFailed: number
-  currentStreak: number        // Dias consecutivos com atividade
-  longestStreak: number
-
-  // Ranking
-  clinicRank?: number          // Posição no ranking da clínica
-
-  // Badges conquistadas
-  badges: string[]             // IDs das badges
-
+  coins: number
+  xp: number
+  level: number
+  badges?: any[]
+  streak?: number
+  lastActivityAt?: string
+  createdAt?: string
   updatedAt: string
+
+  // Legacy (frontend v1). Mantido para não quebrar código antigo.
+  totalPoints?: number
+  currentLevel?: number
+  pointsToNextLevel?: number
+  missionsCompleted?: number
+  missionsInProgress?: number
+  missionsFailed?: number
+  currentStreak?: number        // Dias consecutivos com atividade
+  longestStreak?: number
+  clinicRank?: number           // Posição no ranking da clínica
+  badgesLegacy?: string[]       // IDs das badges (v1)
 }
 
 /**

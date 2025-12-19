@@ -6,6 +6,7 @@ import { Router } from 'express'
 import { db, users, aligners, treatments, stories, story_chapters, story_preferences } from '../db/index'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
 
 const router = Router()
 
@@ -119,6 +120,13 @@ router.post('/login', async (req, res) => {
       lastLoginAt: new Date()
     }).where(eq(users.id, user.id))
 
+    // Auto-assign reward program by age (best-effort)
+    try {
+      await RewardProgramAssignmentService.recomputeForPatient(user.id, user.id)
+    } catch (e) {
+      console.warn('⚠️ Falha ao recomputar programa de prêmios:', e)
+    }
+
     // Remove password_hash from response
     const { password_hash, ...userWithoutPassword } = user
 
@@ -177,7 +185,7 @@ router.get('/users', async (_req, res) => {
 router.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl } = req.body
+    const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl, responsiblePin } = req.body
 
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id))
@@ -186,6 +194,19 @@ router.put('/users/:id', async (req, res) => {
     }
 
     // Update user
+    let responsiblePinHash: string | null | undefined = undefined
+    if (responsiblePin !== undefined) {
+      const pin = String(responsiblePin)
+      if (pin.length === 0) {
+        responsiblePinHash = null
+      } else {
+        if (!/^\d{4,8}$/.test(pin)) {
+          return res.status(400).json({ error: 'PIN deve ter 4 a 8 dígitos' })
+        }
+        responsiblePinHash = await bcrypt.hash(pin, 10)
+      }
+    }
+
     const updated = await db
       .update(users)
       .set({
@@ -195,6 +216,7 @@ router.put('/users/:id', async (req, res) => {
         birthDate: birthDate || existingUser[0].birthDate,
         preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
         profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
+        ...(responsiblePinHash !== undefined ? { responsiblePinHash } : {}),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -214,7 +236,7 @@ router.get('/users/pending', async (_req, res) => {
   try {
     const all = await db.select().from(users)
     const pending = all.filter(
-      (u) => u.role === 'orthodontist' && (!u.isApproved || u.isApproved === false),
+      (u) => u.role === 'orthodontist' && u.isApproved === false,
     )
     res.json({ users: pending })
   } catch (error) {

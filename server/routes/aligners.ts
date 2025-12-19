@@ -5,6 +5,7 @@
 import { Router } from 'express'
 import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users, treatment_phases } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
+import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
 
 const router = Router()
 
@@ -93,7 +94,7 @@ async function applyProgramToPatient(programId: string, patientId: string, total
 
   if (missionsToInsert.length > 0) {
     await db.insert(patient_missions).values(missionsToInsert)
-    console.log(`✅ ${missionsToInsert.length} missões criadas para o tratamento ${treatmentId} via programa`)
+    console.log(`✅ ${missionsToInsert.length} missões criadas para o paciente ${patientId} via programa ${programId}`)
   }
 }
 
@@ -233,7 +234,7 @@ router.post('/treatments', async (req, res) => {
       if (req.body.patientId) {
         const patient = await db.select().from(users).where(eq(users.id, req.body.patientId))
         if (patient.length > 0) {
-          const def = await getDefaultProgramForClinic(patient[0].clinicId || null)
+          const def = await getDefaultProgramForClinic(patient[0].clinicId || undefined)
           if (def) defaultProgramId = def.id
         }
       }
@@ -243,6 +244,13 @@ router.post('/treatments', async (req, res) => {
       } else {
         await assignMissionsForTreatment(req.body.patientId, treatment.id, req.body.totalAligners)
       }
+    }
+
+    // ✅ Atribuir automaticamente programa de prêmios por idade (best-effort)
+    try {
+      await RewardProgramAssignmentService.recomputeForPatient(req.body.patientId, req.body.patientId)
+    } catch (e) {
+      console.warn('⚠️ Falha ao atribuir programa de prêmios:', e)
     }
 
     res.json({ treatment })

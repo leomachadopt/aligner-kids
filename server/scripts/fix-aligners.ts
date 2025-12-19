@@ -28,7 +28,6 @@ async function fixAligners() {
     const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
     // Calcular datas (14 dias cada alinhador)
-    const aligner1Start = new Date(today)
     const aligner1End = new Date(today.setDate(today.getDate() + 14))
 
     const aligner2Start = new Date(aligner1End)

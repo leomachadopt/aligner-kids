@@ -51,6 +51,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { toast } from 'sonner'
+import { PatientPointsService } from '@/services/patientPointsService'
 
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -61,6 +62,12 @@ const PatientDetail = () => {
   const [phases, setPhases] = useState<TreatmentPhase[]>([])
   const [loading, setLoading] = useState(true)
   const [clinic, setClinic] = useState<Clinic | null>(null)
+  const [patientPoints, setPatientPoints] = useState<{ coins: number; xp: number; level: number } | null>(null)
+  const [pointsLoading, setPointsLoading] = useState(false)
+  const [txLoading, setTxLoading] = useState(false)
+  const [txCursor, setTxCursor] = useState<string | null>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [adjustForm, setAdjustForm] = useState({ deltaCoins: 0, deltaXp: 0, reason: '' })
   const [isNewPhaseModalOpen, setIsNewPhaseModalOpen] = useState(false)
   const [isEditPhaseModalOpen, setIsEditPhaseModalOpen] = useState(false)
   const [editingPhase, setEditingPhase] = useState<TreatmentPhase | null>(null)
@@ -130,6 +137,34 @@ const PatientDetail = () => {
             console.error('Error loading phases:', error)
           }
         }
+
+        // Load points + transactions (only for orthodontist/super-admin)
+        const canManagePoints =
+          currentUser.role === 'orthodontist' || currentUser.role === 'super-admin'
+        if (canManagePoints && patientData?.clinicId && currentUser.id) {
+          setPointsLoading(true)
+          setTxLoading(true)
+          try {
+            const [pointsRes, txRes] = await Promise.all([
+              PatientPointsService.getPoints(patientData.clinicId, patientData.id, currentUser.id),
+              PatientPointsService.getTransactions({
+                clinicId: patientData.clinicId,
+                patientId: patientData.id,
+                orthodontistId: currentUser.id,
+                limit: 50,
+                cursor: null,
+              }),
+            ])
+            setPatientPoints(pointsRes.points)
+            setTransactions(txRes.transactions || [])
+            setTxCursor(txRes.nextCursor || null)
+          } catch (error) {
+            console.error('Error loading patient points:', error)
+          } finally {
+            setPointsLoading(false)
+            setTxLoading(false)
+          }
+        }
       } catch (error) {
         console.error('Error loading patient data:', error)
         toast.error('Erro ao carregar dados do paciente')
@@ -140,6 +175,63 @@ const PatientDetail = () => {
 
     loadData()
   }, [id, currentUser])
+
+  const handleAdjustPoints = async () => {
+    if (!currentUser?.id || !patient?.id || !patient?.clinicId) return
+    const deltaCoins = Number(adjustForm.deltaCoins) || 0
+    const deltaXp = Number(adjustForm.deltaXp) || 0
+    const reason = adjustForm.reason.trim()
+
+    if (deltaCoins === 0 && deltaXp === 0) {
+      toast.error('Informe um delta de moedas ou XP')
+      return
+    }
+
+    try {
+      setPointsLoading(true)
+      const result = await PatientPointsService.adjustPoints({
+        clinicId: patient.clinicId,
+        patientId: patient.id,
+        orthodontistId: currentUser.id,
+        deltaCoins,
+        deltaXp,
+        reason,
+      })
+
+      setPatientPoints(result.points)
+      setTransactions((prev) => [result.transaction, ...prev])
+      setAdjustForm({ deltaCoins: 0, deltaXp: 0, reason: '' })
+      toast.success('Pontos ajustados com sucesso')
+    } catch (error) {
+      console.error('Error adjusting points:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao ajustar pontos')
+    } finally {
+      setPointsLoading(false)
+    }
+  }
+
+  const handleLoadMoreTransactions = async () => {
+    if (!currentUser?.id || !patient?.id || !patient?.clinicId) return
+    if (!txCursor) return
+
+    try {
+      setTxLoading(true)
+      const res = await PatientPointsService.getTransactions({
+        clinicId: patient.clinicId,
+        patientId: patient.id,
+        orthodontistId: currentUser.id,
+        limit: 50,
+        cursor: txCursor,
+      })
+      setTransactions((prev) => [...prev, ...(res.transactions || [])])
+      setTxCursor(res.nextCursor || null)
+    } catch (error) {
+      console.error('Error loading more transactions:', error)
+      toast.error('Erro ao carregar mais transações')
+    } finally {
+      setTxLoading(false)
+    }
+  }
 
   const handleDeleteTreatment = async () => {
     if (!treatment || !id) return
@@ -493,6 +585,130 @@ const PatientDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Points + History (Orthodontist/Super-admin) */}
+      {(currentUser?.role === 'orthodontist' || currentUser?.role === 'super-admin') && patient?.clinicId && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="rounded-2xl border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Pontos do Paciente</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pointsLoading && !patientPoints ? (
+                <p className="text-muted-foreground">Carregando pontos...</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-white border">
+                    <p className="text-xs text-muted-foreground font-semibold">Moedas</p>
+                    <p className="text-2xl font-extrabold">{patientPoints?.coins ?? 0}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white border">
+                    <p className="text-xs text-muted-foreground font-semibold">XP</p>
+                    <p className="text-2xl font-extrabold">{patientPoints?.xp ?? 0}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white border">
+                    <p className="text-xs text-muted-foreground font-semibold">Nível</p>
+                    <p className="text-2xl font-extrabold">{patientPoints?.level ?? 1}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-xl bg-white border p-4 space-y-3">
+                <p className="font-semibold">Ajuste manual (delta)</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="deltaCoins">Delta moedas</Label>
+                    <Input
+                      id="deltaCoins"
+                      type="number"
+                      value={adjustForm.deltaCoins}
+                      onChange={(e) =>
+                        setAdjustForm((p) => ({ ...p, deltaCoins: Number(e.target.value) }))
+                      }
+                      placeholder="Ex: 10 ou -10"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="deltaXp">Delta XP</Label>
+                    <Input
+                      id="deltaXp"
+                      type="number"
+                      value={adjustForm.deltaXp}
+                      onChange={(e) =>
+                        setAdjustForm((p) => ({ ...p, deltaXp: Number(e.target.value) }))
+                      }
+                      placeholder="Ex: 20 ou -20"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="reason">Motivo (opcional)</Label>
+                  <Input
+                    id="reason"
+                    value={adjustForm.reason}
+                    onChange={(e) => setAdjustForm((p) => ({ ...p, reason: e.target.value }))}
+                    placeholder="Ex: bônus por consulta / correção manual"
+                  />
+                </div>
+                <Button onClick={handleAdjustPoints} disabled={pointsLoading}>
+                  Aplicar ajuste
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Histórico de Pontos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {txLoading && transactions.length === 0 ? (
+                <p className="text-muted-foreground">Carregando histórico...</p>
+              ) : transactions.length === 0 ? (
+                <p className="text-muted-foreground">Nenhuma transação registrada ainda.</p>
+              ) : (
+                <div className="space-y-2">
+                  {transactions.slice(0, 50).map((t: any) => {
+                    const createdAt = t.createdAt ? new Date(t.createdAt) : null
+                    const deltaXp = t?.metadata?.deltaXp ?? null
+                    const reason = t?.metadata?.reason || ''
+                    return (
+                      <div key={t.id} className="rounded-lg border bg-white p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">
+                            {t.kind}/{t.source}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {createdAt ? createdAt.toLocaleString('pt-BR') : ''}
+                          </p>
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          <p>Δ moedas: {t.amountCoins} • saldo: {t.balanceAfterCoins}</p>
+                          {deltaXp !== null && <p>Δ XP: {deltaXp}</p>}
+                          {reason && <p>Motivo: {reason}</p>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMoreTransactions}
+                  disabled={txLoading || !txCursor}
+                >
+                  Carregar mais
+                </Button>
+                {!txCursor && transactions.length > 0 && (
+                  <p className="text-xs text-muted-foreground">Fim do histórico</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {treatment && (
         <TreatmentTimeline

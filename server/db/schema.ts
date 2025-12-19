@@ -3,7 +3,7 @@
  * Define todas as tabelas do banco de dados Neon (PostgreSQL)
  */
 
-import { pgTable, text, timestamp, boolean, integer, jsonb, varchar, serial } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, boolean, integer, jsonb, varchar } from 'drizzle-orm/pg-core'
 
 // ============================================
 // USERS & AUTH
@@ -34,6 +34,9 @@ export const users = pgTable('users', {
 
   // Profile photo
   profilePhotoUrl: text('profile_photo_url'),
+
+  // Responsible PIN (optional, for child flows)
+  responsiblePinHash: varchar('responsible_pin_hash', { length: 255 }),
 
   // Status
   isActive: boolean('is_active').default(true).notNull(),
@@ -285,6 +288,12 @@ export const patient_missions = pgTable('patient_missions', {
 export const patient_points = pgTable('patient_points', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull().unique(),
+  // Currency & progression (canonical for store)
+  coins: integer('coins').default(0).notNull(),
+  xp: integer('xp').default(0).notNull(),
+  level: integer('level').default(1).notNull(),
+
+  // Legacy fields (keep for backwards compatibility)
   totalPoints: integer('total_points').default(0),
   currentLevel: integer('current_level').default(1),
   badges: jsonb('badges').default([]),
@@ -292,6 +301,226 @@ export const patient_points = pgTable('patient_points', {
   lastActivityAt: timestamp('last_activity_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// STORE / REWARDS
+// ============================================
+
+export const store_items = pgTable('store_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).notNull(), // 'digital' | 'real'
+  category: varchar('category', { length: 100 }).notNull(),
+  priceCoins: integer('price_coins').notNull(),
+  requiredLevel: integer('required_level').default(1).notNull(),
+  imageUrl: varchar('image_url', { length: 500 }),
+  metadata: jsonb('metadata').default({}),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const patient_inventory = pgTable('patient_inventory', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  itemId: varchar('item_id', { length: 255 }).notNull(),
+  quantity: integer('quantity').default(1).notNull(),
+  isActive: boolean('is_active').default(false).notNull(),
+  acquiredAt: timestamp('acquired_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const reward_redemptions = pgTable('reward_redemptions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  itemId: varchar('item_id', { length: 255 }).notNull(),
+  status: varchar('status', { length: 30 }).notNull(), // 'requested' | 'approved' | 'rejected' | 'fulfilled'
+  requestedAt: timestamp('requested_at').defaultNow().notNull(),
+  approvedAt: timestamp('approved_at'),
+  fulfilledAt: timestamp('fulfilled_at'),
+  approvedByUserId: varchar('approved_by_user_id', { length: 255 }),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const point_transactions = pgTable('point_transactions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  kind: varchar('kind', { length: 20 }).notNull(), // 'earn' | 'spend' | 'adjust'
+  source: varchar('source', { length: 30 }).notNull(), // 'mission' | 'purchase' | 'manual' | 'streak'
+  amountCoins: integer('amount_coins').notNull(),
+  balanceAfterCoins: integer('balance_after_coins').notNull(),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ============================================
+// PATIENT COSMETICS (active items per slot)
+// ============================================
+
+export const patient_cosmetics = pgTable('patient_cosmetics', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  slot: varchar('slot', { length: 50 }).notNull(), // 'avatar' | 'photo_frame'
+  inventoryId: varchar('inventory_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// STORY OPTIONS (DB-driven Story Director catalog)
+// ============================================
+
+export const story_options = pgTable('story_options', {
+  id: varchar('id', { length: 100 }).primaryKey(), // slug, e.g. 'floresta'
+  type: varchar('type', { length: 20 }).notNull(), // 'environment' | 'character' | 'theme'
+  name: varchar('name', { length: 255 }).notNull(),
+  icon: varchar('icon', { length: 20 }).notNull(),
+  color: varchar('color', { length: 50 }).notNull(),
+  description: text('description'),
+  isDefault: boolean('is_default').default(true).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  metadata: jsonb('metadata').default({}).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// STORY OPTION TEMPLATES (GLOBAL - Super-admin)
+// ============================================
+
+export const story_option_templates = pgTable('story_option_templates', {
+  id: varchar('id', { length: 100 }).primaryKey(), // stable slug
+  type: varchar('type', { length: 20 }).notNull(), // 'environment' | 'character' | 'theme'
+  name: varchar('name', { length: 255 }).notNull(),
+  icon: varchar('icon', { length: 20 }).notNull(), // fallback
+  color: varchar('color', { length: 50 }).notNull(), // fallback
+  description: text('description'),
+  imageUrl: text('image_url'), // data URL (base64) or CDN URL
+  isDefault: boolean('is_default').default(true).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  metadata: jsonb('metadata').default({}).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// CLINIC STORY OPTIONS (OVERRIDES per clinic)
+// Dentist can edit these; cannot edit global templates.
+// ============================================
+
+export const clinic_story_options = pgTable('clinic_story_options', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  templateId: varchar('template_id', { length: 100 }).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  // overrides (nullable)
+  name: varchar('name', { length: 255 }),
+  icon: varchar('icon', { length: 20 }),
+  color: varchar('color', { length: 50 }),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  isActive: boolean('is_active'),
+  sortOrder: integer('sort_order'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// STORE V2 (Templates + Clinic/Parent items + Programs)
+// ============================================
+
+export const store_item_templates = pgTable('store_item_templates', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).notNull(), // 'digital' | 'real'
+  category: varchar('category', { length: 100 }).notNull(),
+  defaultPriceCoins: integer('default_price_coins').notNull(),
+  defaultRequiredLevel: integer('default_required_level').default(1).notNull(),
+  defaultImageUrl: text('default_image_url'),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const clinic_store_items = pgTable('clinic_store_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  sourceType: varchar('source_type', { length: 20 }).notNull(), // 'global_template' | 'clinic_custom'
+  sourceTemplateId: varchar('source_template_id', { length: 255 }),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  priceCoins: integer('price_coins').notNull(),
+  requiredLevel: integer('required_level').default(1).notNull(),
+  imageUrl: text('image_url'),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const parent_store_items = pgTable('parent_store_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).default('real').notNull(),
+  category: varchar('category', { length: 100 }).default('voucher').notNull(),
+  priceCoins: integer('price_coins').notNull(),
+  requiredLevel: integer('required_level').default(1).notNull(),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const reward_programs = pgTable('reward_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ageMin: integer('age_min'),
+  ageMax: integer('age_max'),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const reward_program_items = pgTable('reward_program_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  clinicStoreItemId: varchar('clinic_store_item_id', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const patient_reward_programs = pgTable('patient_reward_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  assignedByUserId: varchar('assigned_by_user_id', { length: 255 }),
+  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
 })
 
 // ============================================

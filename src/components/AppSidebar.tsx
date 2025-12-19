@@ -6,6 +6,8 @@ import {
   Camera,
   BookOpen,
   Award,
+  ShoppingBag,
+  Gift,
   Users,
   Smile,
   Settings,
@@ -25,6 +27,9 @@ const patientMenu = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/education', label: 'Educação', icon: BookOpen },
   { href: '/gamification', label: 'Gamificação', icon: Award },
+  { href: '/store', label: 'Loja', icon: ShoppingBag },
+  { href: '/my-rewards', label: 'Prêmios', icon: Gift },
+  { href: '/parent/items', label: 'Itens dos Pais', icon: Gift },
 ]
 
 const childPatientMenu = [
@@ -34,6 +39,9 @@ const childPatientMenu = [
   { href: '/chat', label: 'Falar com Doutor(a)', icon: MessageSquare },
   { href: '/education', label: 'Escola de Heróis', icon: BookOpen },
   { href: '/gamification', label: 'Aventuras', icon: Award },
+  { href: '/store', label: 'Loja', icon: ShoppingBag },
+  { href: '/my-rewards', label: 'Meus Prêmios', icon: Gift },
+  { href: '/parent/items', label: 'Itens dos Pais', icon: Gift },
 ]
 
 const orthodontistMenu = [
@@ -43,6 +51,9 @@ const orthodontistMenu = [
   { href: '/reports', label: 'Relatórios', icon: BarChart2 },
   { href: '/mission-config', label: 'Configurar Missões', icon: Trophy },
   { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
+  { href: '/clinic/rewards/catalog', label: 'Catálogo de Prêmios', icon: ShoppingBag },
+  { href: '/clinic/rewards/programs', label: 'Programas de Prêmios', icon: Gift },
+  { href: '/clinic/story-options', label: 'Story Options', icon: BookOpen },
 ]
 
 const superAdminMenu = [
@@ -51,6 +62,8 @@ const superAdminMenu = [
   { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
   { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
   { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
+  { href: '/admin/store-templates', label: 'Templates de Prêmios', icon: Gift },
+  { href: '/admin/story-options', label: 'Story Options', icon: BookOpen },
   { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
   { href: '/admin/data', label: 'Gerenciar Dados', icon: Database },
   { href: '/storage-status', label: 'Status do Storage', icon: Database },

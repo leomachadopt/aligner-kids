@@ -19,7 +19,7 @@ export interface CreatePhaseInput {
 export interface UpdatePhaseInput {
   phaseName?: string
   description?: string
-  totalAligners?: string
+  totalAligners?: number
   status?: 'pending' | 'active' | 'completed' | 'paused' | 'cancelled'
   expectedEndDate?: string
   actualEndDate?: string

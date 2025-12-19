@@ -18,6 +18,14 @@ import missionsRoutes from './routes/missions'
 import phasesRoutes from './routes/phases'
 import messagesRoutes from './routes/messages'
 import photosRoutes from './routes/photos'
+import storeRoutes from './routes/store'
+import storeTemplatesRoutes from './routes/storeTemplates'
+import clinicRewardsRoutes from './routes/clinicRewards'
+import parentRewardsRoutes from './routes/parentRewards'
+import patientPointsRoutes from './routes/patientPoints'
+import storyOptionsRoutes from './routes/storyOptions'
+import adminStoryOptionsRoutes from './routes/adminStoryOptions'
+import clinicStoryOptionsRoutes from './routes/clinicStoryOptions'
 
 // Load environment variables
 dotenv.config()
@@ -72,10 +80,10 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }))
 app.use(cookieParser())
 
 // Health check handler
-const healthCheck = async (req: express.Request, res: express.Response) => {
+const healthCheck = async (_req: express.Request, res: express.Response) => {
   try {
     // Test database connection
-    const result = await db.select().from(users).limit(1)
+    await db.select().from(users).limit(1)
     res.json({
       status: 'healthy',
       database: 'connected',
@@ -104,14 +112,22 @@ app.use('/api', missionsRoutes)
 app.use('/api/phases', phasesRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/photos', photosRoutes)
+app.use('/api', storeRoutes)
+app.use('/api', storeTemplatesRoutes)
+app.use('/api', clinicRewardsRoutes)
+app.use('/api', parentRewardsRoutes)
+app.use('/api', patientPointsRoutes)
+app.use('/api', storyOptionsRoutes)
+app.use('/api', adminStoryOptionsRoutes)
+app.use('/api', clinicStoryOptionsRoutes)
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found' })
 })
 
 // Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Server error:', err)
   res.status(500).json({ error: 'Internal server error' })
 })

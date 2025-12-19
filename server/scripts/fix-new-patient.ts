@@ -3,7 +3,7 @@
  */
 
 import 'dotenv/config'
-import { db, aligners, treatments } from '../db/index'
+import { db, aligners } from '../db/index'
 import { eq } from 'drizzle-orm'
 
 async function fixNewPatient() {

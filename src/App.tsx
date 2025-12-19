@@ -17,6 +17,10 @@ import Photos from './pages/Photos'
 import Chat from './pages/Chat'
 import Education from './pages/Education'
 import Gamification from './pages/Gamification'
+import Store from './pages/Store'
+import MyRewards from './pages/MyRewards'
+import ResponsibleApproval from './pages/ResponsibleApproval'
+import ParentItems from './pages/ParentItems'
 import Reports from './pages/Reports'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
@@ -32,12 +36,17 @@ import AdminPrompts from './pages/AdminPrompts'
 import AdminClinics from './pages/AdminClinics'
 import AdminOrthodontists from './pages/AdminOrthodontists'
 import AdminMissions from './pages/AdminMissions'
+import AdminStoreTemplates from './pages/AdminStoreTemplates'
+import AdminStoryOptions from './pages/AdminStoryOptions'
 import AdminDataManagement from './pages/AdminDataManagement'
 import MissionConfig from './pages/MissionConfig'
 import MyStory from './pages/MyStory'
 import DebugAuth from './pages/DebugAuth'
 import StorageStatus from './pages/StorageStatus'
 import MissionPrograms from './pages/MissionPrograms'
+import ClinicRewardsCatalog from './pages/ClinicRewardsCatalog'
+import ClinicRewardPrograms from './pages/ClinicRewardPrograms'
+import ClinicStoryOptions from './pages/ClinicStoryOptions'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { BackendStatusIndicator } from './components/BackendStatusIndicator'
 import '@/utils/debugAuth' // Debug helper para testar autenticação
@@ -77,6 +86,10 @@ const App = () => (
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/education" element={<Education />} />
                 <Route path="/gamification" element={<Gamification />} />
+                <Route path="/store" element={<Store />} />
+                <Route path="/my-rewards" element={<MyRewards />} />
+                <Route path="/responsible" element={<ResponsibleApproval />} />
+                <Route path="/parent/items" element={<ParentItems />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
@@ -95,6 +108,9 @@ const App = () => (
                 <Route path="/aligner-management" element={<AlignerManagement />} />
                 <Route path="/mission-config" element={<MissionConfig />} />
                 <Route path="/mission-programs" element={<MissionPrograms />} />
+                <Route path="/clinic/rewards/catalog" element={<ClinicRewardsCatalog />} />
+                <Route path="/clinic/rewards/programs" element={<ClinicRewardPrograms />} />
+                <Route path="/clinic/story-options" element={<ClinicStoryOptions />} />
               </Route>
             </Route>
 
@@ -105,6 +121,8 @@ const App = () => (
                 <Route path="/admin/orthodontists" element={<AdminOrthodontists />} />
                 <Route path="/admin/prompts" element={<AdminPrompts />} />
                 <Route path="/admin/missions" element={<AdminMissions />} />
+                <Route path="/admin/store-templates" element={<AdminStoreTemplates />} />
+                <Route path="/admin/story-options" element={<AdminStoryOptions />} />
                 <Route path="/admin/data" element={<AdminDataManagement />} />
               </Route>
             </Route>

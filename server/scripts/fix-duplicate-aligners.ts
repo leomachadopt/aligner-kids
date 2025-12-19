@@ -4,7 +4,7 @@
 
 import 'dotenv/config'
 import { db, aligners } from '../db/index'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 async function fixDuplicates() {
   console.log('🔧 Corrigindo alinhadores duplicados...\n')

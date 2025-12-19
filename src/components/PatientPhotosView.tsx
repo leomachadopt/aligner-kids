@@ -21,10 +21,12 @@ import {
 } from 'lucide-react'
 import { PhotoService } from '@/services/photoService'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
+import { StoreService } from '@/services/storeService'
 import { toast } from 'sonner'
 import type { PhotoPeriod, PhotoType, ProgressPhoto } from '@/types/photo'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { normalizeActivePhotoFrame } from '@/utils/photoFrames'
 
 interface PatientPhotosViewProps {
   patientId: string
@@ -47,9 +49,11 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
   const [savingNotes, setSavingNotes] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<ProgressPhoto | null>(null)
   const [viewingPhotoType, setViewingPhotoType] = useState<string>('')
+  const [activePhotoFrame, setActivePhotoFrame] = useState<any>(null)
 
   useEffect(() => {
     loadPhotos()
+    loadCosmetics()
   }, [patientId])
 
   const loadPhotos = async () => {
@@ -67,6 +71,18 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
       toast.error('Erro ao carregar fotos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadCosmetics = async () => {
+    if (!patientId) return
+    try {
+      const res: any = await StoreService.getActiveCosmetics(patientId)
+      const frameInv = res?.cosmetics?.photo_frame?.inventory
+      const meta = frameInv?.item?.metadata || {}
+      setActivePhotoFrame(normalizeActivePhotoFrame(meta))
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -241,6 +257,15 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
                                   alt={PHOTO_TYPE_LABELS[type]}
                                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                 />
+                                {/* Moldura ativa já na miniatura (preview) */}
+                                {activePhotoFrame && activePhotoFrame.overlayUrl && (activePhotoFrame.exportMode || 'burn') === 'burn' && (
+                                  <img
+                                    src={activePhotoFrame.overlayUrl}
+                                    alt="Moldura"
+                                    className="absolute inset-0 h-full w-full pointer-events-none"
+                                    style={{ objectFit: 'cover' }}
+                                  />
+                                )}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 flex flex-col items-center justify-center gap-2">
                                   <Maximize2 className="h-8 w-8 text-white" />
                                   <p className="font-bold text-white text-sm">
@@ -351,6 +376,7 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
         photoTypeLabel={viewingPhotoType}
         onDelete={handleDeletePhoto}
         canDelete={true}
+        activePhotoFrame={activePhotoFrame}
       />
     </Card>
   )

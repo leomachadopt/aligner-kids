@@ -11,10 +11,12 @@ import { Camera, Folder, ChevronDown, ChevronUp, Loader2, Info, Maximize2 } from
 import { PhotoUploadModal } from '@/components/PhotoUploadModal'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
 import { PhotoService } from '@/services/photoService'
+import { StoreService } from '@/services/storeService'
 import { toast } from 'sonner'
 import type { PhotoPeriod, PhotoType, ProgressPhoto } from '@/types/photo'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { normalizeActivePhotoFrame } from '@/utils/photoFrames'
 
 const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
   frontal: 'Sorriso Frontal',
@@ -34,11 +36,13 @@ const Photos = () => {
   const [requiredPhotos, setRequiredPhotos] = useState<PhotoType[]>([])
   const [viewingPhoto, setViewingPhoto] = useState<ProgressPhoto | null>(null)
   const [viewingPhotoType, setViewingPhotoType] = useState<string>('')
+  const [activePhotoFrame, setActivePhotoFrame] = useState<any>(null)
 
   useEffect(() => {
     if (user?.id) {
       loadPhotos()
       checkRequiredPhotos()
+      loadCosmetics()
     }
   }, [user?.id])
 
@@ -59,6 +63,18 @@ const Photos = () => {
       toast.error('Erro ao carregar fotos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadCosmetics = async () => {
+    if (!user?.id) return
+    try {
+      const res: any = await StoreService.getActiveCosmetics(user.id)
+      const frameInv = res?.cosmetics?.photo_frame?.inventory
+      const meta = frameInv?.item?.metadata || {}
+      setActivePhotoFrame(normalizeActivePhotoFrame(meta))
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -248,6 +264,19 @@ const Photos = () => {
                                   alt={PHOTO_TYPE_LABELS[type]}
                                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                 />
+                                {/* Moldura ativa já na miniatura (preview) */}
+                                {activePhotoFrame && (activePhotoFrame.exportMode || 'burn') === 'burn' && (
+                                  <>
+                                    {activePhotoFrame.overlayUrl ? (
+                                      <img
+                                        src={activePhotoFrame.overlayUrl}
+                                        alt="Moldura"
+                                        className="absolute inset-0 h-full w-full pointer-events-none"
+                                        style={{ objectFit: 'cover' }}
+                                      />
+                                    ) : null}
+                                  </>
+                                )}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 flex flex-col items-center justify-center gap-2">
                                   <Maximize2 className="h-8 w-8 text-white" />
                                   <p className="font-bold text-white text-sm">
@@ -324,6 +353,7 @@ const Photos = () => {
         onClose={() => setViewingPhoto(null)}
         photoTypeLabel={viewingPhotoType}
         canDelete={false} // Pacientes não podem deletar suas próprias fotos
+        activePhotoFrame={activePhotoFrame}
       />
     </div>
   )

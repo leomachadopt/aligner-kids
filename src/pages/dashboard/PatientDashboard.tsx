@@ -303,7 +303,7 @@ const PatientDashboard = () => {
               size="lg"
               className="h-16 text-base font-bold bg-gradient-to-r from-green-400 to-teal-400 hover:scale-105 text-green-900 shadow-lg hover-bounce"
             >
-              <Link to="/gamification">
+              <Link to="/my-rewards">
                 <Award className="mr-2 h-5 w-5" />
                 Ver Meus Prêmios
               </Link>

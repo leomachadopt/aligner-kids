@@ -322,7 +322,7 @@ Genera los capítulos ${startChapter} hasta ${endChapter}.`,
   /**
    * Parse da resposta da OpenAI
    */
-  private static parseStoryResponse(content: string, expectedChapters: number): GenerationResult {
+  private static parseStoryResponse(content: string, _expectedChapters: number): GenerationResult {
     console.log('🔍 Parsing resposta da IA...')
     console.log('📄 Primeiros 500 chars:', content.substring(0, 500))
 

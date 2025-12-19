@@ -1,4 +1,4 @@
-CREATE TABLE "aligners" (
+CREATE TABLE IF NOT EXISTS "aligners" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"treatment_id" varchar(255),
@@ -16,7 +16,7 @@ CREATE TABLE "aligners" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "clinics" (
+CREATE TABLE IF NOT EXISTS "clinics" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"slug" varchar(255) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE "clinics" (
 	CONSTRAINT "clinics_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "messages" (
+CREATE TABLE IF NOT EXISTS "messages" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"sender_id" varchar(255) NOT NULL,
 	"receiver_id" varchar(255) NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE "messages" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "mission_program_templates" (
+CREATE TABLE IF NOT EXISTS "mission_program_templates" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"program_id" varchar(255) NOT NULL,
 	"mission_template_id" varchar(255) NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE "mission_program_templates" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "mission_programs" (
+CREATE TABLE IF NOT EXISTS "mission_programs" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"clinic_id" varchar(255),
 	"name" varchar(255) NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE "mission_programs" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "mission_templates" (
+CREATE TABLE IF NOT EXISTS "mission_templates" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"description" text NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE "mission_templates" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "patient_missions" (
+CREATE TABLE IF NOT EXISTS "patient_missions" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"mission_template_id" varchar(255) NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE "patient_missions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "patient_points" (
+CREATE TABLE IF NOT EXISTS "patient_points" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"total_points" integer DEFAULT 0,
@@ -129,7 +129,7 @@ CREATE TABLE "patient_points" (
 	CONSTRAINT "patient_points_patient_id_unique" UNIQUE("patient_id")
 );
 --> statement-breakpoint
-CREATE TABLE "progress_photos" (
+CREATE TABLE IF NOT EXISTS "progress_photos" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"treatment_id" varchar(255) NOT NULL,
@@ -150,7 +150,7 @@ CREATE TABLE "progress_photos" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "stories" (
+CREATE TABLE IF NOT EXISTS "stories" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"treatment_id" varchar(255),
@@ -173,7 +173,7 @@ CREATE TABLE "stories" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "story_chapters" (
+CREATE TABLE IF NOT EXISTS "story_chapters" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"story_id" varchar(255) NOT NULL,
 	"treatment_id" varchar(255),
@@ -193,7 +193,7 @@ CREATE TABLE "story_chapters" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "story_preferences" (
+CREATE TABLE IF NOT EXISTS "story_preferences" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"treatment_id" varchar(255),
@@ -207,7 +207,7 @@ CREATE TABLE "story_preferences" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "story_prompts" (
+CREATE TABLE IF NOT EXISTS "story_prompts" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"system_prompt" text NOT NULL,
@@ -217,7 +217,7 @@ CREATE TABLE "story_prompts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "treatment_phases" (
+CREATE TABLE IF NOT EXISTS "treatment_phases" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"treatment_id" varchar(255) NOT NULL,
 	"phase_number" integer NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE "treatment_phases" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "treatments" (
+CREATE TABLE IF NOT EXISTS "treatments" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"patient_id" varchar(255) NOT NULL,
 	"name" varchar(255),
@@ -255,7 +255,7 @@ CREATE TABLE "treatments" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"password_hash" text NOT NULL,
