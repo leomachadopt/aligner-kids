@@ -36,6 +36,7 @@ import { NewPhaseModal } from '@/components/NewPhaseModal'
 import { EditPhaseModal } from '@/components/EditPhaseModal'
 import { ChatModal } from '@/components/ChatModal'
 import { PatientPhotosView } from '@/components/PatientPhotosView'
+import { TreatmentForm, type TreatmentFormValues } from '@/components/TreatmentForm'
 import {
   calculateTreatmentProgress,
   isAlignerOverdue,
@@ -75,6 +76,7 @@ const PatientDetail = () => {
   const [isViewTreatmentOpen, setIsViewTreatmentOpen] = useState(false)
   const [isDeleteTreatmentOpen, setIsDeleteTreatmentOpen] = useState(false)
   const [isListTreatmentsOpen, setIsListTreatmentsOpen] = useState(false)
+  const [isCreateTreatmentOpen, setIsCreateTreatmentOpen] = useState(false)
   const [allTreatments, setAllTreatments] = useState<Treatment[]>([])
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [editPatientData, setEditPatientData] = useState({
@@ -265,6 +267,45 @@ const PatientDetail = () => {
     }
   }
 
+  const handleCreateTreatment = async (data: TreatmentFormValues) => {
+    if (!id) return
+
+    try {
+      setLoading(true)
+      await alignerService.createTreatment({
+        patientId: id,
+        totalAligners: data.totalAligners,
+        changeInterval: data.changeInterval,
+        targetHoursPerDay: data.targetHoursPerDay,
+      } as any)
+
+      toast.success('Tratamento criado com sucesso!')
+      setIsCreateTreatmentOpen(false)
+
+      // Recarregar dados do tratamento e alinhadores
+      const patientTreatment = await alignerService.getTreatmentByPatient(id)
+      const patientAligners = await alignerService.getAlignersByPatient(id)
+
+      setTreatment(patientTreatment)
+      setAligners(patientAligners)
+
+      // Load phases if treatment exists
+      if (patientTreatment) {
+        try {
+          const treatmentPhases = await PhaseService.getPhasesByTreatment(patientTreatment.id)
+          setPhases(treatmentPhases)
+        } catch (error) {
+          console.error('Error loading phases:', error)
+        }
+      }
+    } catch (error: any) {
+      console.error('Error creating treatment:', error)
+      toast.error(error.message || 'Erro ao criar tratamento')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEditPatient = () => {
     if (patient) {
       setEditPatientData({
@@ -386,8 +427,11 @@ const PatientDetail = () => {
                 <p className="text-gray-600 font-medium text-lg mb-4">
                   Este paciente ainda não possui um tratamento iniciado.
                 </p>
-                <Button asChild className="rounded-full px-6 py-6 text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover-bounce">
-                  <Link to="/aligner-management">Cadastrar Tratamento</Link>
+                <Button
+                  onClick={() => setIsCreateTreatmentOpen(true)}
+                  className="rounded-full px-6 py-6 text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover-bounce"
+                >
+                  Cadastrar Tratamento
                 </Button>
               </div>
             ) : (
@@ -457,7 +501,7 @@ const PatientDetail = () => {
         </Card>
 
         {/* Phases Section */}
-        {treatment && phases.length > 0 && (
+        {treatment && (
           <Card className="lg:col-span-2 rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -478,39 +522,55 @@ const PatientDetail = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {phases.map((phase) => (
-                <PhaseCard
-                  key={phase.id}
-                  phase={phase}
-                  isActive={phase.status === 'active'}
-                  onEdit={() => {
-                    setEditingPhase(phase)
-                    setIsEditPhaseModalOpen(true)
-                  }}
-                  onStart={async () => {
-                    try {
-                      await PhaseService.startPhase(phase.id)
-                      toast.success('Fase iniciada com sucesso!')
-                      // Reload phases
-                      const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
-                      setPhases(updatedPhases)
-                    } catch (error) {
-                      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar fase')
-                    }
-                  }}
-                  onComplete={async () => {
-                    try {
-                      await PhaseService.completePhase(phase.id)
-                      toast.success('Fase concluída com sucesso!')
-                      // Reload phases
-                      const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
-                      setPhases(updatedPhases)
-                    } catch (error) {
-                      toast.error(error instanceof Error ? error.message : 'Erro ao concluir fase')
-                    }
-                  }}
-                />
-              ))}
+              {phases.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-200 to-teal-200 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-600 font-medium mb-2">
+                    Nenhuma fase criada ainda
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Clique em "Iniciar Nova Fase" para organizar o tratamento em fases
+                  </p>
+                </div>
+              ) : (
+                phases.map((phase) => (
+                  <PhaseCard
+                    key={phase.id}
+                    phase={phase}
+                    isActive={phase.status === 'active'}
+                    onEdit={() => {
+                      setEditingPhase(phase)
+                      setIsEditPhaseModalOpen(true)
+                    }}
+                    onStart={async () => {
+                      try {
+                        await PhaseService.startPhase(phase.id)
+                        toast.success('Fase iniciada com sucesso!')
+                        // Reload phases
+                        const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+                        setPhases(updatedPhases)
+                      } catch (error) {
+                        toast.error(error instanceof Error ? error.message : 'Erro ao iniciar fase')
+                      }
+                    }}
+                    onComplete={async () => {
+                      try {
+                        await PhaseService.completePhase(phase.id)
+                        toast.success('Fase concluída com sucesso!')
+                        // Reload phases
+                        const updatedPhases = await PhaseService.getPhasesByTreatment(treatment.id)
+                        setPhases(updatedPhases)
+                      } catch (error) {
+                        toast.error(error instanceof Error ? error.message : 'Erro ao concluir fase')
+                      }
+                    }}
+                  />
+                ))
+              )}
             </CardContent>
           </Card>
         )}
@@ -548,10 +608,11 @@ const PatientDetail = () => {
               💬 Abrir Chat
             </Button>
             {!treatment ? (
-              <Button className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-md hover-bounce" asChild>
-                <Link to={`/aligner-management?patientId=${id}`}>
-                  ➕ Cadastrar Novo Tratamento
-                </Link>
+              <Button
+                className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-md hover-bounce"
+                onClick={() => setIsCreateTreatmentOpen(true)}
+              >
+                ➕ Cadastrar Novo Tratamento
               </Button>
             ) : (
               <>
@@ -1270,6 +1331,23 @@ const PatientDetail = () => {
           <DialogFooter>
             <Button onClick={() => setIsListTreatmentsOpen(false)}>Fechar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Criar Tratamento */}
+      <Dialog open={isCreateTreatmentOpen} onOpenChange={setIsCreateTreatmentOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Tratamento</DialogTitle>
+            <DialogDescription>
+              Configure o tratamento de {patient?.fullName}. Todos os alinhadores serão criados automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <TreatmentForm
+            onSubmit={handleCreateTreatment}
+            defaultValues={{ patientId: id || '' }}
+            isLoading={loading}
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -88,8 +88,8 @@ export const AdventureJourney = () => {
     try {
       await confirmAlignerChange(currentAlignerData.id)
       setShowCelebration(true)
-      addCoins(50)
-      addXP(25)
+      await addCoins(50)
+      await addXP(25)
       setTimeout(() => window.location.reload(), 2000)
     } catch (error: any) {
       console.error('Error confirming aligner change:', error)

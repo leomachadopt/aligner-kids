@@ -1,66 +1,60 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PlayCircle, BookOpen, Puzzle, Star, Award } from 'lucide-react'
-import { useGamification } from '@/context/GamificationContext'
+import { PlayCircle, Star, Award, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-const educationalContent = [
-  {
-    type: 'video',
-    title: 'A Super Aventura da Limpeza dos Alinhadores',
-    icon: PlayCircle,
-    color: 'bg-blue-400',
-    img: 'https://img.usecurling.com/p/400/200?q=animated%20tooth%20brushing',
-    reward: 20,
-  },
-  {
-    type: 'article',
-    title: 'O que os Super-Heróis do Sorriso Comem?',
-    icon: BookOpen,
-    color: 'bg-green-400',
-    img: 'https://img.usecurling.com/p/400/200?q=healthy%20food%20for%20teeth',
-    reward: 15,
-  },
-  {
-    type: 'quiz',
-    title: 'Quiz: Você é um Mestre dos Alinhadores?',
-    icon: Puzzle,
-    color: 'bg-yellow-400',
-    img: 'https://img.usecurling.com/p/400/200?q=question%20mark%20blocks',
-    reward: 30,
-  },
-  {
-    type: 'video',
-    title: 'Como Usar Seu Alinhador Corretamente',
-    icon: PlayCircle,
-    color: 'bg-purple-400',
-    img: 'https://img.usecurling.com/p/400/200?q=dental%20aligner%20instruction',
-    reward: 20,
-  },
-  {
-    type: 'article',
-    title: 'Dicas para Dormir com Alinhadores',
-    icon: BookOpen,
-    color: 'bg-indigo-400',
-    img: 'https://img.usecurling.com/p/400/200?q=sleeping%20with%20smile',
-    reward: 15,
-  },
-  {
-    type: 'quiz',
-    title: 'Desafio dos Dentes Saudáveis',
-    icon: Puzzle,
-    color: 'bg-pink-400',
-    img: 'https://img.usecurling.com/p/400/200?q=healthy%20teeth%20quiz',
-    reward: 25,
-  },
-]
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useAuth } from '@/context/AuthContext'
+import { EducationService, type EducationLesson } from '@/services/educationService'
+import { toast } from 'sonner'
 
 const Education = () => {
-  const { addCoins, addXP, completeMission } = useGamification()
+  const { user } = useAuth()
+  const patientId = user?.id
 
-  const handleContentClick = (reward: number) => {
-    addCoins(reward)
-    addXP(reward / 2)
-    completeMission('learn-something')
+  const [lessons, setLessons] = useState<EducationLesson[]>([])
+  const [selected, setSelected] = useState<EducationLesson | null>(null)
+  const [answers, setAnswers] = useState<number[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const load = async () => {
+    if (!patientId) return
+    const res = await EducationService.listLessons(patientId)
+    setLessons(res.lessons || [])
+  }
+
+  useEffect(() => {
+    load().catch(() => {
+      // ignore
+    })
+  }, [patientId])
+
+  const openLesson = (l: EducationLesson) => {
+    setSelected(l)
+    setAnswers(new Array((l.quiz || []).length).fill(-1))
+  }
+
+  const canSubmit = useMemo(() => {
+    if (!selected) return false
+    return (selected.quiz || []).length > 0 && answers.every((a) => a >= 0)
+  }, [selected, answers])
+
+  const submit = async () => {
+    if (!patientId || !selected) return
+    setSubmitting(true)
+    try {
+      const res = await EducationService.submitQuiz(patientId, selected.id, answers)
+      if (res.passed) {
+        toast.success(`🎉 Parabéns! Você passou com ${res.scorePercent}%`)
+      } else {
+        toast.error(`Quase! Você fez ${res.scorePercent}%. Tente de novo!`)
+      }
+      setSelected(null)
+      await load()
+    } catch (e: any) {
+      toast.error(e?.message || 'Falha ao enviar quiz')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -97,27 +91,32 @@ const Education = () => {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {educationalContent.map((item) => (
+        {lessons.map((item) => (
           <Card
             key={item.title}
             className="group cursor-pointer overflow-hidden transition-all duration-300 hover-scale hover:shadow-xl"
-            onClick={() => handleContentClick(item.reward)}
+            onClick={() => openLesson(item)}
           >
             <CardHeader className="p-0">
               <div className="relative overflow-hidden">
                 <img
-                  src={item.img}
+                  src="https://img.usecurling.com/p/400/200?q=kids%20dental%20education%20cartoon"
                   alt={item.title}
                   className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
                 <div
-                  className={`absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-transform duration-300 group-hover:scale-125 ${item.color}`}
+                  className="absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-transform duration-300 group-hover:scale-125 bg-blue-500"
                 >
-                  <item.icon className="h-8 w-8 text-white" />
+                  <PlayCircle className="h-8 w-8 text-white" />
                 </div>
                 <div className="absolute top-2 left-2 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-yellow-900 shadow-md">
-                  +{item.reward} moedas
+                  +{item.rewardCoins} moedas
                 </div>
+                {item.progress?.status === 'completed' && (
+                  <div className="absolute top-2 right-2 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white shadow-md flex items-center gap-1">
+                    <CheckCircle2 className="h-4 w-4" /> Concluído
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="p-4">
@@ -129,14 +128,64 @@ const Education = () => {
                 size="sm"
                 className="mt-3 w-full hover-bounce"
               >
-                {item.type === 'video' && 'Assistir Vídeo'}
-                {item.type === 'article' && 'Ler Artigo'}
-                {item.type === 'quiz' && 'Fazer Quiz'}
+                Assistir e responder quiz
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selected?.title}</DialogTitle>
+          </DialogHeader>
+
+          {selected && (
+            <div className="space-y-4">
+              <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                <iframe
+                  className="h-full w-full"
+                  src={selected.videoUrl}
+                  title={selected.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+
+              <div className="space-y-3">
+                {(selected.quiz || []).map((q, idx) => (
+                  <div key={q.id} className="rounded-lg border p-3">
+                    <p className="font-semibold">{idx + 1}. {q.prompt}</p>
+                    <div className="mt-2 grid gap-2">
+                      {q.options.map((opt, optIdx) => (
+                        <label key={optIdx} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name={`q-${q.id}`}
+                            checked={answers[idx] === optIdx}
+                            onChange={() => setAnswers((prev) => prev.map((v, i) => (i === idx ? optIdx : v)))}
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelected(null)}>
+              Fechar
+            </Button>
+            <Button onClick={submit} disabled={!canSubmit || submitting}>
+              {submitting ? 'Enviando...' : 'Enviar respostas'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

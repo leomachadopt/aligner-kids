@@ -26,6 +26,7 @@ export interface TreatmentPhase {
   phaseNumber: number
   phaseName: string
   description?: string
+  adherenceTargetPercent?: number
 
   // Aligner numbering for this phase
   startAlignerNumber: number

@@ -41,11 +41,14 @@ import { useAuth } from '@/context/AuthContext'
 import { AlignerTracker } from '@/components/AlignerTracker'
 import { PendingPhotosAlert } from '@/components/PendingPhotosAlert'
 import { PatientMissions } from '@/components/PatientMissions'
+import { GamificationStats } from '@/components/GamificationStats'
 import {
   calculateDaysUntilChange,
   calculateTreatmentProgress,
 } from '@/utils/alignerCalculations'
 import { Link } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale/pt-BR'
 
 const adhesionData = [
   { name: 'Seg', uso: 90 },
@@ -175,9 +178,10 @@ const PatientDashboard = () => {
           />
         </div>
 
-        {/* Alert de Fotos Pendentes */}
-        {user?.id && <PendingPhotosAlert patientId={user.id} />}
+        {/* 1) Rastreamento de uso do alinhador (pais pausam/retomam) */}
+        <AlignerTracker showNextChange={false} />
 
+        {/* 2) Próxima missão (troca do alinhador) */}
         <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
           <CardHeader>
             <CardTitle className="font-display text-2xl font-bold text-center">
@@ -208,6 +212,16 @@ const PatientDashboard = () => {
                   Alinhador #{currentAligner?.number || 'N/A'}
                   {treatment && ` de ${treatment.totalAligners}`}
                 </p>
+                {currentAligner?.expectedEndDate && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Data esperada:{' '}
+                    {format(
+                      new Date(currentAligner.expectedEndDate),
+                      "dd 'de' MMMM",
+                      { locale: ptBR },
+                    )}
+                  </p>
+                )}
                 {currentAligner && (
                   <Button
                     onClick={handleConfirmChange}
@@ -234,48 +248,32 @@ const PatientDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* 3) Hora de tirar suas fotos */}
+        {user?.id && <PendingPhotosAlert patientId={user.id} />}
+
         {/* Missões Ativas */}
         {user?.id && <PatientMissions patientId={user.id} variant="full" />}
 
-        <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Progresso da Missão</CardTitle>
-                <CardDescription>
-                  Use o alinhador por 2 semanas sem esquecer!
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Progress
-                  value={progress}
-                  className="[&>*]:bg-secondary-child h-4"
-                />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {progress.toFixed(0)}% do tratamento completo
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 hover-scale">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-6 w-6 text-yellow-500 animate-wiggle-slow" />
-                  Ranking de Pontos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Você está em{' '}
-                  <span className="font-bold text-orange-600 text-3xl animate-pulse">
-                    2º lugar
-                  </span>{' '}
-                  na clínica!
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Continue assim para alcançar o 1º lugar! 🚀
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Estatísticas de Gamificação */}
+        <GamificationStats />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Progresso da Missão</CardTitle>
+            <CardDescription>
+              Use o alinhador por 2 semanas sem esquecer!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Progress
+              value={progress}
+              className="[&>*]:bg-secondary-child h-4"
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              {progress.toFixed(0)}% do tratamento completo
+            </p>
+          </CardContent>
+        </Card>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Button
@@ -318,7 +316,7 @@ const PatientDashboard = () => {
       <h1 className="text-3xl font-bold">Olá, Paciente!</h1>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <AlignerTracker />
+          <AlignerTracker showNextChange={false} />
         </div>
         <div className="space-y-6">
           <Card>

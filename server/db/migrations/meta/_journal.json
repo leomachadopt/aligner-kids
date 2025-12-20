@@ -78,6 +78,13 @@
       "when": 1766000004000,
       "tag": "0010_disable_avatar_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1766000005000,
+      "tag": "0011_aligner_quests_and_education",
+      "breakpoints": true
     }
   ]
 }

@@ -218,6 +218,10 @@ const AlignerManagement = () => {
     (a) => a.patientId === (selectedPatientId || patientIdParam),
   )
 
+  const treatment = treatments.find(
+    (t) => t.patientId === (selectedPatientId || patientIdParam),
+  ) || null
+
   return (
     <div className="space-y-8 animate-fade-in-up">
       <div className="rounded-2xl border-2 border-gradient-to-r from-teal-400 via-green-400 to-blue-400 bg-gradient-to-br from-teal-50 via-green-50 to-blue-50 p-6 shadow-xl">
@@ -241,67 +245,98 @@ const AlignerManagement = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
-                <Plus className="h-6 w-6 text-white" />
-              </div>
-              {editingAligner ? 'Editar' : 'Cadastrar'} Alinhador
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!patientIdParam && !selectedPatientId && !editingAligner && (
-              <div className="mb-6">
-                <label htmlFor="patient-select" className="text-sm font-bold uppercase text-gray-600 mb-3 block">
-                  Selecione o Paciente *
-                </label>
-                <select
-                  id="patient-select"
-                  value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
-                  className="w-full rounded-xl border-2 border-green-200 bg-white px-4 py-3 font-medium focus:border-green-400 focus:outline-none"
-                >
-                  <option value="">-- Escolha um paciente --</option>
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.fullName} - {patient.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+        {/* Só mostra o formulário se estiver editando ou se não houver tratamento */}
+        {(editingAligner || treatment === null || patientAligners.length === 0) ? (
+          <Card className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
+                  <Plus className="h-6 w-6 text-white" />
+                </div>
+                {editingAligner ? 'Editar' : 'Cadastrar'} Alinhador
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!patientIdParam && !selectedPatientId && !editingAligner && (
+                <div className="mb-6">
+                  <label htmlFor="patient-select" className="text-sm font-bold uppercase text-gray-600 mb-3 block">
+                    Selecione o Paciente *
+                  </label>
+                  <select
+                    id="patient-select"
+                    value={selectedPatientId}
+                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                    className="w-full rounded-xl border-2 border-green-200 bg-white px-4 py-3 font-medium focus:border-green-400 focus:outline-none"
+                  >
+                    <option value="">-- Escolha um paciente --</option>
+                    {patients.map((patient) => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.fullName} - {patient.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-            {(selectedPatientId || patientIdParam) && (
-              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 shadow-sm">
-                <p className="text-sm font-bold text-gray-800">
-                  🎯 Paciente selecionado: {
-                    patients.find((p) => p.id === (selectedPatientId || patientIdParam))?.fullName
-                  }
+              {(selectedPatientId || patientIdParam) && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 shadow-sm">
+                  <p className="text-sm font-bold text-gray-800">
+                    🎯 Paciente selecionado: {
+                      patients.find((p) => p.id === (selectedPatientId || patientIdParam))?.fullName
+                    }
+                  </p>
+                </div>
+              )}
+
+              <AlignerForm
+                onSubmit={handleSubmit}
+                aligner={editingAligner || undefined}
+                defaultValues={{
+                  patientId: selectedPatientId || patientIdParam || '',
+                  number: patientAligners.length + 1,
+                }}
+                isLoading={isLoading}
+              />
+              {editingAligner && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={handleCancel}
+                >
+                  Cancelar Edição
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-blue-900">
+                ℹ️ Informação
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-gray-700 font-medium">
+                  Este paciente já possui um tratamento ativo com <span className="font-bold text-blue-600">{treatment?.totalAligners || patientAligners.length} alinhadores</span> criados automaticamente.
+                </p>
+                <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>📌 Como funciona:</strong>
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm text-yellow-700 list-disc list-inside">
+                    <li>Os alinhadores são criados automaticamente ao criar o tratamento</li>
+                    <li>Use esta página apenas para <strong>editar</strong> alinhadores existentes</li>
+                    <li>Para adicionar mais alinhadores, edite o tratamento em "Gerenciar Pacientes"</li>
+                  </ul>
+                </div>
+                <p className="text-gray-600 text-sm">
+                  Selecione um alinhador na lista ao lado para editá-lo.
                 </p>
               </div>
-            )}
-
-            <AlignerForm
-              onSubmit={handleSubmit}
-              aligner={editingAligner || undefined}
-              defaultValues={{
-                patientId: selectedPatientId || patientIdParam || '',
-                number: patientAligners.length + 1,
-              }}
-              isLoading={isLoading}
-            />
-            {editingAligner && (
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={handleCancel}
-              >
-                Cancelar Edição
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

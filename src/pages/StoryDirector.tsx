@@ -56,7 +56,18 @@ const StoryDirector = () => {
     ageGroup: 8, // Padrão
   })
 
-  const totalAligners = treatment?.totalAligners || 0
+  const totalAligners = treatment?.totalAligners || treatment?.totalAlignersOverall || 0
+
+  // Debug log para verificar o tratamento
+  useEffect(() => {
+    console.log('📊 Treatment data:', {
+      treatment,
+      totalAligners: treatment?.totalAligners,
+      totalAlignersOverall: treatment?.totalAlignersOverall,
+      computed: totalAligners,
+    })
+  }, [treatment, totalAligners])
+
   useEffect(() => {
     const loadOptions = async () => {
       if (!user?.id) return

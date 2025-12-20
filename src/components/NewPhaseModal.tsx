@@ -39,6 +39,7 @@ export function NewPhaseModal({
     totalAligners: '20',
     startDate: new Date().toISOString().split('T')[0],
     expectedEndDate: '',
+    adherenceTargetPercent: '80',
   })
 
   const nextPhaseNumber = lastPhase ? lastPhase.phaseNumber + 1 : 1
@@ -57,6 +58,7 @@ export function NewPhaseModal({
         totalAligners: parseInt(formData.totalAligners),
         startDate: formData.startDate || undefined,
         expectedEndDate: formData.expectedEndDate || undefined,
+        adherenceTargetPercent: parseInt(formData.adherenceTargetPercent || '80'),
       }
 
       await PhaseService.createPhase(input)
@@ -71,6 +73,7 @@ export function NewPhaseModal({
         totalAligners: '20',
         startDate: new Date().toISOString().split('T')[0],
         expectedEndDate: '',
+        adherenceTargetPercent: '80',
       })
     } catch (error) {
       console.error('Error creating phase:', error)
@@ -165,6 +168,21 @@ export function NewPhaseModal({
                 onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adherenceTargetPercent">% mínimo aceitável (fase)</Label>
+            <Input
+              id="adherenceTargetPercent"
+              type="number"
+              min="0"
+              max="100"
+              value={formData.adherenceTargetPercent}
+              onChange={(e) => setFormData({ ...formData, adherenceTargetPercent: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ex.: 80% (se a meta do alinhador é 22h/dia, o dia conta como OK a partir de 17h36).
+            </p>
           </div>
 
           {lastPhase && lastPhase.status === 'active' && (

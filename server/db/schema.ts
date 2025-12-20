@@ -88,7 +88,7 @@ export const treatments = pgTable('treatments', {
   totalAlignersOverall: integer('total_aligners_overall').default(20).notNull(), // Default 20 for migration
   currentAlignerOverall: integer('current_aligner_overall').default(1).notNull(),
 
-  startDate: varchar('start_date', { length: 10 }).notNull(),
+  startDate: varchar('start_date', { length: 10 }), // Nullable - set when treatment starts
   expectedEndDate: varchar('expected_end_date', { length: 10 }),
 
   // Legacy fields (for backwards compatibility during migration)
@@ -114,6 +114,9 @@ export const treatment_phases = pgTable('treatment_phases', {
   totalAligners: integer('total_aligners').notNull(),
   currentAlignerNumber: integer('current_aligner_number').default(0).notNull(),
 
+  // Gamification: adherence threshold for aligners in this phase (percent)
+  adherenceTargetPercent: integer('adherence_target_percent').default(80).notNull(),
+
   // Phase status
   status: varchar('status', { length: 50 }).default('pending').notNull(), // 'pending' | 'active' | 'completed' | 'paused' | 'cancelled'
 
@@ -134,13 +137,98 @@ export const aligners = pgTable('aligners', {
   phaseId: varchar('phase_id', { length: 255 }), // FK to treatment_phases - for phase tracking
   alignerNumber: integer('aligner_number').notNull(), // Global number (continues across phases)
   alignerNumberInPhase: integer('aligner_number_in_phase'), // Number within the phase (1, 2, 3... resets per phase)
-  startDate: varchar('start_date', { length: 10 }).notNull(),
-  endDate: varchar('end_date', { length: 10 }).notNull(),
+  startDate: varchar('start_date', { length: 10 }), // Nullable - set when aligner is activated
+  endDate: varchar('end_date', { length: 10 }), // Nullable - set when aligner is activated
   actualEndDate: varchar('actual_end_date', { length: 10 }),
   status: varchar('status', { length: 50 }).default('upcoming').notNull(),
   usageHours: integer('usage_hours').default(0),
   targetHoursPerDay: integer('target_hours_per_day').default(22),
   notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// ALIGNER WEAR TRACKING (parents pause/resume)
+// ============================================
+
+export const aligner_wear_sessions = pgTable('aligner_wear_sessions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  alignerId: varchar('aligner_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  phaseId: varchar('phase_id', { length: 255 }),
+  state: varchar('state', { length: 20 }).notNull(), // 'wearing' | 'paused'
+  startedAt: timestamp('started_at').notNull(),
+  endedAt: timestamp('ended_at'),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const aligner_wear_daily = pgTable('aligner_wear_daily', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  alignerId: varchar('aligner_id', { length: 255 }).notNull(),
+  date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
+  wearMinutes: integer('wear_minutes').default(0).notNull(),
+  targetMinutes: integer('target_minutes').default(0).notNull(),
+  targetPercent: integer('target_percent').default(80).notNull(),
+  isDayOk: boolean('is_day_ok').default(false).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// ALIGNER QUESTS (per aligner, driven by adherence/photos/education)
+// ============================================
+
+export const aligner_quests = pgTable('aligner_quests', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  alignerId: varchar('aligner_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  phaseId: varchar('phase_id', { length: 255 }),
+  status: varchar('status', { length: 20 }).default('active').notNull(), // 'active' | 'completed' | 'failed'
+  targetPercent: integer('target_percent').default(80).notNull(), // snapshot from phase
+  targetMinutesPerDay: integer('target_minutes_per_day').default(1320).notNull(),
+  adherencePercentFinal: integer('adherence_percent_final'), // stored on finalize (0..100)
+  photoSetDone: boolean('photo_set_done').default(false).notNull(),
+  lessonsTarget: integer('lessons_target').default(1).notNull(),
+  lessonsDone: integer('lessons_done').default(0).notNull(),
+  rewardCoins: integer('reward_coins').default(200).notNull(),
+  rewardXp: integer('reward_xp').default(120).notNull(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// EDUCATION (video + quiz JSON) + progress
+// ============================================
+
+export const education_lessons = pgTable('education_lessons', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  videoUrl: text('video_url').notNull(),
+  phaseId: varchar('phase_id', { length: 255 }), // optional: lesson applies to a phase
+  quiz: jsonb('quiz').default([]).notNull(), // [{id, prompt, options: string[], correctIndex:number}]
+  passPercent: integer('pass_percent').default(70).notNull(),
+  rewardCoins: integer('reward_coins').default(30).notNull(),
+  rewardXp: integer('reward_xp').default(20).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const patient_lesson_progress = pgTable('patient_lesson_progress', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  lessonId: varchar('lesson_id', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).default('not_started').notNull(), // not_started | in_progress | completed
+  scorePercent: integer('score_percent'),
+  attempts: integer('attempts').default(0).notNull(),
+  lastAttemptAt: timestamp('last_attempt_at'),
+  completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

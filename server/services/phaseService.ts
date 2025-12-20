@@ -14,6 +14,7 @@ export interface CreatePhaseInput {
   totalAligners: number
   startDate?: string
   expectedEndDate?: string
+  adherenceTargetPercent?: number
 }
 
 export interface UpdatePhaseInput {
@@ -87,7 +88,7 @@ export class PhaseService {
    * Create a new phase
    */
   static async createPhase(data: CreatePhaseInput) {
-    const { treatmentId, phaseName, description, totalAligners, startDate, expectedEndDate } = data
+    const { treatmentId, phaseName, description, totalAligners, startDate, expectedEndDate, adherenceTargetPercent } = data
 
     // Get last phase to determine next phase number and starting aligner number
     const lastPhase = await this.getLastPhase(treatmentId)
@@ -106,6 +107,7 @@ export class PhaseService {
       endAlignerNumber,
       totalAligners,
       currentAlignerNumber: 0,
+      adherenceTargetPercent: adherenceTargetPercent ?? 80,
       status: 'pending' as const,
       startDate,
       expectedEndDate,

@@ -14,6 +14,7 @@ import {
   reward_program_items,
   story_options,
   story_option_templates,
+  education_lessons,
 } from './index'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
@@ -608,6 +609,55 @@ async function seed() {
 
       await db.insert(story_option_templates).values(rows as any)
       console.log(`✅ story_option_templates seeded (${rows.length} records)`)
+    }
+
+    // 8. Seed Education Lessons (video + quiz)
+    console.log('\n📚 Seeding education_lessons (video + quiz)...')
+    const existingLessons = await db.select().from(education_lessons).limit(1)
+    if (existingLessons.length > 0) {
+      console.log('✅ education_lessons already seeded')
+    } else {
+      const now = new Date()
+      const lessons = [
+        {
+          id: 'lesson-clean-aligner',
+          title: 'Como limpar seu alinhador (modo herói)',
+          description: 'Aprenda o passo a passo para manter seu alinhador limpinho e seu sorriso forte.',
+          videoUrl: 'https://www.youtube.com/embed/6Fj9f9XfF_w',
+          phaseId: null,
+          quiz: [
+            { id: 'q1', prompt: 'Quando devo limpar o alinhador?', options: ['Só quando sujar muito', 'Todos os dias', 'Uma vez por mês'], correctIndex: 1 },
+            { id: 'q2', prompt: 'O que NÃO é recomendado?', options: ['Água morna/fria', 'Escova macia', 'Água muito quente'], correctIndex: 2 },
+            { id: 'q3', prompt: 'Qual é o objetivo?', options: ['Deixar o alinhador cheiroso', 'Evitar bactérias e manchas', 'Fazer barulho'], correctIndex: 1 },
+          ],
+          passPercent: 70,
+          rewardCoins: 25,
+          rewardXp: 15,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'lesson-food-rules',
+          title: 'Regras de comida do super-sorriso',
+          description: 'O que pode e o que não pode com alinhador? Vamos descobrir!',
+          videoUrl: 'https://www.youtube.com/embed/6Fj9f9XfF_w',
+          phaseId: null,
+          quiz: [
+            { id: 'q1', prompt: 'Para comer, eu devo…', options: ['Tirar o alinhador', 'Comer com ele', 'Mastigar chiclete com ele'], correctIndex: 0 },
+            { id: 'q2', prompt: 'Antes de colocar de volta, eu…', options: ['Escovo os dentes', 'Durmo', 'Bebo refrigerante'], correctIndex: 0 },
+          ],
+          passPercent: 70,
+          rewardCoins: 20,
+          rewardXp: 12,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]
+
+      await db.insert(education_lessons).values(lessons as any)
+      console.log(`✅ education_lessons seeded (${lessons.length} records)`)
     }
   } catch (error) {
     console.error('❌ Seed failed:', error)

@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express'
-import { db, progress_photos, treatments, patient_missions, mission_templates, patient_points } from '../db/index'
+import { db, progress_photos, treatments, patient_missions, mission_templates, patient_points, aligners } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
@@ -394,6 +394,22 @@ async function checkCompletePhotoSet(patientId: string, alignerNumber: number) {
     if (photoTypes.size === 3 && photoTypes.has('frontal') && photoTypes.has('right') && photoTypes.has('left')) {
       console.log('🎯 Set completo de fotos! Procurando missão bônus...')
 
+      // Marcar quest do alinhador como "fotoSetDone" (best-effort)
+      try {
+        const alignerRows = await db
+          .select()
+          .from(aligners)
+          .where(and(eq(aligners.patientId, patientId), eq(aligners.alignerNumber, alignerNumber)))
+          .limit(1)
+        const a = alignerRows[0]
+        if (a) {
+          const { AlignerWearService } = await import('../services/alignerWearService')
+          await AlignerWearService.markPhotoSetDone({ patientId, alignerId: String(a.id) })
+        }
+      } catch {
+        // ignore
+      }
+
       // Buscar template da missão bônus
       const templates = await db
         .select()
@@ -465,10 +481,13 @@ async function awardPoints(patientId: string, points: number, reason: string) {
       await db.insert(patient_points).values({
         id: nanoid(),
         patientId,
+        coins: points,
+        xp: Math.floor(points / 2),
+        level: Math.floor((Math.floor(points / 2)) / 100) + 1,
         totalPoints: points,
-        currentLevel: 1,
+        currentLevel: Math.floor((Math.floor(points / 2)) / 100) + 1,
         badges: [],
-        streak: 1,
+        streak: 0,
         lastActivityAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -476,12 +495,18 @@ async function awardPoints(patientId: string, points: number, reason: string) {
     } else {
       // Atualizar pontos existentes
       const currentPoints = pointsRecords[0]
-      const newTotal = (currentPoints.totalPoints || 0) + points
+      const newCoins = (currentPoints.coins || 0) + points
+      const newXp = (currentPoints.xp || 0) + Math.floor(points / 2)
+      const newLevel = Math.floor(newXp / 100) + 1
 
       await db
         .update(patient_points)
         .set({
-          totalPoints: newTotal,
+          coins: newCoins,
+          xp: newXp,
+          level: newLevel,
+          totalPoints: newCoins,
+          currentLevel: newLevel,
           lastActivityAt: new Date(),
           updatedAt: new Date(),
         })

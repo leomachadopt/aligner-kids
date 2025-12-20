@@ -30,10 +30,21 @@ function mapTreatment(apiTreatment: any): Treatment {
     name: apiTreatment.name || undefined,
     startDate: apiTreatment.startDate,
     expectedEndDate: apiTreatment.expectedEndDate || apiTreatment.estimatedEndDate || '',
-    totalAligners: apiTreatment.totalAligners,
+
+    // Novos campos do modelo atualizado
+    overallStatus: apiTreatment.overallStatus || apiTreatment.status || 'active',
+    totalPhasesPlanned: apiTreatment.totalPhasesPlanned || 1,
+    currentPhaseNumber: apiTreatment.currentPhaseNumber || 1,
+    totalAlignersOverall: apiTreatment.totalAlignersOverall || apiTreatment.totalAligners || 0,
+    currentAlignerOverall: apiTreatment.currentAlignerOverall || apiTreatment.currentAlignerNumber || 1,
+
+    // Campos legados (para compatibilidade)
+    totalAligners: apiTreatment.totalAligners || apiTreatment.totalAlignersOverall,
     currentAlignerNumber: apiTreatment.currentAlignerNumber ?? 1,
-    status: apiTreatment.status || 'active',
+    status: apiTreatment.status || apiTreatment.overallStatus || 'active',
+
     aligners: [],
+    phases: [],
   }
 }
 
@@ -123,7 +134,7 @@ class AlignerServiceAPI implements IAlignerService {
   }
 
   async createTreatment(
-    treatmentData: Omit<Treatment, 'id'>,
+    treatmentData: Omit<Treatment, 'id'> & { changeInterval?: number; targetHoursPerDay?: number },
   ): Promise<Treatment> {
     const today = new Date().toISOString().slice(0, 10)
     const payload = {
@@ -135,6 +146,8 @@ class AlignerServiceAPI implements IAlignerService {
       currentAlignerNumber: treatmentData.currentAlignerNumber ?? 1,
       status: treatmentData.status ?? 'active',
       notes: '',
+      daysPerAligner: (treatmentData as any).changeInterval ?? 14,
+      targetHoursPerDay: (treatmentData as any).targetHoursPerDay ?? 22,
     }
     const res = await apiClient.post<{ treatment: any }>(`/treatments`, payload)
     return mapTreatment(res.treatment)

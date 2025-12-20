@@ -68,7 +68,7 @@ router.get('/:phaseId', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { treatmentId, phaseName, description, totalAligners, startDate, expectedEndDate } = req.body
+    const { treatmentId, phaseName, description, totalAligners, startDate, expectedEndDate, adherenceTargetPercent } = req.body
 
     if (!treatmentId || !phaseName || !totalAligners) {
       return res.status(400).json({
@@ -83,6 +83,7 @@ router.post('/', async (req, res) => {
       totalAligners: parseInt(totalAligners),
       startDate,
       expectedEndDate,
+      adherenceTargetPercent: adherenceTargetPercent != null ? parseInt(adherenceTargetPercent) : undefined,
     })
 
     res.status(201).json(phase)

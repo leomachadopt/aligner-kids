@@ -81,3 +81,4 @@ router.get('/clinic/:clinicId/patients/:patientId/points/transactions', async (r
 export default router
 
 
+

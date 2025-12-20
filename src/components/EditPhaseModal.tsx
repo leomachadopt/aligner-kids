@@ -42,6 +42,7 @@ export function EditPhaseModal({
     status: phase.status,
     expectedEndDate: phase.expectedEndDate || '',
     notes: phase.notes || '',
+    adherenceTargetPercent: String((phase as any).adherenceTargetPercent ?? 80),
   })
 
   // Update form when phase changes
@@ -52,6 +53,7 @@ export function EditPhaseModal({
       status: phase.status,
       expectedEndDate: phase.expectedEndDate || '',
       notes: phase.notes || '',
+      adherenceTargetPercent: String((phase as any).adherenceTargetPercent ?? 80),
     })
   }, [phase])
 
@@ -66,6 +68,7 @@ export function EditPhaseModal({
         status: formData.status,
         expectedEndDate: formData.expectedEndDate || undefined,
         notes: formData.notes || undefined,
+        adherenceTargetPercent: parseInt(formData.adherenceTargetPercent || '80'),
       })
 
       toast.success('Fase atualizada com sucesso!')
@@ -183,6 +186,21 @@ export function EditPhaseModal({
               placeholder="Observações adicionais sobre esta fase..."
               rows={2}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adherenceTargetPercent">% mínimo aceitável (fase)</Label>
+            <Input
+              id="adherenceTargetPercent"
+              type="number"
+              min="0"
+              max="100"
+              value={formData.adherenceTargetPercent}
+              onChange={(e) => setFormData({ ...formData, adherenceTargetPercent: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Esse % é usado nas quests dos alinhadores da fase.
+            </p>
           </div>
 
           <DialogFooter>

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { useAuth } from './AuthContext'
 
 interface Badge {
   id: string
@@ -23,22 +24,22 @@ interface GamificationContextType {
   coins: number
   xp: number
   level: number
-  addCoins: (amount: number) => void
-  addXP: (amount: number) => void
+  addCoins: (amount: number) => Promise<void>
+  addXP: (amount: number) => Promise<void>
 
   // Streak
   currentStreak: number
   longestStreak: number
   lastCheckIn: Date | null
-  checkIn: () => void
+  checkIn: () => Promise<void>
 
   // Badges
   badges: Badge[]
-  earnBadge: (badgeId: string) => void
+  earnBadge: (badgeId: string) => Promise<void>
 
   // Missões Diárias
   dailyMissions: DailyMission[]
-  completeMission: (missionId: string) => void
+  completeMission: (missionId: string) => Promise<void>
 
   // Celebração
   showCelebration: boolean
@@ -122,6 +123,7 @@ const INITIAL_MISSIONS: DailyMission[] = [
 ]
 
 export const GamificationProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth()
   const [coins, setCoins] = useState(0)
   const [xp, setXP] = useState(0)
   const [level, setLevel] = useState(1)
@@ -133,14 +135,35 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationMessage, setCelebrationMessage] = useState('')
 
-  // Carregar dados do localStorage
+  // Carregar pontos reais do servidor
+  useEffect(() => {
+    const fetchPoints = async () => {
+      if (!user?.id) return
+
+      try {
+        const response = await fetch(`/api/points/patient/${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.points) {
+            setCoins(data.points.coins || 0)
+            setXP(data.points.xp || 0)
+            setLevel(data.points.level || 1)
+            console.log('📊 Pontos carregados:', data.points)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar pontos:', error)
+      }
+    }
+
+    fetchPoints()
+  }, [user?.id])
+
+  // Carregar dados do localStorage (apenas para streak, badges e missões)
   useEffect(() => {
     const savedData = localStorage.getItem('gamification')
     if (savedData) {
       const data = JSON.parse(savedData)
-      setCoins(data.coins || 0)
-      setXP(data.xp || 0)
-      setLevel(data.level || 1)
       setCurrentStreak(data.currentStreak || 0)
       setLongestStreak(data.longestStreak || 0)
       setLastCheckIn(data.lastCheckIn ? new Date(data.lastCheckIn) : null)
@@ -173,15 +196,57 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [xp, level])
 
-  const addCoins = (amount: number) => {
-    setCoins((prev) => prev + amount)
+  const addCoins = async (amount: number) => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch(`/api/points/patient/${user.id}/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coins: amount, xp: 0 }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.points) {
+          setCoins(data.points.coins || 0)
+          setXP(data.points.xp || 0)
+          setLevel(data.points.level || 1)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar moedas:', error)
+      // Fallback para atualização local
+      setCoins((prev) => prev + amount)
+    }
   }
 
-  const addXP = (amount: number) => {
-    setXP((prev) => prev + amount)
+  const addXP = async (amount: number) => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch(`/api/points/patient/${user.id}/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coins: 0, xp: amount }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.points) {
+          setCoins(data.points.coins || 0)
+          setXP(data.points.xp || 0)
+          setLevel(data.points.level || 1)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar XP:', error)
+      // Fallback para atualização local
+      setXP((prev) => prev + amount)
+    }
   }
 
-  const checkIn = () => {
+  const checkIn = async () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -199,25 +264,25 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
         if (newStreak > longestStreak) {
           setLongestStreak(newStreak)
         }
-        addCoins(10)
-        addXP(20)
+        await addCoins(10)
+        await addXP(20)
       } else if (diffDays > 1) {
         // Quebrou a sequência
         setCurrentStreak(1)
-        addCoins(5)
-        addXP(10)
+        await addCoins(5)
+        await addXP(10)
       }
     } else {
       // Primeiro check-in
       setCurrentStreak(1)
-      addCoins(5)
-      addXP(10)
+      await addCoins(5)
+      await addXP(10)
     }
 
     setLastCheckIn(today)
   }
 
-  const earnBadge = (badgeId: string) => {
+  const earnBadge = async (badgeId: string) => {
     setBadges((prev) =>
       prev.map((badge) =>
         badge.id === badgeId && !badge.earned
@@ -229,22 +294,24 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     const badge = badges.find((b) => b.id === badgeId)
     if (badge && !badge.earned) {
       triggerCelebration(`${badge.icon} ${badge.name} conquistado!`)
-      addCoins(100)
-      addXP(50)
+      await addCoins(100)
+      await addXP(50)
     }
   }
 
-  const completeMission = (missionId: string) => {
-    setDailyMissions((prev) =>
-      prev.map((mission) => {
-        if (mission.id === missionId && !mission.completed) {
-          addCoins(mission.reward)
-          addXP(mission.reward / 2)
-          return { ...mission, completed: true }
-        }
-        return mission
-      }),
-    )
+  const completeMission = async (missionId: string) => {
+    const mission = dailyMissions.find((m) => m.id === missionId && !m.completed)
+
+    if (mission) {
+      await addCoins(mission.reward)
+      await addXP(mission.reward / 2)
+
+      setDailyMissions((prev) =>
+        prev.map((m) =>
+          m.id === missionId ? { ...m, completed: true } : m
+        ),
+      )
+    }
   }
 
   const triggerCelebration = (message: string) => {

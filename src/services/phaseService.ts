@@ -13,6 +13,7 @@ export interface CreatePhaseInput {
   totalAligners: number
   startDate?: string
   expectedEndDate?: string
+  adherenceTargetPercent?: number
 }
 
 export class PhaseService {

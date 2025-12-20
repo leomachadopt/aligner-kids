@@ -6,6 +6,7 @@ import { Router } from 'express'
 import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users, treatment_phases } from '../db/index'
 import { eq, and, desc } from 'drizzle-orm'
 import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
+import { AlignerWearService } from '../services/alignerWearService'
 
 const router = Router()
 
@@ -158,74 +159,124 @@ router.get('/treatments/patient/:patientId', async (req, res) => {
 // Create treatment
 router.post('/treatments', async (req, res) => {
   try {
+    console.log('🔵 POST /api/treatments - Criando tratamento:', {
+      patientId: req.body.patientId,
+      totalAligners: req.body.totalAligners
+    })
+
     if (!req.body.patientId || !req.body.totalAligners) {
       return res.status(400).json({ error: 'patientId e totalAligners são obrigatórios' })
     }
 
-    const startDate =
-      (req.body.startDate && String(req.body.startDate).slice(0, 10)) ||
-      new Date().toISOString().slice(0, 10)
+    // Sistema dinâmico: startDate será definido quando tratamento for iniciado
+    console.log('📝 Preparando valores do tratamento...')
+    const treatmentValues: any = {
+      id: `treatment-${Date.now()}`,
+      patientId: req.body.patientId,
+      name: req.body.name || null,
+      totalAligners: req.body.totalAligners,
+      currentAlignerNumber: 1,
+      status: 'pending',
+      notes: req.body.notes || null,
+    }
+    // Não incluir startDate e expectedEndDate - deixar como NULL no banco
 
-    const expectedEndDate =
-      (req.body.expectedEndDate && String(req.body.expectedEndDate).slice(0, 10)) ||
-      (req.body.estimatedEndDate && String(req.body.estimatedEndDate).slice(0, 10)) ||
-      null
-
-    // Sempre iniciar progresso no primeiro alinhador de um novo tratamento
-    const currentAlignerNumber = 1
-
+    console.log('💾 Inserindo tratamento no banco...')
     const newTreatment = await db
       .insert(treatments)
-      .values({
-        id: `treatment-${Date.now()}`,
-        patientId: req.body.patientId,
-        name: req.body.name || null,
-        startDate,
-        expectedEndDate,
-        totalAligners: req.body.totalAligners,
-        currentAlignerNumber,
-        status: req.body.status || 'active',
-        notes: req.body.notes || null,
-      })
+      .values(treatmentValues)
       .returning()
 
     const treatment = newTreatment[0]
+    console.log('✅ Tratamento inserido:', treatment.id)
 
     // ✅ CRIAR AUTOMATICAMENTE TODOS OS ALINHADORES
-    const daysPerAligner = req.body.daysPerAligner || 14
+    console.log('📦 Criando', req.body.totalAligners, 'alinhadores...')
+    // Sistema dinâmico: datas são definidas apenas quando alinhador é ATIVADO
+    const daysPerAligner = req.body.changeInterval || req.body.daysPerAligner || 14
     const alignersToCreate = []
 
     for (let i = 1; i <= req.body.totalAligners; i++) {
-      const alignerStartDate = new Date(startDate)
-      alignerStartDate.setDate(alignerStartDate.getDate() + (i - 1) * daysPerAligner)
-
-      const alignerEndDate = new Date(alignerStartDate)
-      alignerEndDate.setDate(alignerEndDate.getDate() + daysPerAligner - 1)
-
-      alignersToCreate.push({
+      // Não calcular datas fixas - serão definidas quando alinhador for ativado
+      const alignerData: any = {
         id: `aligner-${Date.now()}-${i}`,
         patientId: req.body.patientId,
         treatmentId: treatment.id,
         alignerNumber: i,
-        startDate: alignerStartDate.toISOString().slice(0, 10),
-        endDate: alignerEndDate.toISOString().slice(0, 10),
-        actualEndDate: null,
-        status: i === 1 ? 'active' : 'pending',
+        // startDate e endDate omitidos - serão NULL no banco
+        status: 'pending', // Todos começam pending, até iniciar tratamento
         usageHours: 0,
         targetHoursPerDay: req.body.targetHoursPerDay || 22,
-        notes: null,
-      })
+        changeInterval: daysPerAligner, // Armazenar intervalo de troca
+      }
+      alignersToCreate.push(alignerData)
 
       // Pequeno delay para garantir IDs únicos
       await new Promise(resolve => setTimeout(resolve, 5))
     }
 
     // Inserir todos os alinhadores
-    await db.insert(aligners).values(alignersToCreate)
+    console.log('💾 Inserindo alinhadores no banco...')
+    const insertedAligners = await db.insert(aligners).values(alignersToCreate).returning()
+    console.log('✅ Alinhadores inseridos:', insertedAligners.length)
 
-    console.log(`✅ Tratamento criado com ${req.body.totalAligners} alinhadores`)
+    // ✅ CRIAR AUTOMATICAMENTE A FASE 1 (Fase Inicial)
+    console.log('📋 Criando Fase 1...')
+    // Sistema dinâmico: fase criada mas aguardando início real
+    const phaseValues: any = {
+      id: `phase-${Date.now()}`,
+      treatmentId: treatment.id,
+      phaseNumber: 1,
+      phaseName: 'Fase 1',
+      startAlignerNumber: 1,
+      endAlignerNumber: req.body.totalAligners,
+      totalAlignersInPhase: req.body.totalAligners,
+      currentAlignerNumber: 0, // Ainda não iniciou
+      status: 'pending', // Aguardando início
+      // startDate e expectedEndDate omitidos - serão NULL no banco
+      notes: 'Fase inicial criada automaticamente - aguardando início',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const firstPhase = await db
+      .insert(treatment_phases)
+      .values(phaseValues)
+      .returning()
+
+    console.log(`✅ Fase 1 criada automaticamente com ${req.body.totalAligners} alinhadores`)
+
+    // Atualizar todos os alinhadores para vincular com a fase criada
+    console.log('🔗 Vinculando alinhadores à fase...')
+    for (const aligner of insertedAligners) {
+      await db
+        .update(aligners)
+        .set({ phaseId: firstPhase[0].id })
+        .where(eq(aligners.id, aligner.id))
+    }
+
+    console.log('✅ Alinhadores vinculados à fase')
+
+    // Atualizar o tratamento com informações da fase
+    console.log('📝 Atualizando tratamento...')
+    await db
+      .update(treatments)
+      .set({
+        totalPhasesPlanned: 1,
+        currentPhaseNumber: 1,
+        totalAlignersOverall: req.body.totalAligners,
+        currentAlignerOverall: 0, // Ainda não iniciou
+        overallStatus: 'pending', // Aguardando início
+        status: 'pending',
+      })
+      .where(eq(treatments.id, treatment.id))
+
+    // NÃO inicializar quest ainda - será feito quando tratamento for iniciado
+
+    console.log(`✅ Tratamento criado com ${req.body.totalAligners} alinhadores e Fase 1 automática`)
 
     // ✅ Criar missões baseadas em programa ou templates padrão
+    console.log('🎯 Atribuindo missões...')
     if (req.body.missionProgramId) {
       await applyProgramToPatient(req.body.missionProgramId, req.body.patientId, req.body.totalAligners)
     } else {
@@ -246,17 +297,27 @@ router.post('/treatments', async (req, res) => {
       }
     }
 
+    console.log('✅ Missões atribuídas')
+
     // ✅ Atribuir automaticamente programa de prêmios por idade (best-effort)
+    console.log('🎁 Atribuindo programa de prêmios...')
     try {
       await RewardProgramAssignmentService.recomputeForPatient(req.body.patientId, req.body.patientId)
+      console.log('✅ Programa de prêmios atribuído')
     } catch (e) {
       console.warn('⚠️ Falha ao atribuir programa de prêmios:', e)
     }
 
+    console.log('🎉 Tratamento criado com sucesso! Retornando resposta...')
     res.json({ treatment })
-  } catch (error) {
-    console.error('Error creating treatment:', error)
-    res.status(500).json({ error: 'Failed to create treatment' })
+  } catch (error: any) {
+    console.error('❌ Error creating treatment:', error)
+    console.error('❌ Error message:', error.message)
+    console.error('❌ Error stack:', error.stack)
+    res.status(500).json({
+      error: 'Failed to create treatment',
+      details: error.message
+    })
   }
 })
 
@@ -335,6 +396,8 @@ router.get('/aligners/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
     const { treatmentId } = req.query
+    console.log('📋 Listando alinhadores:', { patientId, treatmentId })
+
     const baseWhere = treatmentId
       ? and(eq(aligners.patientId, patientId), eq(aligners.treatmentId, treatmentId as string))
       : eq(aligners.patientId, patientId)
@@ -345,6 +408,7 @@ router.get('/aligners/patient/:patientId', async (req, res) => {
       .where(baseWhere)
       .orderBy(aligners.alignerNumber)
 
+    console.log('📊 Alinhadores encontrados:', result.length)
     res.json({ aligners: result })
   } catch (error) {
     console.error('Error fetching aligners:', error)
@@ -474,24 +538,8 @@ router.post('/aligners/:id/confirm', async (req, res) => {
 
     const aligner = alignerResult[0]
 
-    // ✅ VALIDAÇÃO: Verificar se a data de término já passou
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const endDate = new Date(aligner.endDate)
-    endDate.setHours(0, 0, 0, 0)
-
-    if (today < endDate) {
-      const diffTime = endDate.getTime() - today.getTime()
-      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-      return res.status(400).json({
-        error: 'Ainda não é possível trocar o alinhador',
-        daysRemaining,
-        canActivateAt: aligner.endDate
-      })
-    }
-
+    // ✅ SISTEMA DINÂMICO: Permite trocar a qualquer momento
+    // A data REAL da troca é usada para recalcular o próximo alinhador
     const todayStr = new Date().toISOString().slice(0, 10)
 
     // Mark as completed
@@ -503,6 +551,13 @@ router.post('/aligners/:id/confirm', async (req, res) => {
         updatedAt: new Date(),
       })
       .where(eq(aligners.id, alignerId))
+
+    // Finalizar quest do alinhador (aderência + recompensa) - best-effort
+    try {
+      await AlignerWearService.finalizeQuestForAligner(alignerId)
+    } catch {
+      // ignore
+    }
 
     // ✅ BUSCAR FASE ATUAL (se existir)
     let currentPhase = null
@@ -614,15 +669,30 @@ router.post('/aligners/:id/confirm', async (req, res) => {
         }
       }
 
-      // Ativar próximo alinhador
+      // ✅ ATIVAR PRÓXIMO ALINHADOR COM DATAS DINÂMICAS
+      // Calcular data de término baseado no intervalo de troca e na data REAL da troca
+      const changeInterval = nextAligner.changeInterval || 14
+      const nextEndDate = new Date(todayStr)
+      nextEndDate.setDate(nextEndDate.getDate() + changeInterval)
+      const nextEndDateStr = nextEndDate.toISOString().slice(0, 10)
+
       await db
         .update(aligners)
         .set({
           status: 'active',
           startDate: todayStr,
+          endDate: nextEndDateStr,
           updatedAt: new Date(),
         })
         .where(eq(aligners.id, nextAligner.id))
+
+      // Inicializar quest + estado "em uso" para o próximo alinhador
+      try {
+        await AlignerWearService.ensureQuestForAligner(nextAligner as any)
+        await AlignerWearService.ensureInitialWearingSession(nextAligner as any, aligner.patientId)
+      } catch {
+        // ignore
+      }
 
       // Ativar missões cujo gatilho é iniciar este alinhador
       await db
@@ -705,6 +775,7 @@ router.delete('/aligners/:id', async (req, res) => {
 /**
  * POST /treatments/:id/start
  * Inicia o tratamento, ativando o primeiro alinhador da primeira fase
+ * SISTEMA DINÂMICO: Define datas baseadas no momento real de início
  */
 router.post('/treatments/:id/start', async (req, res) => {
   try {
@@ -723,7 +794,7 @@ router.post('/treatments/:id/start', async (req, res) => {
     const treatment = treatmentResult[0]
 
     // Verificar se já foi iniciado
-    if (treatment.overallStatus === 'active' && treatment.currentAlignerOverall > 1) {
+    if (treatment.overallStatus === 'active' && treatment.currentAlignerOverall > 0) {
       return res.status(400).json({ error: 'Tratamento já foi iniciado' })
     }
 
@@ -740,17 +811,6 @@ router.post('/treatments/:id/start', async (req, res) => {
 
     const firstPhase = phases[0]
     const today = new Date().toISOString().slice(0, 10)
-
-    // Ativar a primeira fase
-    await db
-      .update(treatment_phases)
-      .set({
-        status: 'active',
-        startDate: today,
-        currentAlignerNumber: 1,
-        updatedAt: new Date(),
-      })
-      .where(eq(treatment_phases.id, firstPhase.id))
 
     // Buscar o primeiro alinhador global
     const firstAlignerResult = await db
@@ -769,27 +829,55 @@ router.post('/treatments/:id/start', async (req, res) => {
 
     const firstAligner = firstAlignerResult[0]
 
-    // Ativar o primeiro alinhador
+    // ✅ CALCULAR DATAS DINAMICAMENTE baseado no intervalo de troca
+    const changeInterval = firstAligner.changeInterval || 14
+    const endDate = new Date(today)
+    endDate.setDate(endDate.getDate() + changeInterval)
+    const endDateStr = endDate.toISOString().slice(0, 10)
+
+    // Ativar o primeiro alinhador COM DATAS REAIS
     await db
       .update(aligners)
       .set({
         status: 'active',
         startDate: today,
+        endDate: endDateStr,
         updatedAt: new Date(),
       })
       .where(eq(aligners.id, firstAligner.id))
+
+    // Ativar a primeira fase
+    await db
+      .update(treatment_phases)
+      .set({
+        status: 'active',
+        startDate: today,
+        currentAlignerNumber: 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(treatment_phases.id, firstPhase.id))
 
     // Atualizar o tratamento
     await db
       .update(treatments)
       .set({
         overallStatus: 'active',
+        status: 'active',
         currentPhaseNumber: 1,
         currentAlignerOverall: firstPhase.startAlignerNumber,
+        currentAlignerNumber: firstPhase.startAlignerNumber,
         startDate: today,
         updatedAt: new Date(),
       })
       .where(eq(treatments.id, treatmentId))
+
+    // Inicializar quest + estado "em uso" para o primeiro alinhador
+    try {
+      await AlignerWearService.ensureQuestForAligner(firstAligner)
+      await AlignerWearService.ensureInitialWearingSession(firstAligner, treatment.patientId)
+    } catch {
+      // best-effort
+    }
 
     // Ativar missões do primeiro alinhador
     await db
@@ -806,7 +894,7 @@ router.post('/treatments/:id/start', async (req, res) => {
         )
       )
 
-    console.log(`✅ Tratamento ${treatmentId} iniciado - Alinhador ${firstPhase.startAlignerNumber} ativado`)
+    console.log(`✅ Tratamento ${treatmentId} iniciado - Alinhador ${firstPhase.startAlignerNumber} ativado (${today} até ${endDateStr})`)
 
     res.json({
       success: true,
@@ -828,6 +916,7 @@ router.post('/treatments/:id/start', async (req, res) => {
         ...firstAligner,
         status: 'active',
         startDate: today,
+        endDate: endDateStr,
       }
     })
   } catch (error) {

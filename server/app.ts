@@ -26,6 +26,9 @@ import patientPointsRoutes from './routes/patientPoints'
 import storyOptionsRoutes from './routes/storyOptions'
 import adminStoryOptionsRoutes from './routes/adminStoryOptions'
 import clinicStoryOptionsRoutes from './routes/clinicStoryOptions'
+import educationRoutes from './routes/education'
+import alignerWearRoutes from './routes/alignerWear'
+import alignerQuestsRoutes from './routes/alignerQuests'
 
 // Load environment variables
 dotenv.config()
@@ -120,6 +123,9 @@ app.use('/api', patientPointsRoutes)
 app.use('/api', storyOptionsRoutes)
 app.use('/api', adminStoryOptionsRoutes)
 app.use('/api', clinicStoryOptionsRoutes)
+app.use('/api', educationRoutes)
+app.use('/api', alignerWearRoutes)
+app.use('/api', alignerQuestsRoutes)
 
 // 404 handler
 app.use((_req, res) => {
