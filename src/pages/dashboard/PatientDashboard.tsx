@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -82,6 +83,7 @@ const badges = [
 ]
 
 const PatientDashboard = () => {
+  const { t, i18n } = useTranslation()
   const { isChild } = useUserRole()
   const { user } = useAuth()
   const currentAligner = useCurrentAligner()
@@ -169,7 +171,7 @@ const PatientDashboard = () => {
       <div className="space-y-6 animate-fade-in-up">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-4xl font-extrabold text-primary">
-            E aí, Campeão!
+            {t('patient.dashboard.title')}
           </h1>
           <img
             src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
@@ -185,14 +187,14 @@ const PatientDashboard = () => {
         <Card className="border-primary-child border-2 shadow-lg bg-accent-child">
           <CardHeader>
             <CardTitle className="font-display text-2xl font-bold text-center">
-              {needsToStart ? '🚀 Pronto para Começar?' : 'Próxima Missão: Trocar Alinhador!'}
+              {needsToStart ? '🚀 ' + t('patient.dashboard.startTreatment') : t('patient.dashboard.nextMission')}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             {needsToStart ? (
               <>
                 <p className="text-lg mb-4 text-gray-700">
-                  Clique no botão abaixo para iniciar sua jornada do sorriso!
+                  {t('patient.dashboard.startMessage')}
                 </p>
                 <Button
                   onClick={handleStartTreatment}
@@ -200,21 +202,21 @@ const PatientDashboard = () => {
                   className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white text-xl font-bold px-12 py-8 rounded-full shadow-xl hover:scale-105 transition-all"
                 >
                   <Play className="mr-2 h-6 w-6" />
-                  {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+                  {t('patient.dashboard.startButton')}
                 </Button>
               </>
             ) : (
               <>
                 <p className="text-6xl font-bold text-primary-child">
-                  {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                  {t('patient.dashboard.daysRemaining', { count: daysRemaining })}
                 </p>
                 <p className="text-muted-foreground font-semibold">
-                  Alinhador #{currentAligner?.number || 'N/A'}
-                  {treatment && ` de ${treatment.totalAligners}`}
+                  {t('patient.dashboard.alignerNumber', { number: currentAligner?.number || 'N/A' })}
+                  {treatment && ' ' + t('patient.dashboard.alignerOf', { total: treatment.totalAligners })}
                 </p>
                 {currentAligner?.expectedEndDate && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Data esperada:{' '}
+                    {t('patient.dashboard.expectedDate')}:{' '}
                     {format(
                       new Date(currentAligner.expectedEndDate),
                       "dd 'de' MMMM",
@@ -231,14 +233,12 @@ const PatientDashboard = () => {
                     {!canActivate ? (
                       <>
                         <Lock className="mr-2" />
-                        Faltam {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                        {t('patient.dashboard.waitDays', { count: daysRemaining })}
                       </>
-                    ) : isConfirmingChange ? (
-                      'Trocando...'
                     ) : (
                       <>
                         <Rocket className="mr-2" />
-                        Troquei!
+                        {t('patient.dashboard.switchButton')}
                       </>
                     )}
                   </Button>
@@ -259,9 +259,9 @@ const PatientDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Progresso da Missão</CardTitle>
+            <CardTitle>{t('patient.dashboard.missionProgress')}</CardTitle>
             <CardDescription>
-              Use o alinhador por 2 semanas sem esquecer!
+              {t('patient.dashboard.missionDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -270,7 +270,7 @@ const PatientDashboard = () => {
               className="[&>*]:bg-secondary-child h-4"
             />
             <p className="mt-2 text-sm text-muted-foreground">
-              {progress.toFixed(0)}% do tratamento completo
+              {t('patient.dashboard.treatmentComplete', { percent: progress.toFixed(0) })}
             </p>
           </CardContent>
         </Card>
@@ -283,7 +283,7 @@ const PatientDashboard = () => {
             >
               <Link to="/photos">
                 <Camera className="mr-2 h-5 w-5" />
-                Tirar Fotos Divertidas
+                {t('patient.dashboard.takePhotos')}
               </Link>
             </Button>
             <Button
@@ -293,7 +293,7 @@ const PatientDashboard = () => {
             >
               <Link to="/chat">
                 <MessageSquare className="mr-2 h-5 w-5" />
-                Falar com a Doutora
+                {t('patient.dashboard.talkDoctor')}
               </Link>
             </Button>
             <Button
@@ -303,7 +303,7 @@ const PatientDashboard = () => {
             >
               <Link to="/my-rewards">
                 <Award className="mr-2 h-5 w-5" />
-                Ver Meus Prêmios
+                {t('patient.dashboard.myRewards')}
               </Link>
             </Button>
           </div>
@@ -313,7 +313,7 @@ const PatientDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <h1 className="text-3xl font-bold">Olá, Paciente!</h1>
+      <h1 className="text-3xl font-bold">{t('patient.dashboard.adultWelcome')}</h1>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AlignerTracker showNextChange={false} />
@@ -321,13 +321,13 @@ const PatientDashboard = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{needsToStart ? 'Iniciar Tratamento' : 'Próxima Troca'}</CardTitle>
+              <CardTitle>{needsToStart ? t('patient.dashboard.startTreatmentTitle') : t('patient.dashboard.nextChange')}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               {needsToStart ? (
                 <>
                   <p className="mb-4 text-muted-foreground">
-                    Clique no botão abaixo para iniciar seu tratamento
+                    {t('patient.dashboard.startTreatmentMessage')}
                   </p>
                   <Button
                     onClick={handleStartTreatment}
@@ -335,17 +335,17 @@ const PatientDashboard = () => {
                     className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                   >
                     <Play className="mr-2 h-4 w-4" />
-                    {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+                    {isStartingTreatment ? t('patient.dashboard.starting') : t('patient.dashboard.startButton')}
                   </Button>
                 </>
               ) : (
                 <>
                   <p className="text-5xl font-bold text-primary">
-                    {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                    {t('patient.dashboard.daysRemaining', { count: daysRemaining })}
                   </p>
                   <p className="text-muted-foreground">
-                    Alinhador #{currentAligner?.number || 'N/A'}
-                    {treatment && ` de ${treatment.totalAligners}`}
+                    {t('patient.dashboard.alignerNumber', { number: currentAligner?.number || 'N/A' })}
+                    {treatment && ' ' + t('patient.dashboard.alignerOf', { total: treatment.totalAligners })}
                   </p>
                   {currentAligner && (
                     <Button
@@ -356,12 +356,12 @@ const PatientDashboard = () => {
                       {!canActivate ? (
                         <>
                           <Lock className="mr-2 h-4 w-4" />
-                          Aguardar {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                          {t('patient.dashboard.waitDaysShort', { count: daysRemaining })}
                         </>
                       ) : isConfirmingChange ? (
-                        'Confirmando...'
+                        t('patient.dashboard.confirming')
                       ) : (
-                        'Confirmar Troca'
+                        t('patient.dashboard.confirmChange')
                       )}
                     </Button>
                   )}
@@ -371,25 +371,25 @@ const PatientDashboard = () => {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Ações Rápidas</CardTitle>
+              <CardTitle>{t('patient.dashboard.quickActions')}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-2">
               <Button variant="outline" asChild>
                 <Link to="/photos">
                   <Camera className="mr-2 h-4 w-4" />
-                  Enviar Fotos
+                  {t('patient.dashboard.sendPhotos')}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/chat">
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Chat com a Clínica
+                  {t('patient.dashboard.chatClinic')}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/my-treatment">
                   <Calendar className="mr-2 h-4 w-4" />
-                  Ver Linha do Tempo
+                  {t('patient.dashboard.viewTimeline')}
                 </Link>
               </Button>
             </CardContent>
@@ -403,7 +403,7 @@ const PatientDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Conteúdo Educacional</CardTitle>
+            <CardTitle>{t('patient.dashboard.educationalContent')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Carousel>
@@ -426,7 +426,7 @@ const PatientDashboard = () => {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Badges de Disciplina</CardTitle>
+            <CardTitle>{t('patient.dashboard.disciplineBadges')}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-around">
             {badges.map((badge) => (

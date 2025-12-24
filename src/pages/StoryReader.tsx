@@ -310,44 +310,6 @@ const StoryReader = () => {
             </CardContent>
           </Card>
 
-          {/* Informações Técnicas (apenas para debug) */}
-          {import.meta.env.DEV && (
-            <Card className="mt-6 border-2 border-dashed border-gray-300">
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">
-                  Debug Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                <div className="grid gap-2">
-                  <div>
-                    <strong>Chapter ID:</strong> {chapter.id}
-                  </div>
-                  <div>
-                    <strong>Chapter Number:</strong> {chapter.chapterNumber} / {allChapters.length}
-                  </div>
-                  <div>
-                    <strong>Required Aligner:</strong> {chapter.requiredAlignerNumber}
-                  </div>
-                  <div>
-                    <strong>Model:</strong> {chapter.modelUsed}
-                  </div>
-                  {chapter.tokensUsed && (
-                    <div>
-                      <strong>Tokens:</strong> {chapter.tokensUsed}
-                    </div>
-                  )}
-                  <div>
-                    <strong>Has Audio:</strong> {chapter.audioUrl ? 'Yes' : 'No'}
-                  </div>
-                  <div>
-                    <strong>Created:</strong>{' '}
-                    {new Date(chapter.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 

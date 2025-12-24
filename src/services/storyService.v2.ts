@@ -132,27 +132,59 @@ export class StorySeriesService {
 
       onProgress?.('🎬 Iniciando geração da história...', 0)
 
-      // ✅ CHAMADA SEGURA AO BACKEND (OpenAI API roda no servidor)
-      const response = await apiClient.post<{
-        success: boolean
-        story: StorySeries
-        chaptersGenerated: number
-      }>('/stories/generate', {
-        patientId,
-        treatmentId,
-        preferences: input.preferences,
-        totalAligners: input.totalAligners,
-      })
+      // Simular progresso durante a geração (que acontece no backend)
+      const totalChapters = input.totalAligners
+      const BATCH_SIZE = 5
+      const totalBatches = Math.ceil(totalChapters / BATCH_SIZE)
+      const estimatedTimePerBatch = 90000 // 90 segundos por lote de 5 capítulos
 
-      if (!response.success) {
-        throw new Error('Erro ao gerar história no servidor')
+      // Iniciar simulação de progresso
+      let currentProgress = 5
+      const progressInterval = setInterval(() => {
+        if (currentProgress < 95) {
+          currentProgress += 5
+          const batchNumber = Math.floor((currentProgress / 100) * totalBatches) + 1
+          onProgress?.(
+            `📝 Gerando história mágica... (lote ${Math.min(batchNumber, totalBatches)}/${totalBatches})`,
+            currentProgress
+          )
+        }
+      }, estimatedTimePerBatch / 18) // Atualizar progresso ~18 vezes por lote
+
+      try {
+        // ✅ CHAMADA SEGURA AO BACKEND (OpenAI API roda no servidor)
+        // Usando postLongRunning para operações demoradas (até 10 minutos)
+        const response = await apiClient.postLongRunning<{
+          success: boolean
+          story: StorySeries
+          chaptersGenerated: number
+        }>(
+          '/stories/generate',
+          {
+            patientId,
+            treatmentId,
+            preferences: input.preferences,
+            totalAligners: input.totalAligners,
+          },
+          600000 // 10 minutos de timeout
+        )
+
+        clearInterval(progressInterval)
+
+        if (!response.success) {
+          throw new Error('Erro ao gerar história no servidor')
+        }
+
+        onProgress?.('✅ História criada com sucesso!', 100)
+
+        console.log(`✅ História gerada: ${response.chaptersGenerated} capítulos`)
+
+        return response.story
+      } catch (error) {
+        clearInterval(progressInterval)
+        console.error('❌ Erro ao criar história:', error)
+        throw error
       }
-
-      onProgress?.('✅ História criada com sucesso!', 100)
-
-      console.log(`✅ História gerada: ${response.chaptersGenerated} capítulos`)
-
-      return response.story
     } catch (error) {
       console.error('❌ Erro ao criar história:', error)
       throw error

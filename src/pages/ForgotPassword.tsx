@@ -9,8 +9,12 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useBodyClass } from '@/hooks/useBodyClass'
 
 const ForgotPassword = () => {
+  // Mantém consistência visual nas rotas públicas.
+  useBodyClass('child-theme', true)
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md animate-fade-in-up">

@@ -9,8 +9,10 @@ import type { InventoryEntry, RedemptionEntry } from '@/types/store'
 import { Gift, ShoppingBag } from 'lucide-react'
 import { RewardDetailModal } from '@/components/RewardDetailModal'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 export default function MyRewards() {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const patientId = user?.id
 
@@ -48,14 +50,14 @@ export default function MyRewards() {
       setActivatingId(inv.inventoryId)
       if (inv.isEquipped) {
         await StoreService.deactivateInventoryCosmetic(patientId, inv.inventoryId, inv.slot)
-        toast.success('Cosmético desativado')
+        toast.success(t('rewards.inventory.deactivated'))
       } else {
         await StoreService.activateInventoryCosmetic(patientId, inv.inventoryId, inv.slot)
-        toast.success('Cosmético ativado')
+        toast.success(t('rewards.inventory.activated'))
       }
       await load()
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao atualizar cosmético')
+      toast.error(e?.message || t('rewards.inventory.updateError'))
     } finally {
       setActivatingId(null)
     }
@@ -69,7 +71,7 @@ export default function MyRewards() {
   if (!patientId) {
     return (
       <div className="p-6">
-        <p className="text-muted-foreground">Faça login para ver seus prêmios.</p>
+        <p className="text-muted-foreground">{t('rewards.loginRequired')}</p>
       </div>
     )
   }
@@ -78,20 +80,20 @@ export default function MyRewards() {
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl font-extrabold text-primary">Meus Prêmios</h1>
-          <p className="mt-2 text-muted-foreground">Itens comprados e resgates pendentes.</p>
+          <h1 className="font-display text-4xl font-extrabold text-primary">{t('rewards.title')}</h1>
+          <p className="mt-2 text-muted-foreground">{t('rewards.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button asChild variant="outline">
             <Link to="/store">
               <ShoppingBag className="mr-2 h-4 w-4" />
-              Ir para Loja
+              {t('rewards.goToStore')}
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link to="/responsible">
               <Gift className="mr-2 h-4 w-4" />
-              Aprovar Resgates
+              {t('rewards.approveRedemptions')}
               {pendingCount > 0 && (
                 <Badge className="ml-2" variant="default">
                   {pendingCount}
@@ -104,17 +106,17 @@ export default function MyRewards() {
 
       {loading ? (
         <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">Carregando...</CardContent>
+          <CardContent className="p-6 text-center text-muted-foreground">{t('rewards.loading')}</CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Minha Mochila (Digitais)</CardTitle>
+              <CardTitle>{t('rewards.inventory.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {inventory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Você ainda não comprou itens digitais.</p>
+                <p className="text-sm text-muted-foreground">{t('rewards.inventory.empty')}</p>
               ) : (
                 inventory.map((inv) => (
                   <div key={inv.inventoryId} className="flex items-start justify-between gap-4 border rounded-lg p-4">
@@ -122,8 +124,8 @@ export default function MyRewards() {
                       <p className="font-semibold truncate">{inv.item?.name || inv.itemId}</p>
                       <p className="text-sm text-muted-foreground">{inv.item?.description}</p>
                       <div className="mt-2 flex items-center gap-2">
-                        <Badge variant="secondary">x{inv.quantity}</Badge>
-                        {inv.isEquipped && <Badge>Ativo</Badge>}
+                        <Badge variant="secondary">{t('rewards.inventory.quantity', { count: inv.quantity })}</Badge>
+                        {inv.isEquipped && <Badge>{t('rewards.inventory.active')}</Badge>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -134,14 +136,14 @@ export default function MyRewards() {
                           setDetailOpen(true)
                         }}
                       >
-                        Ver detalhes
+                        {t('rewards.inventory.seeDetails')}
                       </Button>
                       {inv.canActivate && inv.slot && (
                         <Button
                           onClick={() => handleToggleCosmetic(inv)}
                           disabled={activatingId === inv.inventoryId}
                         >
-                          {inv.isEquipped ? 'Desativar' : 'Ativar'}
+                          {inv.isEquipped ? t('rewards.inventory.deactivate') : t('rewards.inventory.activate')}
                         </Button>
                       )}
                     </div>
@@ -153,11 +155,11 @@ export default function MyRewards() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Resgates (Vales)</CardTitle>
+              <CardTitle>{t('rewards.redemptions.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {redemptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum resgate solicitado ainda.</p>
+                <p className="text-sm text-muted-foreground">{t('rewards.redemptions.empty')}</p>
               ) : (
                 redemptions.map((r) => (
                   <div key={r.redemptionId} className="flex items-start justify-between gap-4 border rounded-lg p-4">
@@ -174,10 +176,10 @@ export default function MyRewards() {
                                 : 'outline'
                           }
                         >
-                          {r.status}
+                          {t(`rewards.status.${r.status}`)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Pedido: {new Date(r.requestedAt).toLocaleDateString('pt-BR')}
+                          {t('rewards.redemptions.requestedOn', { date: new Date(r.requestedAt).toLocaleDateString(i18n.language) })}
                         </span>
                       </div>
                     </div>

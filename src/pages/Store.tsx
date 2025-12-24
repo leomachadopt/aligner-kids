@@ -8,8 +8,10 @@ import { StoreService } from '@/services/storeService'
 import type { CatalogItem } from '@/types/store'
 import { MissionService } from '@/services/missionService.v2'
 import { Coins, Gift, Image as ImageIcon, ShoppingBag } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function Store() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const patientId = user?.id
 
@@ -49,10 +51,10 @@ export default function Store() {
       setBuyingId(item.catalogItemId)
       const result = await StoreService.purchaseCatalogItem(patientId, item.kind, item.catalogItemId)
       setCoins(result.points.coins || 0)
-      alert(item.type === 'digital' ? '✅ Item comprado! Veja em Meus Prêmios.' : '✅ Pedido enviado! Aguarde aprovação.')
+      alert(item.type === 'digital' ? t('store.purchaseSuccess') : t('store.purchaseRequestSuccess'))
       await load()
     } catch (e: any) {
-      alert(e?.message || 'Erro ao comprar item')
+      alert(e?.message || t('store.purchaseError'))
     } finally {
       setBuyingId(null)
     }
@@ -61,7 +63,7 @@ export default function Store() {
   if (!patientId) {
     return (
       <div className="p-6">
-        <p className="text-muted-foreground">Faça login para acessar a loja.</p>
+        <p className="text-muted-foreground">{t('store.loginRequired')}</p>
       </div>
     )
   }
@@ -70,9 +72,9 @@ export default function Store() {
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl font-extrabold text-primary">Loja</h1>
+          <h1 className="font-display text-4xl font-extrabold text-primary">{t('store.title')}</h1>
           <p className="mt-2 text-muted-foreground">
-            Use suas moedas para trocar por itens digitais e prêmios.
+            {t('store.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -83,7 +85,7 @@ export default function Store() {
           <Button asChild variant="outline">
             <Link to="/my-rewards">
               <Gift className="mr-2 h-4 w-4" />
-              Meus Prêmios
+              {t('store.myRewards')}
             </Link>
           </Button>
         </div>
@@ -91,7 +93,7 @@ export default function Store() {
 
       {loading ? (
         <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">Carregando loja...</CardContent>
+          <CardContent className="p-6 text-center text-muted-foreground">{t('store.loading')}</CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
@@ -106,8 +108,8 @@ export default function Store() {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
-              <Card key={`${item.kind}:${item.catalogItemId}`} className="overflow-hidden">
+            {items.map((item, index) => (
+              <Card key={`${item.kind}:${item.catalogItemId}:${index}`} className="overflow-hidden">
                 <div className="relative aspect-video bg-muted/20 border-b">
                   {item.imageUrl ? (
                     <img
@@ -123,7 +125,7 @@ export default function Store() {
                   )}
                   {item.isOwned && (
                     <div className="absolute top-3 right-3">
-                      <Badge>Já comprado</Badge>
+                      <Badge>{t('store.owned')}</Badge>
                     </div>
                   )}
                 </div>
@@ -131,7 +133,7 @@ export default function Store() {
                   <CardTitle className="flex items-center justify-between gap-3">
                     <span className="truncate">{item.name}</span>
                     <Badge variant={item.type === 'real' ? 'default' : 'secondary'}>
-                      {item.type === 'real' ? 'Vale' : 'Digital'}
+                      {t(`store.itemTypes.${item.type === 'real' ? 'real' : 'digital'}`)}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -142,14 +144,14 @@ export default function Store() {
                     <div className="flex items-center gap-2">
                       <Coins className="h-4 w-4 text-yellow-700" />
                       <span className="font-bold">{item.priceCoins}</span>
-                      <span className="text-xs text-muted-foreground">Nível {item.requiredLevel}+</span>
+                      <span className="text-xs text-muted-foreground">{t('store.requiredLevel', { level: item.requiredLevel })}</span>
                     </div>
                     <Button
                       onClick={() => handleBuy(item)}
                       disabled={Boolean(item.isOwned) || buyingId === item.catalogItemId || coins < item.priceCoins}
                     >
                       <ShoppingBag className="mr-2 h-4 w-4" />
-                      {item.isOwned ? 'Já comprado' : buyingId === item.catalogItemId ? 'Comprando...' : 'Comprar'}
+                      {item.isOwned ? t('store.owned') : buyingId === item.catalogItemId ? t('store.buying') : t('store.buy')}
                     </Button>
                   </div>
                 </CardContent>

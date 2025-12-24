@@ -15,7 +15,8 @@ import type { MessageWithSender } from '@/types/message'
 import { Send, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR, enUS, es } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 
 interface ChatBoxProps {
   otherUserId: string
@@ -24,12 +25,23 @@ interface ChatBoxProps {
 }
 
 export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxProps) {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [messages, setMessages] = useState<MessageWithSender[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const getDateLocale = () => {
+    const localeMap: Record<string, Locale> = {
+      'pt-BR': ptBR,
+      'pt-PT': ptBR,
+      'en-US': enUS,
+      'es-ES': es,
+    }
+    return localeMap[i18n.language] || enUS
+  }
 
   // Load messages
   useEffect(() => {
@@ -79,30 +91,21 @@ export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxPr
       console.log('✅ Messages reloaded')
     } catch (error) {
       console.error('❌ Error sending message:', error)
-      toast.error('Erro ao enviar mensagem')
+      toast.error(t('patient.chat.errorSending'))
     } finally {
       setSending(false)
     }
   }
 
   const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'orthodontist':
-        return 'Ortodontista'
-      case 'patient':
-        return 'Paciente'
-      case 'child-patient':
-        return 'Paciente Infantil'
-      default:
-        return role
-    }
+    return t(`patient.chat.roles.${role}`, role)
   }
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Chat</CardTitle>
+          <CardTitle>{t('patient.chat.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -131,7 +134,7 @@ export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxPr
           <div className="space-y-4">
             {!messages || messages.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma mensagem ainda. Envie a primeira!
+                {t('patient.chat.noMessages')}
               </div>
             ) : (
               messages.map((message) => {
@@ -156,7 +159,7 @@ export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxPr
                       >
                         {formatDistanceToNow(new Date(message.createdAt), {
                           addSuffix: true,
-                          locale: ptBR,
+                          locale: getDateLocale(),
                         })}
                       </p>
                     </div>
@@ -174,7 +177,7 @@ export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxPr
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Digite sua mensagem..."
+            placeholder={t('patient.chat.placeholder')}
             disabled={sending}
           />
           <Button type="submit" disabled={!newMessage.trim() || sending}>

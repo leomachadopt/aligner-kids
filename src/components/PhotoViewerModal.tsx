@@ -213,31 +213,38 @@ export function PhotoViewerModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[95vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh] border-2 border-gradient-to-r from-cyan-300 via-blue-300 to-purple-300">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="flex items-center gap-2">
-                  {photoTypeLabel}
-                  {photo.hasIssues && (
-                    <Badge variant="destructive" className="gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      Atenção
-                    </Badge>
-                  )}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {photo.alignerNumber
-                    ? `Alinhador ${photo.alignerNumber}`
-                    : 'Fotos Iniciais'}{' '}
-                  · {format(new Date(photo.capturedAt), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-400 flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    {photoTypeLabel}
+                    {photo.hasIssues && (
+                      <Badge variant="destructive" className="gap-1 text-base">
+                        <AlertTriangle className="h-4 w-4" />
+                        Atenção
+                      </Badge>
+                    )}
+                  </DialogTitle>
+                  <p className="text-sm text-gray-600 font-medium mt-1">
+                    {photo.alignerNumber
+                      ? `Alinhador ${photo.alignerNumber}`
+                      : 'Fotos Iniciais'}{' '}
+                    · {format(new Date(photo.capturedAt), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
               </div>
             </div>
           </DialogHeader>
 
           {/* Image Viewer */}
-          <div className="relative overflow-auto max-h-[70vh] bg-black/5 rounded-lg flex items-center justify-center p-4">
+          <div className="relative overflow-auto max-h-[70vh] bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl border-2 border-slate-300 shadow-lg flex items-center justify-center p-4">
             <div
               className="relative"
               style={{
@@ -282,17 +289,18 @@ export function PhotoViewerModal({
           </div>
 
           {/* Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-slate-200 pt-4">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleZoomOut}
                 disabled={zoom <= 50}
+                className="rounded-lg border-2"
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium min-w-[60px] text-center">
+              <span className="text-sm font-extrabold min-w-[60px] text-center bg-slate-100 px-3 py-1 rounded-lg">
                 {zoom}%
               </span>
               <Button
@@ -300,25 +308,41 @@ export function PhotoViewerModal({
                 size="sm"
                 onClick={handleZoomIn}
                 disabled={zoom >= 200}
+                className="rounded-lg border-2"
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
 
-              <div className="h-4 w-px bg-border mx-2" />
+              <div className="h-6 w-px bg-slate-300 mx-2" />
 
-              <Button variant="outline" size="sm" onClick={handleRotate}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRotate}
+                className="rounded-lg border-2"
+              >
                 <RotateCw className="h-4 w-4" />
               </Button>
 
-              <Button variant="outline" size="sm" onClick={handleReset}>
-                Resetar
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="rounded-lg border-2 font-bold"
+              >
+                🔄 Resetar
               </Button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                className="gap-2 rounded-lg border-2 font-bold hover:bg-blue-50"
+              >
                 <Download className="h-4 w-4" />
-                Baixar
+                💾 Baixar
               </Button>
 
               {canDelete && onDelete && (
@@ -326,48 +350,55 @@ export function PhotoViewerModal({
                   variant="destructive"
                   size="sm"
                   onClick={() => setShowDeleteDialog(true)}
-                  className="gap-2"
+                  className="gap-2 rounded-lg font-bold"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Deletar
+                  🗑️ Deletar
                 </Button>
               )}
 
-              <Button variant="ghost" size="sm" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="rounded-lg"
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Photo Info */}
-          <div className="border-t pt-4 space-y-2">
+          <div className="border-t-2 border-slate-200 pt-4 space-y-3">
             {photo.clinicianNotes && (
-              <div className="rounded-lg bg-blue-50 p-3">
-                <p className="text-sm font-semibold text-blue-900 mb-1">
-                  Observações Clínicas:
+              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 shadow-sm">
+                <p className="text-base font-bold text-blue-900 mb-2 flex items-center gap-2">
+                  <span className="text-xl">📝</span> Observações Clínicas:
                 </p>
-                <p className="text-sm text-blue-800">{photo.clinicianNotes}</p>
+                <p className="text-sm text-blue-800 leading-relaxed">{photo.clinicianNotes}</p>
               </div>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               {photo.fileName && (
-                <div>
-                  <span className="font-semibold">Arquivo:</span> {photo.fileName}
+                <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                  <span className="font-bold text-slate-700">📄 Arquivo:</span>
+                  <p className="text-slate-600 truncate">{photo.fileName}</p>
                 </div>
               )}
               {photo.fileSize && (
-                <div>
-                  <span className="font-semibold">Tamanho:</span>{' '}
-                  {(photo.fileSize / 1024 / 1024).toFixed(2)} MB
+                <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                  <span className="font-bold text-slate-700">💾 Tamanho:</span>
+                  <p className="text-slate-600">{(photo.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
               )}
-              <div>
-                <span className="font-semibold">Enviado em:</span>{' '}
-                {format(new Date(photo.uploadedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+              <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                <span className="font-bold text-slate-700">📅 Enviado em:</span>
+                <p className="text-slate-600">{format(new Date(photo.uploadedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
               </div>
-              <div>
-                <span className="font-semibold">ID:</span> {photo.id.slice(0, 8)}...
+              <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                <span className="font-bold text-slate-700">🔑 ID:</span>
+                <p className="text-slate-600 font-mono">{photo.id.slice(0, 8)}...</p>
               </div>
             </div>
           </div>
@@ -376,20 +407,34 @@ export function PhotoViewerModal({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-2 border-red-300">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja deletar esta foto? Esta ação não pode ser desfeita.
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-400 to-pink-400 flex items-center justify-center shadow-lg">
+                <AlertTriangle className="h-7 w-7 text-white" />
+              </div>
+              <AlertDialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                Confirmar Exclusão
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base">
+              <div className="rounded-xl bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200 p-4 shadow-sm">
+                <p className="text-red-900 font-bold mb-2">⚠️ Atenção!</p>
+                <p className="text-red-800">
+                  Tem certeza que deseja deletar esta foto? Esta ação não pode ser desfeita.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="rounded-xl border-2 font-bold">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold shadow-lg"
             >
-              Deletar Foto
+              🗑️ Deletar Foto
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

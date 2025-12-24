@@ -30,6 +30,7 @@ function getOpenAIClient(): OpenAI {
 interface TTSOptions {
   voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'
   model?: 'tts-1' | 'tts-1-hd'
+  language?: string // ISO language code (pt-BR, pt-PT, en-US, etc.)
 }
 
 interface TTSResult {
@@ -50,8 +51,18 @@ export class OpenAITTSService {
     const client = getOpenAIClient()
     const voice = options.voice || VOICE
     const model = options.model || MODEL
+    const language = options.language || 'pt-BR'
 
-    console.log(`🎙️  Gerando áudio com OpenAI TTS (${voice})...`)
+    console.log(`🎙️  Gerando áudio com OpenAI TTS...`)
+    console.log(`   Voz: ${voice}`)
+    console.log(`   Modelo: ${model}`)
+    console.log(`   Idioma desejado: ${language}`)
+
+    if (language === 'pt-PT') {
+      console.warn('⚠️  LIMITAÇÃO: OpenAI TTS não distingue pt-PT de pt-BR no sotaque.')
+      console.warn('   O áudio pode soar como português brasileiro.')
+      console.warn('   Para pt-PT nativo, considere Azure TTS ou Google Cloud TTS.')
+    }
 
     try {
       // Gerar áudio
@@ -107,11 +118,12 @@ export class OpenAITTSService {
   static async generateChapterAudio(
     chapterTitle: string,
     chapterContent: string,
+    language?: string,
   ): Promise<TTSResult> {
     // Combinar título e conteúdo
     const fullText = `${chapterTitle}.\n\n${chapterContent}`
 
-    return this.generateSpeech(fullText)
+    return this.generateSpeech(fullText, { language })
   }
 
   /**

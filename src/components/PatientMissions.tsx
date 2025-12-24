@@ -19,6 +19,7 @@ import {
   Target,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 interface MissionTemplate {
   id: string
@@ -59,6 +60,7 @@ interface PatientMissionsProps {
 }
 
 export function PatientMissions({ patientId, variant = 'full' }: PatientMissionsProps) {
+  const { t } = useTranslation()
   const [missions, setMissions] = React.useState<PatientMission[]>([])
   const [templates, setTemplates] = React.useState<Record<string, MissionTemplate>>({})
   const [loading, setLoading] = React.useState(true)
@@ -72,25 +74,34 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
     try {
       setLoading(true)
 
-      // Buscar templates de missões
-      const templatesRes = await fetch('/api/missions/templates')
-      const templatesData = await templatesRes.json()
-      const templatesMap: Record<string, MissionTemplate> = {}
-      templatesData.templates.forEach((t: MissionTemplate) => {
-        templatesMap[t.id] = t
-      })
-      setTemplates(templatesMap)
-
-      // Buscar missões do paciente
+      // Buscar missões do paciente (agora inclui templates traduzidos)
       const missionsRes = await fetch(`/api/missions/patient/${patientId}`)
       const missionsData = await missionsRes.json()
 
       // Filtrar apenas missões ativas (não completadas/expiradas)
       const activeMissions = missionsData.missions.filter(
-        (m: PatientMission) => m.status === 'in_progress' || m.status === 'available'
+        (m: any) => m.status === 'in_progress' || m.status === 'available'
       )
 
-      setMissions(activeMissions)
+      // Remover duplicatas - manter apenas uma missão por template
+      const uniqueMissions = activeMissions.reduce((acc: any[], current: any) => {
+        const existing = acc.find(m => m.missionTemplateId === current.missionTemplateId)
+        if (!existing) {
+          acc.push(current)
+        }
+        return acc
+      }, [])
+
+      // Criar mapa de templates para manter compatibilidade
+      const templatesMap: Record<string, MissionTemplate> = {}
+      uniqueMissions.forEach((m: any) => {
+        if (m.template) {
+          templatesMap[m.missionTemplateId] = m.template
+        }
+      })
+      setTemplates(templatesMap)
+
+      setMissions(uniqueMissions)
     } catch (error) {
       console.error('Erro ao carregar missões:', error)
     } finally {
@@ -132,11 +143,11 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display">
             <Star className="h-6 w-6 text-yellow-500" />
-            Missões Ativas
+            {t('patient.missions.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground">Carregando missões...</p>
+          <p className="text-center text-muted-foreground">{t('patient.missions.loading')}</p>
         </CardContent>
       </Card>
     )
@@ -148,14 +159,14 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display">
             <Star className="h-6 w-6 text-yellow-500" />
-            Missões Ativas
+            {t('patient.missions.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Trophy className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <p className="text-muted-foreground">
-              Nenhuma missão ativa no momento
+              {t('patient.missions.noMissions')}
             </p>
           </div>
         </CardContent>
@@ -169,7 +180,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 font-display text-2xl">
             <Star className="h-6 w-6 text-yellow-500 animate-pulse" />
-            Missões Ativas
+            {t('patient.missions.title')}
           </CardTitle>
           {variant === 'full' && (
             <div className="rounded-full bg-primary-child px-3 py-1">
@@ -233,7 +244,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                       </h4>
                       {mission.status === 'in_progress' && (
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                          Em andamento
+                          {t('patient.missions.status.inProgress')}
                         </Badge>
                       )}
                     </div>
@@ -265,8 +276,8 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                     <div className="mt-2 flex items-center gap-1">
                       <Coins className="h-4 w-4 text-yellow-600" />
                       <span className="text-sm font-bold text-yellow-700">
-                        +{template.basePoints}
-                        {template.bonusPoints ? ` (+${template.bonusPoints} bônus)` : ''} pontos
+                        {t('patient.missions.list.earnPoints', { points: template.basePoints })}
+                        {template.bonusPoints ? ` ${t('patient.missions.list.earnBonus', { bonus: template.bonusPoints })}` : ''}
                       </span>
                     </div>
                   </div>
@@ -300,7 +311,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
         {variant === 'full' && completedCount === totalMissions && totalMissions > 0 && (
           <div className="mt-4 rounded-lg bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 p-4 text-center animate-bounce-slow">
             <p className="font-display text-xl font-extrabold text-white drop-shadow-lg">
-              🎉 Todas as missões completadas! 🎉
+              {t('patient.missions.allCompleted')}
             </p>
           </div>
         )}

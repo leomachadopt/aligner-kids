@@ -6,8 +6,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { useAuth } from '@/context/AuthContext'
 import { EducationService, type EducationLesson } from '@/services/educationService'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 const Education = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const patientId = user?.id
 
@@ -44,14 +46,14 @@ const Education = () => {
     try {
       const res = await EducationService.submitQuiz(patientId, selected.id, answers)
       if (res.passed) {
-        toast.success(`🎉 Parabéns! Você passou com ${res.scorePercent}%`)
+        toast.success(t('patient.education.quiz.successMessage', { score: res.scorePercent }))
       } else {
-        toast.error(`Quase! Você fez ${res.scorePercent}%. Tente de novo!`)
+        toast.error(t('patient.education.quiz.failMessage', { score: res.scorePercent }))
       }
       setSelected(null)
       await load()
     } catch (e: any) {
-      toast.error(e?.message || 'Falha ao enviar quiz')
+      toast.error(e?.message || t('patient.education.quiz.submitError'))
     } finally {
       setSubmitting(false)
     }
@@ -66,10 +68,10 @@ const Education = () => {
           className="mb-4 animate-float hover-wiggle"
         />
         <h1 className="font-display text-4xl font-extrabold text-primary">
-          Escola de Heróis do Sorriso
+          {t('patient.education.title')}
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          Aprenda tudo para ter o sorriso mais poderoso de todos!
+          {t('patient.education.subtitle')}
         </p>
       </div>
 
@@ -79,9 +81,9 @@ const Education = () => {
             <div className="flex items-center gap-3">
               <Star className="h-8 w-8 text-yellow-500 animate-wiggle-slow" />
               <div>
-                <p className="text-lg font-bold">Ganhe Recompensas!</p>
+                <p className="text-lg font-bold">{t('patient.education.earnRewards.title')}</p>
                 <p className="text-sm text-muted-foreground">
-                  Complete conteúdos educacionais e ganhe moedas
+                  {t('patient.education.earnRewards.description')}
                 </p>
               </div>
             </div>
@@ -110,11 +112,11 @@ const Education = () => {
                   <PlayCircle className="h-8 w-8 text-white" />
                 </div>
                 <div className="absolute top-2 left-2 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-yellow-900 shadow-md">
-                  +{item.rewardCoins} moedas
+                  {t('patient.education.lesson.coins', { coins: item.rewardCoins })}
                 </div>
                 {item.progress?.status === 'completed' && (
                   <div className="absolute top-2 right-2 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white shadow-md flex items-center gap-1">
-                    <CheckCircle2 className="h-4 w-4" /> Concluído
+                    <CheckCircle2 className="h-4 w-4" /> {t('patient.education.lesson.completed')}
                   </div>
                 )}
               </div>
@@ -128,7 +130,7 @@ const Education = () => {
                 size="sm"
                 className="mt-3 w-full hover-bounce"
               >
-                Assistir e responder quiz
+                {t('patient.education.lesson.watchAndQuiz')}
               </Button>
             </CardContent>
           </Card>
@@ -178,10 +180,10 @@ const Education = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelected(null)}>
-              Fechar
+              {t('patient.education.quiz.close')}
             </Button>
             <Button onClick={submit} disabled={!canSubmit || submitting}>
-              {submitting ? 'Enviando...' : 'Enviar respostas'}
+              {submitting ? t('patient.education.quiz.submitting') : t('patient.education.quiz.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

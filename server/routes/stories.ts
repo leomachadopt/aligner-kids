@@ -6,7 +6,7 @@ import { Router } from 'express'
 import { db, stories, story_chapters, story_preferences, users } from '../db/index'
 import { and, eq } from 'drizzle-orm'
 import { StoryGenerationService } from '../services/storyGenerationService'
-import { OpenAITTSService } from '../services/openaiTTS'
+import { TTSFactory } from '../services/ttsFactory'
 
 const router = Router()
 
@@ -418,9 +418,10 @@ router.post('/stories/generate', async (req, res) => {
 
         try {
           console.log(`🎙️  Gerando áudio para capítulo ${chapterData.chapterNumber}...`)
-          const audioResult = await OpenAITTSService.generateChapterAudio(
+          const audioResult = await TTSFactory.generateChapterAudio(
             chapterData.title,
-            chapterData.content
+            chapterData.content,
+            patientLanguage // Usar factory que escolhe o serviço correto
           )
           audioUrl = audioResult.audioUrl
           audioDurationSeconds = audioResult.durationSeconds

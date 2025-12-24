@@ -3,9 +3,10 @@
  * Monitora a saúde do backend e notifica sobre mudanças de status
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+import { getHealthUrl } from '@/config/api'
+
 // Health endpoint - usa /api/health para consistência
-const HEALTH_URL = API_BASE_URL + '/health'
+const HEALTH_URL = getHealthUrl()
 
 type HealthStatus = {
   isHealthy: boolean

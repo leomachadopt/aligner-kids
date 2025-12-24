@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Home,
   BarChart2,
@@ -20,68 +21,77 @@ import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/user'
 import { useUserRole } from '@/context/UserRoleContext'
 
-const patientMenu = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/my-treatment', label: 'Meu Tratamento', icon: Smile },
-  { href: '/photos', label: 'Fotos', icon: Camera },
-  { href: '/chat', label: 'Chat', icon: MessageSquare },
-  { href: '/education', label: 'Educação', icon: BookOpen },
-  { href: '/gamification', label: 'Gamificação', icon: Award },
-  { href: '/store', label: 'Loja', icon: ShoppingBag },
-  { href: '/my-rewards', label: 'Prêmios', icon: Gift },
-  { href: '/parent/items', label: 'Itens dos Pais', icon: Gift },
+const getPatientMenu = (t: any) => [
+  { href: '/dashboard', label: t('navigation.patient.dashboard'), icon: Home },
+  { href: '/my-treatment', label: t('navigation.patient.myTreatment'), icon: Smile },
+  { href: '/photos', label: t('navigation.patient.photos'), icon: Camera },
+  { href: '/chat', label: t('navigation.patient.chat'), icon: MessageSquare },
+  { href: '/education', label: t('navigation.patient.education'), icon: BookOpen },
+  { href: '/gamification', label: t('navigation.patient.gamification'), icon: Award },
+  { href: '/store', label: t('navigation.patient.store'), icon: ShoppingBag },
+  { href: '/my-rewards', label: t('navigation.patient.myRewards'), icon: Gift },
+  { href: '/parent/items', label: t('navigation.patient.parentItems'), icon: Gift },
 ]
 
-const childPatientMenu = [
-  { href: '/dashboard', label: 'Minha Base', icon: Home },
-  { href: '/my-treatment', label: 'Minha Jornada', icon: Smile },
-  { href: '/photos', label: 'Fotos Mágicas', icon: Camera },
-  { href: '/chat', label: 'Falar com Doutor(a)', icon: MessageSquare },
-  { href: '/education', label: 'Escola de Heróis', icon: BookOpen },
-  { href: '/gamification', label: 'Aventuras', icon: Award },
-  { href: '/store', label: 'Loja', icon: ShoppingBag },
-  { href: '/my-rewards', label: 'Meus Prêmios', icon: Gift },
-  { href: '/parent/items', label: 'Itens dos Pais', icon: Gift },
+const getChildPatientMenu = (t: any) => [
+  { href: '/dashboard', label: t('navigation.childPatient.dashboard'), icon: Home },
+  { href: '/my-treatment', label: t('navigation.childPatient.myTreatment'), icon: Smile },
+  { href: '/photos', label: t('navigation.childPatient.photos'), icon: Camera },
+  { href: '/chat', label: t('navigation.childPatient.chat'), icon: MessageSquare },
+  { href: '/education', label: t('navigation.childPatient.education'), icon: BookOpen },
+  { href: '/gamification', label: t('navigation.childPatient.gamification'), icon: Award },
+  { href: '/store', label: t('navigation.childPatient.store'), icon: ShoppingBag },
+  { href: '/my-rewards', label: t('navigation.childPatient.myRewards'), icon: Gift },
+  { href: '/parent/items', label: t('navigation.childPatient.parentItems'), icon: Gift },
 ]
 
-const orthodontistMenu = [
-  { href: '/dashboard', label: 'Dashboard Clínico', icon: Home },
-  { href: '/patient-management', label: 'Pacientes', icon: Users },
-  { href: '/chat', label: 'Chat', icon: MessageSquare },
-  { href: '/reports', label: 'Relatórios', icon: BarChart2 },
-  { href: '/mission-config', label: 'Configurar Missões', icon: Trophy },
-  { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
-  { href: '/clinic/rewards/catalog', label: 'Catálogo de Prêmios', icon: ShoppingBag },
-  { href: '/clinic/rewards/programs', label: 'Programas de Prêmios', icon: Gift },
-  { href: '/clinic/story-options', label: 'Story Options', icon: BookOpen },
+const getOrthodontistMenu = (t: any) => [
+  { href: '/dashboard', label: t('navigation.orthodontist.dashboard'), icon: Home },
+  { href: '/patient-management', label: t('navigation.orthodontist.patientManagement'), icon: Users },
+  { href: '/chat', label: t('navigation.orthodontist.chat'), icon: MessageSquare },
+  { href: '/reports', label: t('navigation.orthodontist.reports'), icon: BarChart2 },
+  { href: '/mission-config', label: t('navigation.orthodontist.missionConfig'), icon: Trophy },
+  { href: '/mission-programs', label: t('navigation.orthodontist.missionPrograms'), icon: Layers },
+  { href: '/clinic/rewards/catalog', label: t('navigation.orthodontist.rewardsCatalog'), icon: ShoppingBag },
+  { href: '/clinic/rewards/programs', label: t('navigation.orthodontist.rewardsPrograms'), icon: Gift },
+  { href: '/clinic/story-options', label: t('navigation.orthodontist.storyOptions'), icon: BookOpen },
 ]
 
-const superAdminMenu = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/admin/clinics', label: 'Gerenciar Clínicas', icon: Shield },
-  { href: '/admin/orthodontists', label: 'Aprovar Ortodontistas', icon: Users },
-  { href: '/admin/prompts', label: 'Configurar IA', icon: Settings },
-  { href: '/admin/missions', label: 'Gerenciar Missões', icon: Trophy },
-  { href: '/admin/store-templates', label: 'Templates de Prêmios', icon: Gift },
-  { href: '/admin/story-options', label: 'Story Options', icon: BookOpen },
-  { href: '/mission-programs', label: 'Programas de Missões', icon: Layers },
-  { href: '/admin/data', label: 'Gerenciar Dados', icon: Database },
-  { href: '/storage-status', label: 'Status do Storage', icon: Database },
+const getSuperAdminMenu = (t: any) => [
+  { href: '/dashboard', label: t('navigation.superAdmin.dashboard'), icon: Home },
+  { href: '/admin/clinics', label: t('navigation.superAdmin.clinics'), icon: Shield },
+  { href: '/admin/orthodontists', label: t('navigation.superAdmin.orthodontists'), icon: Users },
+  { href: '/admin/prompts', label: t('navigation.superAdmin.prompts'), icon: Settings },
+  { href: '/admin/missions', label: t('navigation.superAdmin.missions'), icon: Trophy },
+  { href: '/admin/store-templates', label: t('navigation.superAdmin.storeTemplates'), icon: Gift },
+  { href: '/admin/story-options', label: t('navigation.superAdmin.storyOptions'), icon: BookOpen },
+  { href: '/mission-programs', label: t('navigation.superAdmin.missionPrograms'), icon: Layers },
+  { href: '/admin/data', label: t('navigation.superAdmin.data'), icon: Database },
+  { href: '/storage-status', label: t('navigation.superAdmin.storageStatus'), icon: Database },
 ]
-
-const menuItems: Record<UserRole, typeof patientMenu> = {
-  patient: patientMenu,
-  'child-patient': childPatientMenu,
-  orthodontist: orthodontistMenu,
-  'super-admin': superAdminMenu,
-}
 
 export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
   const location = useLocation()
   const { isChild } = useUserRole()
+  const { t } = useTranslation()
 
-  // Se não tem role, usar menu de paciente como fallback
-  const currentMenu = userRole ? (menuItems[userRole] || patientMenu) : patientMenu
+  // Get menu based on user role
+  const getCurrentMenu = () => {
+    switch (userRole) {
+      case 'patient':
+        return getPatientMenu(t)
+      case 'child-patient':
+        return getChildPatientMenu(t)
+      case 'orthodontist':
+        return getOrthodontistMenu(t)
+      case 'super-admin':
+        return getSuperAdminMenu(t)
+      default:
+        return getPatientMenu(t)
+    }
+  }
+
+  const currentMenu = getCurrentMenu()
 
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-border/60 bg-background/80 backdrop-blur-md shadow-[0_15px_50px_-25px_rgba(0,0,0,0.35)] md:flex">
@@ -98,7 +108,7 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
               isChild && 'font-display text-xl',
             )}
           >
-            App Alinhadores
+            {t('navigation.appName')}
           </span>
         </Link>
       </div>

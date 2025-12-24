@@ -2,7 +2,9 @@
  * API Client - Utility for making API requests to the backend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+import { getApiBaseUrl, joinUrl } from '@/config/api'
+
+const API_BASE_URL = getApiBaseUrl()
 
 interface ApiResponse<T> {
   data?: T
@@ -43,7 +45,7 @@ class ApiClient {
           headers['Authorization'] = `Bearer ${this.token}`
         }
 
-        const response = await fetch(`${this.baseURL}${endpoint}`, {
+        const response = await fetch(joinUrl(this.baseURL, endpoint), {
           ...options,
           headers,
           credentials: 'include', // Include cookies
@@ -92,6 +94,40 @@ class ApiClient {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     })
+  }
+
+  /**
+   * POST request for long-running operations (e.g., story generation)
+   * Uses AbortController with extended timeout
+   */
+  async postLongRunning<T>(
+    endpoint: string,
+    data?: unknown,
+    timeoutMs: number = 600000 // 10 minutes default
+  ): Promise<T> {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const result = await this.request<T>(
+        endpoint,
+        {
+          method: 'POST',
+          body: data ? JSON.stringify(data) : undefined,
+          signal: controller.signal,
+        },
+        1, // Only 1 retry for long operations
+        0
+      )
+      clearTimeout(timeoutId)
+      return result
+    } catch (error: any) {
+      clearTimeout(timeoutId)
+      if (error.name === 'AbortError') {
+        throw new Error('A geração de história demorou muito tempo. Por favor, tente novamente.')
+      }
+      throw error
+    }
   }
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {

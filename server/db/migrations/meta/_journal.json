@@ -85,6 +85,20 @@
       "when": 1766000005000,
       "tag": "0011_aligner_quests_and_education",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1766252266000,
+      "tag": "0012_make_dates_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1766320000000,
+      "tag": "0013_translations",
+      "breakpoints": true
     }
   ]
 }

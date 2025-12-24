@@ -7,8 +7,12 @@ import {
 } from '@/components/ui/card'
 import { LoginForm } from '@/components/LoginForm'
 import { Smile, Sparkles, Shield } from 'lucide-react'
+import { useBodyClass } from '@/hooks/useBodyClass'
 
 const Index = () => {
+  // Garante que o login sempre usa o tema esperado (evita alternância após refresh/logout)
+  useBodyClass('child-theme', true)
+
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background">
       {/* Background decorations */}

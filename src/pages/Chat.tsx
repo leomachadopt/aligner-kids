@@ -17,8 +17,10 @@ import { MessageSquare, Search, Loader2, Users } from 'lucide-react'
 import type { Conversation } from '@/types/message'
 import type { User } from '@/types/user'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 const Chat = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
@@ -68,21 +70,12 @@ const Chat = () => {
       setAvailableUsers(filtered)
     } catch (error) {
       console.error('Error loading available users:', error)
-      toast.error('Erro ao carregar usuários disponíveis')
+      toast.error(t('errors.loadingConversations'))
     }
   }
 
   const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'orthodontist':
-        return 'Ortodontista'
-      case 'patient':
-        return 'Paciente'
-      case 'child-patient':
-        return 'Paciente Infantil'
-      default:
-        return role
-    }
+    return t(`patient.chat.roles.${role}`, role)
   }
 
   const getInitials = (name: string) => {
@@ -138,12 +131,12 @@ const Chat = () => {
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
-            Conversas
+            {t('patient.chat.title')}
           </CardTitle>
           <div className="relative mt-3">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             <Input
-              placeholder="Buscar..."
+              placeholder={t('patient.chat.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-11 h-12 rounded-xl border-2 border-green-200 focus:border-green-400 bg-white font-medium"
@@ -155,7 +148,7 @@ const Chat = () => {
             <div className="text-center py-12">
               <Users className="h-16 w-16 mx-auto text-gray-300 mb-3" />
               <p className="text-sm text-gray-600 font-medium">
-                Nenhum usuário encontrado
+                {t('patient.chat.noUsers')}
               </p>
             </div>
           ) : (
@@ -235,12 +228,12 @@ const Chat = () => {
                 <MessageSquare className="h-12 w-12 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                Selecione uma conversa
+                {t('patient.chat.selectConversation')}
               </h3>
               <p className="text-gray-600 font-medium text-lg">
                 {user?.role === 'patient' || user?.role === 'child-patient'
-                  ? 'Escolha um ortodontista para conversar'
-                  : 'Escolha um paciente para conversar'}
+                  ? t('patient.chat.selectOrthodontist')
+                  : t('patient.chat.selectPatient')}
               </p>
             </CardContent>
           </Card>

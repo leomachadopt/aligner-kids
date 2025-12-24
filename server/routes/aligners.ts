@@ -7,6 +7,7 @@ import { db, treatments, aligners, mission_templates, patient_missions, mission_
 import { eq, and, desc } from 'drizzle-orm'
 import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
 import { AlignerWearService } from '../services/alignerWearService'
+import { MissionProgressService } from '../services/missionProgressService'
 
 const router = Router()
 
@@ -196,10 +197,11 @@ router.post('/treatments', async (req, res) => {
     const daysPerAligner = req.body.changeInterval || req.body.daysPerAligner || 14
     const alignersToCreate = []
 
+    const baseTimestamp = Date.now()
     for (let i = 1; i <= req.body.totalAligners; i++) {
       // Não calcular datas fixas - serão definidas quando alinhador for ativado
       const alignerData: any = {
-        id: `aligner-${Date.now()}-${i}`,
+        id: `aligner-${baseTimestamp}-${i}`, // ID único baseado em timestamp + índice
         patientId: req.body.patientId,
         treatmentId: treatment.id,
         alignerNumber: i,
@@ -210,9 +212,6 @@ router.post('/treatments', async (req, res) => {
         changeInterval: daysPerAligner, // Armazenar intervalo de troca
       }
       alignersToCreate.push(alignerData)
-
-      // Pequeno delay para garantir IDs únicos
-      await new Promise(resolve => setTimeout(resolve, 5))
     }
 
     // Inserir todos os alinhadores
@@ -222,6 +221,12 @@ router.post('/treatments', async (req, res) => {
 
     // ✅ CRIAR AUTOMATICAMENTE A FASE 1 (Fase Inicial)
     console.log('📋 Criando Fase 1...')
+    console.log('📊 Valor de totalAligners:', req.body.totalAligners, 'tipo:', typeof req.body.totalAligners)
+
+    // Garantir que totalAligners é um número válido
+    const totalAlignersValue = parseInt(req.body.totalAligners) || 20
+    console.log('📊 Valor final totalAligners:', totalAlignersValue)
+
     // Sistema dinâmico: fase criada mas aguardando início real
     const phaseValues: any = {
       id: `phase-${Date.now()}`,
@@ -229,10 +234,11 @@ router.post('/treatments', async (req, res) => {
       phaseNumber: 1,
       phaseName: 'Fase 1',
       startAlignerNumber: 1,
-      endAlignerNumber: req.body.totalAligners,
-      totalAlignersInPhase: req.body.totalAligners,
+      endAlignerNumber: totalAlignersValue,
+      totalAligners: totalAlignersValue, // Campo correto do schema
       currentAlignerNumber: 0, // Ainda não iniciou
       status: 'pending', // Aguardando início
+      adherenceTargetPercent: 80, // Adicionar explicitamente
       // startDate e expectedEndDate omitidos - serão NULL no banco
       notes: 'Fase inicial criada automaticamente - aguardando início',
       createdAt: new Date(),
@@ -244,7 +250,7 @@ router.post('/treatments', async (req, res) => {
       .values(phaseValues)
       .returning()
 
-    console.log(`✅ Fase 1 criada automaticamente com ${req.body.totalAligners} alinhadores`)
+    console.log(`✅ Fase 1 criada automaticamente com ${totalAlignersValue} alinhadores`)
 
     // Atualizar todos os alinhadores para vincular com a fase criada
     console.log('🔗 Vinculando alinhadores à fase...')
@@ -694,20 +700,8 @@ router.post('/aligners/:id/confirm', async (req, res) => {
         // ignore
       }
 
-      // Ativar missões cujo gatilho é iniciar este alinhador
-      await db
-        .update(patient_missions)
-        .set({
-          status: 'in_progress',
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(patient_missions.patientId, aligner.patientId),
-            eq(patient_missions.trigger, 'on_aligner_N_start'),
-            eq(patient_missions.triggerAlignerNumber, nextAligner.alignerNumber),
-          ),
-        )
+      // 🎯 Ativar missões cujo gatilho é iniciar este alinhador
+      await MissionProgressService.activateMissionsForAligner(aligner.patientId, nextAligner.alignerNumber)
 
       res.json({
         success: true,

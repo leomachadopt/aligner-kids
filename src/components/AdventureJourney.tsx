@@ -14,8 +14,10 @@ import {
 import { Celebration } from './Confetti'
 import { useGamification } from '@/context/GamificationContext'
 import { useTreatment, useCurrentAligner, useAligners } from '@/context/AlignerContext'
+import { useTranslation } from 'react-i18next'
 
 export const AdventureJourney = () => {
+  const { t } = useTranslation()
   const treatment = useTreatment()
   const currentAlignerData = useCurrentAligner()
   const { confirmAlignerChange } = useAligners()
@@ -114,7 +116,7 @@ export const AdventureJourney = () => {
         <CardHeader className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
           <CardTitle className="flex items-center gap-2 font-display text-2xl text-white drop-shadow-lg">
             <Rocket className="animate-bounce-slow h-8 w-8" />
-            Sua Jornada Rumo ao Super Sorriso!
+            {t('patient.journey.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -186,13 +188,15 @@ export const AdventureJourney = () => {
           {/* Progresso e Ação */}
           <div className="mt-8 space-y-4 text-center">
             <div className="rounded-lg bg-gradient-to-r from-primary-child/10 to-purple-400/10 p-4">
-              <p className="mb-2 text-lg font-semibold">
-                Você está no alinhador{' '}
-                <span className="text-3xl font-extrabold text-primary-child drop-shadow-md">
-                  {currentAligner}
-                </span>{' '}
-                de {totalAligners}!
-              </p>
+              <p
+                className="mb-2 text-lg font-semibold"
+                dangerouslySetInnerHTML={{
+                  __html: t('patient.journey.currentProgress', {
+                    current: `<span class="text-3xl font-extrabold text-primary-child drop-shadow-md">${currentAligner}</span>`,
+                    total: totalAligners
+                  })
+                }}
+              />
               <div className="mx-auto h-3 w-full max-w-md overflow-hidden rounded-full bg-gray-200">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 transition-all duration-500"
@@ -200,7 +204,7 @@ export const AdventureJourney = () => {
                 />
               </div>
               <p className="mt-2 text-sm font-medium text-gray-600">
-                {Math.round((currentAligner / totalAligners) * 100)}% completo
+                {t('patient.journey.percentComplete', { percent: Math.round((currentAligner / totalAligners) * 100) })}
               </p>
             </div>
 
@@ -212,7 +216,7 @@ export const AdventureJourney = () => {
                 className="rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-12 py-8 text-xl font-bold text-white shadow-xl hover:scale-110 hover:shadow-2xl transition-all"
               >
                 <Play className="mr-2 h-8 w-8" />
-                {isStartingTreatment ? 'Iniciando...' : 'Iniciar Tratamento'}
+                {isStartingTreatment ? t('patient.journey.starting') : t('patient.journey.startTreatment')}
               </Button>
             ) : currentAligner < totalAligners ? (
               <Button
@@ -224,21 +228,21 @@ export const AdventureJourney = () => {
                 {!canActivate ? (
                   <>
                     <Lock className="mr-2 h-6 w-6" />
-                    Faltam {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}!
+                    {t(`patient.journey.daysRemaining_${daysRemaining === 1 ? 'one' : 'other'}`, { count: daysRemaining })}
                   </>
                 ) : isConfirmingChange ? (
-                  'Trocando...'
+                  t('patient.journey.changing')
                 ) : (
                   <>
                     <Rocket className="mr-2 h-6 w-6" />
-                    Passei para o próximo alinhador!
+                    {t('patient.journey.nextAligner')}
                   </>
                 )}
               </Button>
             ) : (
               <div className="rounded-xl bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 p-6 animate-bounce-slow">
                 <p className="font-display text-2xl font-extrabold text-white drop-shadow-lg">
-                  🎉 Parabéns! Você completou sua jornada! 🎉
+                  {t('patient.journey.completed')}
                 </p>
               </div>
             )}

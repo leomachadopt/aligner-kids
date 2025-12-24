@@ -1,0 +1,651 @@
+{
+  "common": {
+    "actions": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "close": "Cerrar",
+      "confirm": "Confirmar",
+      "continue": "Continuar",
+      "back": "Volver",
+      "next": "Siguiente",
+      "previous": "Anterior",
+      "search": "Buscar",
+      "filter": "Filtrar",
+      "send": "Enviar",
+      "upload": "Subir",
+      "download": "Descargar",
+      "select": "Seleccionar",
+      "remove": "Quitar",
+      "add": "Añadir",
+      "refresh": "Actualizar",
+      "view": "Ver",
+      "expand": "Expandir",
+      "collapse": "Contraer"
+    },
+    "states": {
+      "loading": "Cargando...",
+      "success": "Éxito",
+      "error": "Error",
+      "warning": "Aviso",
+      "info": "Información",
+      "empty": "Vacío",
+      "noData": "Sin datos",
+      "notFound": "No encontrado",
+      "processing": "Procesando...",
+      "completed": "Completado",
+      "pending": "Pendiente",
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "time": {
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "tomorrow": "Mañana",
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año",
+      "day": "Día",
+      "hour": "Hora",
+      "minute": "Minuto",
+      "second": "Segundo",
+      "ago": "hace",
+      "from_now": "dentro de"
+    },
+    "numbers": {
+      "day_one": "{{count}} día",
+      "day_other": "{{count}} días",
+      "hour_one": "{{count}} hora",
+      "hour_other": "{{count}} horas",
+      "minute_one": "{{count}} minuto",
+      "minute_other": "{{count}} minutos",
+      "point_one": "{{count}} punto",
+      "point_other": "{{count}} puntos",
+      "coin_one": "{{count}} moneda",
+      "coin_other": "{{count}} monedas",
+      "photo_one": "{{count}} foto",
+      "photo_other": "{{count}} fotos"
+    },
+    "answers": {
+      "yes": "Sí",
+      "no": "No"
+    },
+    "welcome": "Bienvenido"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "register": "Registrarse",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar Contraseña",
+    "forgotPassword": "¿Olvidaste la contraseña?",
+    "rememberMe": "Recuérdame",
+    "loginSuccess": "Inicio de sesión exitoso",
+    "loginError": "Error al iniciar sesión",
+    "registerSuccess": "Registro completado con éxito",
+    "registerError": "Error al realizar el registro"
+  },
+  "navigation": {
+    "appName": "App Alineadores",
+    "patient": {
+      "dashboard": "Panel",
+      "myTreatment": "Mi Tratamiento",
+      "photos": "Fotos",
+      "chat": "Chat",
+      "education": "Educación",
+      "gamification": "Gamificación",
+      "store": "Tienda",
+      "myRewards": "Premios",
+      "parentItems": "Artículos de los Padres"
+    },
+    "childPatient": {
+      "dashboard": "Mi Base",
+      "myTreatment": "Mi Aventura",
+      "photos": "Fotos Mágicas",
+      "chat": "Hablar con el Doctor(a)",
+      "education": "Escuela de Héroes",
+      "gamification": "Aventuras",
+      "store": "Tienda",
+      "myRewards": "Mis Premios",
+      "parentItems": "Artículos de los Padres"
+    },
+    "orthodontist": {
+      "dashboard": "Panel Clínico",
+      "patientManagement": "Pacientes",
+      "chat": "Chat",
+      "reports": "Informes",
+      "missionConfig": "Configurar Misiones",
+      "missionPrograms": "Programas de Misiones",
+      "rewardsCatalog": "Catálogo de Premios",
+      "rewardsPrograms": "Programas de Premios",
+      "storyOptions": "Opciones de Historias"
+    },
+    "superAdmin": {
+      "dashboard": "Panel",
+      "clinics": "Gestionar Clínicas",
+      "orthodontists": "Aprobar Ortodoncistas",
+      "prompts": "Configurar IA",
+      "missions": "Gestionar Misiones",
+      "storeTemplates": "Plantillas de Premios",
+      "storyOptions": "Opciones de Historias",
+      "missionPrograms": "Programas de Misiones",
+      "data": "Gestionar Datos",
+      "storageStatus": "Estado del Almacenamiento"
+    }
+  },
+  "header": {
+    "myAccount": "Mi Cuenta",
+    "myProfile": "Mi Perfil",
+    "settings": "Configuración",
+    "help": "Ayuda",
+    "logout": "Cerrar sesión",
+    "pageTitles": {
+      "dashboard": "Panel",
+      "myTreatment": "Mi Tratamiento",
+      "photos": "Fotos",
+      "chat": "Chat",
+      "education": "Educación",
+      "gamification": "Gamificación",
+      "store": "Tienda",
+      "myRewards": "Premios",
+      "responsible": "Modo Responsable",
+      "reports": "Informes",
+      "patientManagement": "Gestión de Pacientes",
+      "profile": "Mi Perfil",
+      "appSettings": "Configuración",
+      "helpPage": "Ayuda"
+    },
+    "childPageTitles": {
+      "dashboard": "Mi Base Secreta",
+      "myTreatment": "Aventura de la Sonrisa",
+      "photos": "Fotos Mágicas",
+      "chat": "Hablar con el Doctor(a)",
+      "education": "Escuela de Héroes",
+      "gamification": "Centro de Aventuras",
+      "store": "Tienda del Héroe",
+      "myRewards": "Mis Premios",
+      "responsible": "Modo Responsable",
+      "reports": "Informes del Detective",
+      "profile": "Mi Perfil de Héroe",
+      "appSettings": "Ajustes",
+      "helpPage": "Ayuda"
+    }
+  },
+  "patient": {
+    "dashboard": {
+      "title": "¡Hola, Campeón!",
+      "adultWelcome": "¡Hola, Paciente!",
+      "startTreatment": "¿Listo para Empezar?",
+      "startTreatmentTitle": "Iniciar Tratamiento",
+      "startButton": "Iniciar Tratamiento",
+      "startMessage": "¡Haz clic en el botón de abajo para comenzar tu aventura de la sonrisa!",
+      "startTreatmentMessage": "Haz clic en el botón de abajo para iniciar tu tratamiento",
+      "starting": "Iniciando...",
+      "confirming": "Confirmando...",
+      "nextMission": "Próxima Misión: ¡Cambiar Alineador!",
+      "nextChange": "Próximo Cambio",
+      "daysRemaining_one": "{{count}} día",
+      "daysRemaining_other": "{{count}} días",
+      "alignerNumber": "Alineador #{{number}}",
+      "alignerOf": "de {{total}}",
+      "expectedDate": "Fecha esperada",
+      "switchButton": "¡Cambiado!",
+      "confirmChange": "Confirmar Cambio",
+      "waitDays_one": "Falta {{count}} día",
+      "waitDays_other": "Faltan {{count}} días",
+      "waitDaysShort_one": "Esperar {{count}} día",
+      "waitDaysShort_other": "Esperar {{count}} días",
+      "photoTime": "Hora de tomar tus fotos",
+      "missionProgress": "Progreso de la Misión",
+      "missionDescription": "¡Usa el alineador durante 2 semanas sin olvidar!",
+      "treatmentComplete": "{{percent}}% del tratamiento completo",
+      "takePhotos": "Tomar Fotos Divertidas",
+      "talkDoctor": "Hablar con el Doctor(a)",
+      "myRewards": "Ver Mis Premios",
+      "quickActions": "Acciones Rápidas",
+      "sendPhotos": "Enviar Fotos",
+      "chatClinic": "Chat con la Clínica",
+      "viewTimeline": "Ver Línea de Tiempo",
+      "educationalContent": "Contenido Educativo",
+      "disciplineBadges": "Insignias de Disciplina"
+    },
+    "aligner": {
+      "tracker": {
+        "title": "Seguimiento de Uso",
+        "description": "Tiempo de uso y adherencia del alineador actual",
+        "noAligner": "Ningún alineador activo en este momento.",
+        "alignerNumber": "Alineador #{{number}}",
+        "usageToday": "Uso Hoy",
+        "usageAccumulated": "Uso Acumulado",
+        "targetDaily": "Meta: {{hours}}h/día • mínimo {{percent}}%",
+        "totalHours": "{{hours}}h totales",
+        "daysUsed": "{{days}} días de uso",
+        "adherence": "Adherencia",
+        "pauseUsage": "Pausar Uso",
+        "resumeUsage": "Reanudar Uso",
+        "nextChange": "Próximo Cambio",
+        "changeDelayed": "¡Cambio Retrasado!",
+        "daysDelayed": "Llevas {{days}} días de retraso",
+        "daysUntilChange_one": "{{count}} día",
+        "daysUntilChange_other": "{{count}} días",
+        "changeToAligner": "Para cambiar al Alineador #{{number}}",
+        "expectedDate": "Fecha esperada: {{date}}",
+        "weeklyAdherence": "Adherencia Semanal",
+        "weeklyDescription": "Horas de uso en los últimos 7 días",
+        "chartHours": "horas",
+        "chartTarget": "meta"
+      },
+      "usage": {
+        "currentAligner": "Alineador Actual",
+        "usageToday": "Uso hoy",
+        "totalUsage": "Uso total",
+        "daysUsed_one": "{{count}} día de uso",
+        "daysUsed_other": "{{count}} días de uso",
+        "hoursTotal": "{{hours}}h totales"
+      },
+      "status": {
+        "active": "Activo",
+        "paused": "Pausado",
+        "delayed": "Retrasado",
+        "pending": "Pendiente",
+        "completed": "Completado"
+      },
+      "actions": {
+        "pause": "Pausar",
+        "resume": "Reanudar",
+        "change": "Cambiar Alineador",
+        "nextChange": "Próximo Cambio"
+      }
+    },
+    "missions": {
+      "title": "Misiones Activas",
+      "activeMissions": "Misiones Activas",
+      "completedMissions": "Misiones Completadas",
+      "noMissions": "Ninguna misión activa en este momento",
+      "allCompleted": "¡Todas las misiones completadas!",
+      "loading": "Cargando misiones...",
+      "status": {
+        "inProgress": "En curso",
+        "available": "Disponible",
+        "completed": "Completada",
+        "locked": "Bloqueada"
+      },
+      "rewards": {
+        "points": "puntos",
+        "bonusPoints": "bonificación",
+        "coins": "monedas",
+        "xp": "XP"
+      },
+      "list": {
+        "dailyGoal": "¡Meta del día alcanzada!",
+        "weekComplete": "¡Semana completa!",
+        "monthComplete": "¡Mes completo!",
+        "progress": "{{current}} / {{target}}",
+        "earnPoints": "+{{points}} puntos",
+        "earnBonus": "+{{bonus}} bonificación"
+      }
+    },
+    "photos": {
+      "title": "Estudio de Fotos Mágicas",
+      "subtitle": "¡Vamos a registrar la evolución de tu súper sonrisa!",
+      "upload": {
+        "title": "Tomar Nuevas Fotos",
+        "description": "Pide ayuda a un adulto y sigue los ejemplos de abajo para tomar las mejores fotos.",
+        "instructions": "Instrucciones para la captura"
+      },
+      "pending": {
+        "title": "¡Hora de Tomar tus Fotos!",
+        "description": "Alineador {{number}} · {{count}} foto pendiente",
+        "description_plural": "Alineador {{number}} · {{count}} fotos pendientes",
+        "required": "Fotos necesarias:",
+        "takeNow": "Tomar Fotos Ahora",
+        "earnBonus": "¡Gana puntos! ¡Envía todas las fotos y gana hasta 150 puntos de bonificación!"
+      },
+      "gallery": {
+        "title": "Mi Galería de Sonrisas",
+        "noPhotos": "Ninguna foto aún",
+        "noPhotosDescription": "¡Empieza tomando tus primeras fotos de progreso!",
+        "takeFirst": "Tomar Primera Foto",
+        "alignerNumber": "Alineador {{number}}",
+        "initialPhotos": "Fotos Iniciales",
+        "photoCount_one": "{{count}} foto",
+        "photoCount_other": "{{count}} fotos",
+        "clickToEnlarge": "Haz clic para ampliar",
+        "noPhoto": "Sin foto",
+        "clinicianNotes": "Observaciones Clínicas:"
+      },
+      "types": {
+        "frontal": "Sonrisa Frontal",
+        "right": "Lado Derecho",
+        "left": "Lado Izquierdo"
+      }
+    },
+    "chat": {
+      "title": "Conversaciones",
+      "selectConversation": "Selecciona una conversación",
+      "selectOrthodontist": "Elige un ortodoncista para conversar",
+      "selectPatient": "Elige un paciente para conversar",
+      "noUsers": "Ningún usuario encontrado",
+      "placeholder": "Escribe tu mensaje...",
+      "send": "Enviar",
+      "search": "Buscar...",
+      "unreadCount_one": "{{count}} no leída",
+      "unreadCount_other": "{{count}} no leídas",
+      "roles": {
+        "orthodontist": "Ortodoncista",
+        "patient": "Paciente",
+        "child-patient": "Paciente Infantil"
+      },
+      "noMessages": "¡Aún no hay mensajes. Envía el primero!",
+      "errorSending": "Error al enviar mensaje"
+    },
+    "treatment": {
+      "title": "Tu Aventura de la Sonrisa",
+      "subtitle": "¡Sigue tu aventura hacia una sonrisa increíble!",
+      "timeline": {
+        "title": "Línea de Tiempo del Tratamiento",
+        "aligner": "Alineador #{{number}}",
+        "startDate": "Inicio",
+        "endDate": "Fin",
+        "daysUsed": "Uso acumulado",
+        "totalHours": "Horas totales",
+        "expectedChange": "Cambio esperado",
+        "notes": "Notas"
+      },
+      "phases": {
+        "title": "Mapa del Tesoro",
+        "phaseCount": "{{count}} Fases",
+        "loading": "Cargando fases...",
+        "alignerRange": "Alineadores {{start}} a {{end}}",
+        "completed": "Completado",
+        "inProgress": "En Curso",
+        "milestones": {
+          "start": "Inicio de la Aventura",
+          "quarter": "Progreso Inicial",
+          "half": "Mitad del Camino",
+          "threeQuarters": "Recta Final",
+          "end": "¡Fin de la Aventura!"
+        }
+      },
+      "progress": {
+        "title": "Progreso Actual",
+        "currentAligner": "Alineador {{number}}",
+        "completed": "¡Ya has completado el {{percent}}% de tu aventura!"
+      }
+    },
+    "gamification": {
+      "stats": {
+        "coins": "Monedas",
+        "level": "Nivel",
+        "xp": "XP",
+        "streak": "Racha",
+        "nextLevel": "{{current}}/{{target}} XP"
+      },
+      "levels": {
+        "current": "Nivel {{level}}",
+        "progress": "{{xp}} XP hasta el próximo nivel"
+      },
+      "achievements": {
+        "title": "Logros",
+        "unlocked": "Desbloqueado",
+        "locked": "Bloqueado"
+      },
+      "streak": {
+        "title": "¡Racha Activa!",
+        "days_one": "{{count}} día",
+        "days_other": "{{count}} días",
+        "record": "Récord: {{days}} días",
+        "messages": {
+          "start": "¡Comienza tu aventura hoy!",
+          "day1": "¡Has empezado! ¡Continúa mañana!",
+          "week1": "¡Lo estás haciendo bien! ¡Sigue así!",
+          "week2": "¡Increíble! ¡Eres un campeón!",
+          "month1": "¡LEGENDARIO! ¡Eres imparable!"
+        }
+      }
+    },
+    "adventures": {
+      "title": "Centro de Aventuras",
+      "subtitle": "¡Sigue tu viaje y colecciona sellos increíbles!",
+      "loading": "Cargando tu historia...",
+      "storyDirector": {
+        "title": "Director de Historias",
+        "description": "¡Crea tu propia historia mágica personalizada! Tú eliges el ambiente, personajes y tema.",
+        "createButton": "Crear Historia"
+      },
+      "myStory": {
+        "title": "Mi Historia",
+        "active": "Activa",
+        "continue": "¡Continúa tu aventura mágica! {{unlocked}} de {{total}} capítulos disponibles.",
+        "progress": "Progreso",
+        "viewChapters": "Ver Capítulos"
+      },
+      "badges": {
+        "title": "Colección de Sellos",
+        "earned": "✓ Conquistado",
+        "goldMonth": {
+          "name": "Mes de Oro",
+          "description": "Mes completo de uso"
+        },
+        "diligentPatient": {
+          "name": "Paciente Asiduo",
+          "description": "Alta adherencia"
+        },
+        "superSmile": {
+          "name": "Super Sonrisa",
+          "description": "Progreso excelente"
+        },
+        "photographerPro": {
+          "name": "Fotógrafo Pro",
+          "description": "Envía 10 fotos"
+        }
+      }
+    },
+    "education": {
+      "title": "Escuela de Héroes de la Sonrisa",
+      "subtitle": "¡Aprende todo para tener la sonrisa más poderosa de todas!",
+      "earnRewards": {
+        "title": "¡Gana Recompensas!",
+        "description": "Completa contenidos educacionales y gana monedas"
+      },
+      "lesson": {
+        "watchAndQuiz": "Ver y responder quiz",
+        "completed": "Completado",
+        "coins": "+{{coins}} monedas"
+      },
+      "quiz": {
+        "title": "Quiz",
+        "question": "{{number}}. {{question}}",
+        "submit": "Enviar respuestas",
+        "submitting": "Enviando...",
+        "close": "Cerrar",
+        "successTitle": "🎉 ¡Felicitaciones!",
+        "successMessage": "Aprobaste con {{score}}%",
+        "failTitle": "¡Casi!",
+        "failMessage": "Obtuviste {{score}}%. ¡Inténtalo de nuevo!",
+        "submitError": "Error al enviar quiz"
+      }
+    },
+    "journey": {
+      "title": "¡Tu Viaje Hacia la Super Sonrisa!",
+      "currentProgress": "Estás en el alineador <strong>{{current}}</strong> de {{total}}!",
+      "percentComplete": "{{percent}}% completo",
+      "daysRemaining_one": "¡Falta {{count}} día!",
+      "daysRemaining_other": "¡Faltan {{count}} días!",
+      "startTreatment": "Iniciar Tratamiento",
+      "starting": "Iniciando...",
+      "nextAligner": "¡Pasé al siguiente alineador!",
+      "changing": "Cambiando...",
+      "completed": "🎉 ¡Felicitaciones! ¡Completaste tu viaje! 🎉"
+    },
+    "storyChapters": {
+      "title": "Historias y Capítulos",
+      "progress": "Progreso de Desbloqueo",
+      "chaptersCount": "{{unlocked}}/{{total}} capítulos",
+      "chapter": "Capítulo {{number}}",
+      "unlocked": "Desbloqueado",
+      "nextUnlock": "Próximo: Alineador #{{number}}",
+      "requiredAligner": "Alineador #{{number}}",
+      "nextChapterIn": "Próximo capítulo se desbloquea en:",
+      "alignersRemaining_one": "Falta {{count}} alineador",
+      "alignersRemaining_other": "Faltan {{count}} alineadores",
+      "almostThere": "¡Estás cerca!"
+    },
+    "parentZone": {
+      "title": "Área de Padres: Ítems Propios",
+      "newVoucher": "Nuevo Vale",
+      "myVouchers": "Mis vales",
+      "loading": "Cargando...",
+      "noItems": "Ningún ítem creado aún.",
+      "coins": "{{count}} coins",
+      "level": "nivel {{level}}+",
+      "form": {
+        "title": "Nuevo vale",
+        "name": "Nombre",
+        "description": "Descripción",
+        "price": "Precio (coins)",
+        "minLevel": "Nivel mínimo",
+        "save": "Guardar"
+      },
+      "errors": {
+        "loadFailed": "Error al cargar",
+        "createFailed": "Error al crear ítem"
+      }
+    }
+  },
+  "missions": {
+    "usage": {
+      "dailyPerfect": "Uso Diario Perfecto",
+      "dailyPerfectDesc": "Usa el alineador durante 22 horas o más hoy",
+      "weekComplete": "Semana Completa",
+      "weekCompleteDesc": "Usa el alineador durante 22h+ durante 7 días consecutivos",
+      "monthChampion": "Mes Campeón",
+      "monthChampionDesc": "Completa 30 días con 20h+ de uso del alineador"
+    },
+    "hygiene": {
+      "impeccable": "Higiene Impecable",
+      "impeccableDesc": "Limpia el alineador 2 veces al día durante 7 días",
+      "dailyFloss": "Hilo Dental Diario",
+      "dailyFlossDesc": "Usa hilo dental todos los días durante una semana"
+    },
+    "milestones": {
+      "firstWeek": "Primera Semana",
+      "firstWeekDesc": "Completa tu primera semana de tratamiento",
+      "firstMonth": "Primer Mes",
+      "firstMonthDesc": "Completa tu primer mes de tratamiento",
+      "halfway": "Mitad del Camino",
+      "halfwayDesc": "Alcanza la mitad de tus alineadores"
+    }
+  },
+  "timeline": {
+    "title": "Línea de Tiempo del Tratamiento",
+    "aligner": "Alineador #{{number}}",
+    "startDate": "Inicio",
+    "endDate": "Fin",
+    "daysUsed": "Uso acumulado",
+    "totalHours": "Horas totales",
+    "expectedChange": "Cambio esperado",
+    "notes": "Notas",
+    "status": {
+      "completed": "Completado",
+      "active": "Activo",
+      "delayed": "Retrasado",
+      "pending": "Pendiente"
+    }
+  },
+  "gamification": {
+    "level": "Nivel",
+    "points": "Puntos",
+    "coins": "Monedas",
+    "xp": "XP",
+    "leaderboard": "Clasificación",
+    "achievements": "Logros",
+    "rewards": "Recompensas"
+  },
+  "settings": {
+    "title": "Configuración",
+    "profile": "Perfil",
+    "language": "Idioma",
+    "notifications": "Notificaciones",
+    "privacy": "Privacidad",
+    "selectLanguage": "Seleccionar Idioma"
+  },
+  "languages": {
+    "pt-BR": "Português (Brasil)",
+    "pt-PT": "Português (Portugal)",
+    "en-US": "English (US)",
+    "es-ES": "Español (España)"
+  },
+  "store": {
+    "title": "Tienda",
+    "subtitle": "Usa tus monedas para cambiar por artículos digitales y premios.",
+    "myRewards": "Mis Premios",
+    "loading": "Cargando tienda...",
+    "loginRequired": "Inicia sesión para acceder a la tienda.",
+    "noItems": "No hay artículos disponibles en este momento.",
+    "buy": "Comprar",
+    "buying": "Comprando...",
+    "owned": "Ya comprado",
+    "purchaseSuccess": "✅ ¡Artículo comprado! Ver en Mis Premios.",
+    "purchaseRequestSuccess": "✅ ¡Pedido enviado! Espera aprobación.",
+    "purchaseError": "Error al comprar artículo",
+    "insufficientCoins": "Monedas insuficientes",
+    "requiredLevel": "Nivel {{level}}+",
+    "itemTypes": {
+      "real": "Vale",
+      "digital": "Digital"
+    },
+    "categories": {
+      "all": "Todos",
+      "avatars": "Avatares",
+      "frames": "Marcos",
+      "backgrounds": "Fondos",
+      "physical": "Premios Físicos"
+    }
+  },
+  "rewards": {
+    "title": "Mis Premios",
+    "subtitle": "Artículos comprados y canjes pendientes.",
+    "loginRequired": "Inicia sesión para ver tus premios.",
+    "loading": "Cargando...",
+    "goToStore": "Ir a Tienda",
+    "approveRedemptions": "Aprobar Canjes",
+    "inventory": {
+      "title": "Mi Mochila (Digitales)",
+      "empty": "Aún no has comprado artículos digitales.",
+      "quantity": "x{{count}}",
+      "active": "Activo",
+      "seeDetails": "Ver detalles",
+      "activate": "Activar",
+      "deactivate": "Desactivar",
+      "activated": "Cosmético activado",
+      "deactivated": "Cosmético desactivado",
+      "updateError": "Error al actualizar cosmético"
+    },
+    "redemptions": {
+      "title": "Canjes (Vales)",
+      "empty": "Ningún canje solicitado aún.",
+      "requestedOn": "Pedido: {{date}}"
+    },
+    "status": {
+      "requested": "Solicitado",
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
+      "delivered": "Entregado"
+    }
+  },
+  "errors": {
+    "generic": "Ha ocurrido un error. Inténtalo de nuevo.",
+    "network": "Error de conexión. Verifica tu internet.",
+    "notFound": "No encontrado",
+    "unauthorized": "No autorizado",
+    "forbidden": "Acceso denegado",
+    "loadingPhotos": "Error al cargar fotos",
+    "uploadingPhoto": "Error al enviar foto",
+    "loadingMissions": "Error al cargar misiones",
+    "completingMission": "Error al completar misión",
+    "loadingConversations": "Error al cargar conversas"
+  }
+}

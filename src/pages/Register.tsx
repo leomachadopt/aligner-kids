@@ -22,10 +22,14 @@ import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import type { UserRole } from '@/types/user'
+import { useBodyClass } from '@/hooks/useBodyClass'
 
 type ProfileType = 'paciente' | 'ortodontista'
 
 const Register = () => {
+  // Mantém consistência visual nas rotas públicas.
+  useBodyClass('child-theme', true)
+
   const navigate = useNavigate()
   const { register, isLoading } = useAuth()
 

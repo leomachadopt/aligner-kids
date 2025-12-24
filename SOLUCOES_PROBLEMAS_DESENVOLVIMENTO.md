@@ -105,21 +105,30 @@ cp .env.example .env
 ## ❌ Problema: Frontend Não Encontra o Backend
 
 ### Causa
-URL do backend incorreta.
+Backend não está rodando **ou** URL do backend/proxy está incorreta.
 
 ### Solução
 
-1. Verifique o arquivo `.env` (na raiz do projeto):
+1. Primeiro, verifique se o backend está respondendo:
+
+```bash
+curl http://localhost:3001/api/health
+```
+
+2. Se o backend estiver ok, verifique o arquivo `.env` (na raiz do projeto):
 ```bash
 cat .env | grep VITE_API_URL
 ```
 
-2. Deve conter:
+3. **Importante**:
+
+- Se `VITE_API_URL` **não estiver definido**, o frontend usa **`/api` por padrão** (recomendado). Em dev, o Vite faz proxy de `/api` para `http://localhost:3001`.
+- Se você definir `VITE_API_URL`, ele deve apontar para o backend correto (incluindo `/api`), por exemplo:
+
 ```env
+# Exemplo (opcional)
 VITE_API_URL=http://localhost:3001/api
 ```
-
-3. Se estiver faltando, adicione ao `.env`.
 
 4. Reinicie o frontend:
 ```bash

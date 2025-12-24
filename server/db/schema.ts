@@ -704,3 +704,18 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
+
+// ============================================
+// TRANSLATIONS (Multi-language Support)
+// ============================================
+
+export const translations = pgTable('translations', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  entityType: varchar('entity_type', { length: 100 }).notNull(), // 'mission_template', 'reward_program', etc
+  entityId: varchar('entity_id', { length: 255 }).notNull(), // ID of the entity being translated
+  fieldName: varchar('field_name', { length: 100 }).notNull(), // 'name', 'description', etc
+  language: varchar('language', { length: 10 }).notNull(), // 'pt-BR', 'en-US', 'es-ES', 'pt-PT'
+  value: text('value').notNull(), // Translated text
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})

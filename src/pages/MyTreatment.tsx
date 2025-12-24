@@ -9,8 +9,10 @@ import { calculateTreatmentProgress } from '@/utils/alignerCalculations'
 import { TreatmentTimeline } from '@/components/TreatmentTimeline'
 import { PhaseService } from '@/services/phaseService'
 import type { TreatmentPhase } from '@/types/aligner'
+import { useTranslation } from 'react-i18next'
 
 const MyTreatment = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const treatment = useTreatment()
   const currentAligner = useCurrentAligner()
@@ -47,17 +49,17 @@ const MyTreatment = () => {
   const treatmentSteps = phases.length > 0
     ? phases.map((phase) => ({
         name: phase.phaseName,
-        description: `Alinhadores ${phase.startAlignerNumber} a ${phase.endAlignerNumber}`,
+        description: t('patient.treatment.phases.alignerRange', { start: phase.startAlignerNumber, end: phase.endAlignerNumber }),
         completed: phase.status === 'completed',
         active: phase.status === 'active',
       }))
     : [
         // Fallback to milestones if no phases
-        { name: 'Início da Aventura', description: 'Alinhador 1', completed: currentAlignerNumber >= 1, active: currentAlignerNumber === 1 },
-        { name: `Progresso Inicial`, description: `Alinhador ${Math.floor(totalAligners * 0.25)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.25), active: false },
-        { name: `Meio da Jornada`, description: `Alinhador ${Math.floor(totalAligners * 0.5)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.5), active: false },
-        { name: `Reta Final`, description: `Alinhador ${Math.floor(totalAligners * 0.75)}`, completed: currentAlignerNumber >= Math.floor(totalAligners * 0.75), active: false },
-        { name: 'Fim da Jornada!', description: `Alinhador ${totalAligners}`, completed: currentAlignerNumber >= totalAligners, active: false },
+        { name: t('patient.treatment.phases.milestones.start'), description: t('patient.treatment.timeline.aligner', { number: 1 }), completed: currentAlignerNumber >= 1, active: currentAlignerNumber === 1 },
+        { name: t('patient.treatment.phases.milestones.quarter'), description: t('patient.treatment.timeline.aligner', { number: Math.floor(totalAligners * 0.25) }), completed: currentAlignerNumber >= Math.floor(totalAligners * 0.25), active: false },
+        { name: t('patient.treatment.phases.milestones.half'), description: t('patient.treatment.timeline.aligner', { number: Math.floor(totalAligners * 0.5) }), completed: currentAlignerNumber >= Math.floor(totalAligners * 0.5), active: false },
+        { name: t('patient.treatment.phases.milestones.threeQuarters'), description: t('patient.treatment.timeline.aligner', { number: Math.floor(totalAligners * 0.75) }), completed: currentAlignerNumber >= Math.floor(totalAligners * 0.75), active: false },
+        { name: t('patient.treatment.phases.milestones.end'), description: t('patient.treatment.timeline.aligner', { number: totalAligners }), completed: currentAlignerNumber >= totalAligners, active: false },
       ]
 
   return (
@@ -69,10 +71,10 @@ const MyTreatment = () => {
           className="mb-4 animate-float hover-wiggle"
         />
         <h1 className="font-display text-4xl font-extrabold text-primary">
-          Sua Jornada do Sorriso
+          {t('patient.treatment.title')}
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          Acompanhe sua aventura para um sorriso incrível!
+          {t('patient.treatment.subtitle')}
         </p>
       </div>
 
@@ -80,24 +82,20 @@ const MyTreatment = () => {
         <CardHeader className="bg-gradient-to-r from-blue-400 to-purple-400">
           <CardTitle className="flex items-center gap-2 text-white drop-shadow-lg">
             <Sparkles className="h-6 w-6 animate-wiggle-slow" />
-            Progresso Atual
+            {t('patient.treatment.progress.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <span className="font-bold text-primary-child">Alinhador {currentAlignerNumber}</span>
+            <span className="font-bold text-primary-child">{t('patient.treatment.progress.currentAligner', { number: currentAlignerNumber })}</span>
             <Progress
               value={progressPercentage}
               className="h-4 flex-1 [&>*]:bg-gradient-to-r [&>*]:from-green-400 [&>*]:via-blue-400 [&>*]:to-purple-400"
             />
-            <span className="font-bold text-gray-600">Alinhador {totalAligners}</span>
+            <span className="font-bold text-gray-600">{t('patient.treatment.timeline.aligner', { number: totalAligners })}</span>
           </div>
           <p className="mt-4 text-center text-lg font-semibold text-muted-foreground">
-            Você já completou{' '}
-            <span className="text-2xl font-extrabold text-primary-child">
-              {progressPercentage.toFixed(0)}%
-            </span>{' '}
-            da sua jornada! 🎉
+            {t('patient.treatment.progress.completed', { percent: progressPercentage.toFixed(0) })} 🎉
           </p>
         </CardContent>
       </Card>
@@ -108,13 +106,13 @@ const MyTreatment = () => {
         <CardHeader className="bg-gradient-to-r from-purple-400 to-pink-400">
           <CardTitle className="text-white drop-shadow-lg flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Mapa do Tesouro {phases.length > 0 && `(${phases.length} Fases)`}
+            {t('patient.treatment.phases.title')} {phases.length > 0 && `(${t('patient.treatment.phases.phaseCount', { count: phases.length })})`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           {loadingPhases ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Carregando fases...</p>
+              <p className="text-muted-foreground">{t('patient.treatment.phases.loading')}</p>
             </div>
           ) : (
             <div className="relative pl-6">
@@ -154,10 +152,10 @@ const MyTreatment = () => {
                     </p>
                     <p className="text-sm text-muted-foreground">{step.description}</p>
                     {step.completed && (
-                      <p className="text-sm text-green-600 font-medium">✓ Completado</p>
+                      <p className="text-sm text-green-600 font-medium">✓ {t('patient.treatment.phases.completed')}</p>
                     )}
                     {step.active && (
-                      <p className="text-sm text-blue-600 font-medium">→ Em Andamento</p>
+                      <p className="text-sm text-blue-600 font-medium">→ {t('patient.treatment.phases.inProgress')}</p>
                     )}
                   </div>
                 </div>

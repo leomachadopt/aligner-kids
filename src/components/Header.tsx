@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Menu, User, Settings, HelpCircle, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,49 +15,51 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppSidebar } from '@/components/AppSidebar'
 import { NotificationPanel } from '@/components/NotificationPanel'
 import { GamificationStats } from '@/components/GamificationStats'
+import { LanguageSelector } from '@/components/LanguageSelector'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { useUserRole } from '@/context/UserRoleContext'
 import { useAuth } from '@/context/AuthContext'
 
-const pageTitles: { [key: string]: string } = {
-  '/dashboard': 'Dashboard',
-  '/my-treatment': 'Meu Tratamento',
-  '/photos': 'Fotos',
-  '/chat': 'Chat',
-  '/education': 'Educação',
-  '/gamification': 'Gamificação',
-  '/store': 'Loja',
-  '/my-rewards': 'Prêmios',
-  '/responsible': 'Modo Responsável',
-  '/reports': 'Relatórios',
-  '/patient-management': 'Gerenciamento de Pacientes',
-  '/profile': 'Meu Perfil',
-  '/settings': 'Configurações',
-  '/help': 'Ajuda',
-}
+const getPageTitles = (t: any): { [key: string]: string } => ({
+  '/dashboard': t('header.pageTitles.dashboard'),
+  '/my-treatment': t('header.pageTitles.myTreatment'),
+  '/photos': t('header.pageTitles.photos'),
+  '/chat': t('header.pageTitles.chat'),
+  '/education': t('header.pageTitles.education'),
+  '/gamification': t('header.pageTitles.gamification'),
+  '/store': t('header.pageTitles.store'),
+  '/my-rewards': t('header.pageTitles.myRewards'),
+  '/responsible': t('header.pageTitles.responsible'),
+  '/reports': t('header.pageTitles.reports'),
+  '/patient-management': t('header.pageTitles.patientManagement'),
+  '/profile': t('header.pageTitles.profile'),
+  '/settings': t('header.pageTitles.appSettings'),
+  '/help': t('header.pageTitles.helpPage'),
+})
 
-const childPageTitles: { [key: string]: string } = {
-  '/dashboard': 'Minha Base Secreta',
-  '/my-treatment': 'Jornada do Sorriso',
-  '/photos': 'Fotos Mágicas',
-  '/chat': 'Falar com Doutor(a)',
-  '/education': 'Escola de Heróis',
-  '/gamification': 'Central de Aventuras',
-  '/store': 'Loja do Herói',
-  '/my-rewards': 'Meus Prêmios',
-  '/responsible': 'Modo Responsável',
-  '/reports': 'Relatórios do Detetive',
-  '/profile': 'Meu Perfil de Herói',
-  '/settings': 'Ajustes',
-  '/help': 'Ajuda',
-}
+const getChildPageTitles = (t: any): { [key: string]: string } => ({
+  '/dashboard': t('header.childPageTitles.dashboard'),
+  '/my-treatment': t('header.childPageTitles.myTreatment'),
+  '/photos': t('header.childPageTitles.photos'),
+  '/chat': t('header.childPageTitles.chat'),
+  '/education': t('header.childPageTitles.education'),
+  '/gamification': t('header.childPageTitles.gamification'),
+  '/store': t('header.childPageTitles.store'),
+  '/my-rewards': t('header.childPageTitles.myRewards'),
+  '/responsible': t('header.childPageTitles.responsible'),
+  '/reports': t('header.childPageTitles.reports'),
+  '/profile': t('header.childPageTitles.profile'),
+  '/settings': t('header.childPageTitles.appSettings'),
+  '/help': t('header.childPageTitles.helpPage'),
+})
 
 export const Header = () => {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const { role, isChild } = useUserRole()
   const { user } = useAuth()
+  const { t } = useTranslation()
 
   const handleScroll = () => {
     setScrolled(window.scrollY > 10)
@@ -67,8 +70,10 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const pageTitles = getPageTitles(t)
+  const childPageTitles = getChildPageTitles(t)
   const titles = isChild ? childPageTitles : pageTitles
-  const pageTitle = titles[location.pathname] || 'App Alinhadores'
+  const pageTitle = titles[location.pathname] || t('navigation.appName')
 
   // Obter iniciais do nome
   const getInitials = (name: string) => {
@@ -106,6 +111,7 @@ export const Header = () => {
               <GamificationStats compact />
             </div>
           )}
+          <LanguageSelector variant="dropdown" />
           <NotificationPanel />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -127,31 +133,31 @@ export const Header = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('header.myAccount')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/profile">
                   <User className="mr-2 h-4 w-4" />
-                  Meu Perfil
+                  {t('header.myProfile')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/settings">
                   <Settings className="mr-2 h-4 w-4" />
-                  Configurações
+                  {t('header.settings')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/help">
                   <HelpCircle className="mr-2 h-4 w-4" />
-                  Ajuda
+                  {t('header.help')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sair
+                  {t('header.logout')}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

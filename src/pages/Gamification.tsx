@@ -12,15 +12,10 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useEffect, useState } from 'react'
 import type { StorySeries, StoryChapterV3 } from '@/types/story'
-
-const badges = [
-  { id: '1', name: 'Mês de Ouro', icon: '🏆', earned: true, description: 'Um mês completo de uso', earnedDate: '2024-01-15' },
-  { id: '2', name: 'Paciente Assíduo', icon: '🛡️', earned: true, description: 'Alta aderência', earnedDate: '2024-01-20' },
-  { id: '3', name: 'Super Sorriso', icon: '⭐', earned: true, description: 'Progresso excelente', earnedDate: '2024-02-01' },
-  { id: '4', name: 'Fotógrafo Pro', icon: '📸', earned: false, description: 'Envie 10 fotos', earnedDate: null },
-]
+import { useTranslation } from 'react-i18next'
 
 const Gamification = () => {
+  const { t } = useTranslation()
   const treatment = useTreatment()
   const currentAligner = useCurrentAligner()
   const navigate = useNavigate()
@@ -32,6 +27,13 @@ const Gamification = () => {
 
   const patientId = user?.id
   const currentAlignerNumber = currentAligner?.number || 1
+
+  const badges = [
+    { id: '1', name: t('patient.adventures.badges.goldMonth.name'), icon: '🏆', earned: true, description: t('patient.adventures.badges.goldMonth.description'), earnedDate: '2024-01-15' },
+    { id: '2', name: t('patient.adventures.badges.diligentPatient.name'), icon: '🛡️', earned: true, description: t('patient.adventures.badges.diligentPatient.description'), earnedDate: '2024-01-20' },
+    { id: '3', name: t('patient.adventures.badges.superSmile.name'), icon: '⭐', earned: true, description: t('patient.adventures.badges.superSmile.description'), earnedDate: '2024-02-01' },
+    { id: '4', name: t('patient.adventures.badges.photographerPro.name'), icon: '📸', earned: false, description: t('patient.adventures.badges.photographerPro.description'), earnedDate: null },
+  ]
 
   // Calcular progresso da história
   let storyProgress = 0
@@ -89,7 +91,7 @@ const Gamification = () => {
   if (isLoadingStory) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Carregando sua história...</p>
+        <p className="text-muted-foreground">{t('patient.adventures.loading')}</p>
       </div>
     )
   }
@@ -99,10 +101,10 @@ const Gamification = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-4xl font-extrabold text-primary">
-            Central de Aventuras
+            {t('patient.adventures.title')}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            Acompanhe sua jornada e colecione selos incríveis!
+            {t('patient.adventures.subtitle')}
           </p>
         </div>
         <img
@@ -124,10 +126,10 @@ const Gamification = () => {
                 </div>
                 <div>
                   <h3 className="font-display text-2xl font-bold text-primary-child mb-1">
-                    Diretor de Histórias
+                    {t('patient.adventures.storyDirector.title')}
                   </h3>
                   <p className="text-muted-foreground">
-                    Crie sua própria história mágica personalizada! Você escolhe o ambiente, personagens e tema.
+                    {t('patient.adventures.storyDirector.description')}
                   </p>
                 </div>
               </div>
@@ -137,7 +139,7 @@ const Gamification = () => {
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform min-w-[200px]"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
-                Criar História
+                {t('patient.adventures.storyDirector.createButton')}
               </Button>
             </div>
           </CardContent>
@@ -154,18 +156,18 @@ const Gamification = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-display text-2xl font-bold text-green-700">
-                      {series?.title || 'Minha História'}
+                      {series?.title || t('patient.adventures.myStory.title')}
                     </h3>
                     <Badge variant="default" className="bg-green-600">
-                      Ativa
+                      {t('patient.adventures.myStory.active')}
                     </Badge>
                   </div>
                   <p className="text-muted-foreground mb-3">
-                    Continue sua aventura mágica! {unlockedCount} de {totalChapters} capítulos disponíveis.
+                    {t('patient.adventures.myStory.continue', { unlocked: unlockedCount, total: totalChapters })}
                   </p>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="font-semibold">Progresso</span>
+                      <span className="font-semibold">{t('patient.adventures.myStory.progress')}</span>
                       <span className="text-green-700 font-bold">{Math.round(storyProgress)}%</span>
                     </div>
                     <Progress value={storyProgress} className="h-2" />
@@ -177,7 +179,7 @@ const Gamification = () => {
                 className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform min-w-[200px]"
               >
                 <BookOpen className="mr-2 h-5 w-5" />
-                Ver Capítulos
+                {t('patient.adventures.myStory.viewChapters')}
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
@@ -199,7 +201,7 @@ const Gamification = () => {
         <CardHeader className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
           <CardTitle className="flex items-center gap-2 font-display text-2xl text-white drop-shadow-lg">
             <Sparkles className="h-6 w-6 animate-wiggle-slow" />
-            Coleção de Selos
+            {t('patient.adventures.badges.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 p-6 text-center md:grid-cols-4">
@@ -236,7 +238,7 @@ const Gamification = () => {
                 </p>
                 {badge.earned && badge.earnedDate && (
                   <p className="mt-2 text-xs font-medium text-green-600">
-                    ✓ Conquistado
+                    {t('patient.adventures.badges.earned')}
                   </p>
                 )}
               </div>

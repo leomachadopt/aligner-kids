@@ -1,0 +1,651 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close",
+      "confirm": "Confirm",
+      "continue": "Continue",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "search": "Search",
+      "filter": "Filter",
+      "send": "Send",
+      "upload": "Upload",
+      "download": "Download",
+      "select": "Select",
+      "remove": "Remove",
+      "add": "Add",
+      "refresh": "Refresh",
+      "view": "View",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "states": {
+      "loading": "Loading...",
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information",
+      "empty": "Empty",
+      "noData": "No data",
+      "notFound": "Not found",
+      "processing": "Processing...",
+      "completed": "Completed",
+      "pending": "Pending",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "time": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "tomorrow": "Tomorrow",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "day": "Day",
+      "hour": "Hour",
+      "minute": "Minute",
+      "second": "Second",
+      "ago": "ago",
+      "from_now": "from now"
+    },
+    "numbers": {
+      "day_one": "{{count}} day",
+      "day_other": "{{count}} days",
+      "hour_one": "{{count}} hour",
+      "hour_other": "{{count}} hours",
+      "minute_one": "{{count}} minute",
+      "minute_other": "{{count}} minutes",
+      "point_one": "{{count}} point",
+      "point_other": "{{count}} points",
+      "coin_one": "{{count}} coin",
+      "coin_other": "{{count}} coins",
+      "photo_one": "{{count}} photo",
+      "photo_other": "{{count}} photos"
+    },
+    "answers": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "welcome": "Welcome"
+  },
+  "auth": {
+    "login": "Log In",
+    "logout": "Log Out",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "rememberMe": "Remember me",
+    "loginSuccess": "Login successful",
+    "loginError": "Error logging in",
+    "registerSuccess": "Registration successful",
+    "registerError": "Error during registration"
+  },
+  "navigation": {
+    "appName": "Aligner App",
+    "patient": {
+      "dashboard": "Dashboard",
+      "myTreatment": "My Treatment",
+      "photos": "Photos",
+      "chat": "Chat",
+      "education": "Education",
+      "gamification": "Gamification",
+      "store": "Store",
+      "myRewards": "Rewards",
+      "parentItems": "Parent Items"
+    },
+    "childPatient": {
+      "dashboard": "My Base",
+      "myTreatment": "My Journey",
+      "photos": "Magic Photos",
+      "chat": "Talk to Doctor",
+      "education": "Hero School",
+      "gamification": "Adventures",
+      "store": "Store",
+      "myRewards": "My Rewards",
+      "parentItems": "Parent Items"
+    },
+    "orthodontist": {
+      "dashboard": "Clinical Dashboard",
+      "patientManagement": "Patients",
+      "chat": "Chat",
+      "reports": "Reports",
+      "missionConfig": "Configure Missions",
+      "missionPrograms": "Mission Programs",
+      "rewardsCatalog": "Rewards Catalog",
+      "rewardsPrograms": "Rewards Programs",
+      "storyOptions": "Story Options"
+    },
+    "superAdmin": {
+      "dashboard": "Dashboard",
+      "clinics": "Manage Clinics",
+      "orthodontists": "Approve Orthodontists",
+      "prompts": "Configure AI",
+      "missions": "Manage Missions",
+      "storeTemplates": "Reward Templates",
+      "storyOptions": "Story Options",
+      "missionPrograms": "Mission Programs",
+      "data": "Manage Data",
+      "storageStatus": "Storage Status"
+    }
+  },
+  "header": {
+    "myAccount": "My Account",
+    "myProfile": "My Profile",
+    "settings": "Settings",
+    "help": "Help",
+    "logout": "Log Out",
+    "pageTitles": {
+      "dashboard": "Dashboard",
+      "myTreatment": "My Treatment",
+      "photos": "Photos",
+      "chat": "Chat",
+      "education": "Education",
+      "gamification": "Gamification",
+      "store": "Store",
+      "myRewards": "Rewards",
+      "responsible": "Parent Mode",
+      "reports": "Reports",
+      "patientManagement": "Patient Management",
+      "profile": "My Profile",
+      "appSettings": "Settings",
+      "helpPage": "Help"
+    },
+    "childPageTitles": {
+      "dashboard": "My Secret Base",
+      "myTreatment": "Smile Journey",
+      "photos": "Magic Photos",
+      "chat": "Talk to Doctor",
+      "education": "Hero School",
+      "gamification": "Adventure Center",
+      "store": "Hero Shop",
+      "myRewards": "My Rewards",
+      "responsible": "Parent Mode",
+      "reports": "Detective Reports",
+      "profile": "My Hero Profile",
+      "appSettings": "Settings",
+      "helpPage": "Help"
+    }
+  },
+  "patient": {
+    "dashboard": {
+      "title": "Hey, Champion!",
+      "adultWelcome": "Hello, Patient!",
+      "startTreatment": "Ready to Start?",
+      "startTreatmentTitle": "Start Treatment",
+      "startButton": "Start Treatment",
+      "startMessage": "Click the button below to start your smile journey!",
+      "startTreatmentMessage": "Click the button below to start your treatment",
+      "starting": "Starting...",
+      "confirming": "Confirming...",
+      "nextMission": "Next Mission: Change Aligner!",
+      "nextChange": "Next Change",
+      "daysRemaining_one": "{{count}} day",
+      "daysRemaining_other": "{{count}} days",
+      "alignerNumber": "Aligner #{{number}}",
+      "alignerOf": "of {{total}}",
+      "expectedDate": "Expected date",
+      "switchButton": "Changed!",
+      "confirmChange": "Confirm Change",
+      "waitDays_one": "{{count}} day remaining",
+      "waitDays_other": "{{count}} days remaining",
+      "waitDaysShort_one": "Wait {{count}} day",
+      "waitDaysShort_other": "Wait {{count}} days",
+      "photoTime": "Time to take your photos",
+      "missionProgress": "Mission Progress",
+      "missionDescription": "Wear your aligner for 2 weeks without forgetting!",
+      "treatmentComplete": "{{percent}}% of treatment complete",
+      "takePhotos": "Take Fun Photos",
+      "talkDoctor": "Talk to Doctor",
+      "myRewards": "View My Rewards",
+      "quickActions": "Quick Actions",
+      "sendPhotos": "Send Photos",
+      "chatClinic": "Chat with Clinic",
+      "viewTimeline": "View Timeline",
+      "educationalContent": "Educational Content",
+      "disciplineBadges": "Discipline Badges"
+    },
+    "aligner": {
+      "tracker": {
+        "title": "Usage Tracking",
+        "description": "Wear time and adherence of current aligner",
+        "noAligner": "No active aligner at the moment.",
+        "alignerNumber": "Aligner #{{number}}",
+        "usageToday": "Usage Today",
+        "usageAccumulated": "Accumulated Usage",
+        "targetDaily": "Goal: {{hours}}h/day • minimum {{percent}}%",
+        "totalHours": "{{hours}}h total",
+        "daysUsed": "{{days}} days of wear",
+        "adherence": "Adherence",
+        "pauseUsage": "Pause Usage",
+        "resumeUsage": "Resume Usage",
+        "nextChange": "Next Change",
+        "changeDelayed": "Change Delayed!",
+        "daysDelayed": "You are {{days}} days behind",
+        "daysUntilChange_one": "{{count}} day",
+        "daysUntilChange_other": "{{count}} days",
+        "changeToAligner": "To change to Aligner #{{number}}",
+        "expectedDate": "Expected date: {{date}}",
+        "weeklyAdherence": "Weekly Adherence",
+        "weeklyDescription": "Wear hours in the last 7 days",
+        "chartHours": "hours",
+        "chartTarget": "goal"
+      },
+      "usage": {
+        "currentAligner": "Current Aligner",
+        "usageToday": "Usage today",
+        "totalUsage": "Total usage",
+        "daysUsed_one": "{{count}} day of wear",
+        "daysUsed_other": "{{count}} days of wear",
+        "hoursTotal": "{{hours}}h total"
+      },
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "delayed": "Delayed",
+        "pending": "Pending",
+        "completed": "Completed"
+      },
+      "actions": {
+        "pause": "Pause",
+        "resume": "Resume",
+        "change": "Change Aligner",
+        "nextChange": "Next Change"
+      }
+    },
+    "missions": {
+      "title": "Active Missions",
+      "activeMissions": "Active Missions",
+      "completedMissions": "Completed Missions",
+      "noMissions": "No active missions at the moment",
+      "allCompleted": "All missions completed!",
+      "loading": "Loading missions...",
+      "status": {
+        "inProgress": "In progress",
+        "available": "Available",
+        "completed": "Completed",
+        "locked": "Locked"
+      },
+      "rewards": {
+        "points": "points",
+        "bonusPoints": "bonus",
+        "coins": "coins",
+        "xp": "XP"
+      },
+      "list": {
+        "dailyGoal": "Daily goal achieved!",
+        "weekComplete": "Week complete!",
+        "monthComplete": "Month complete!",
+        "progress": "{{current}} / {{target}}",
+        "earnPoints": "+{{points}} points",
+        "earnBonus": "+{{bonus}} bonus"
+      }
+    },
+    "photos": {
+      "title": "Magic Photo Studio",
+      "subtitle": "Let's capture the evolution of your super smile!",
+      "upload": {
+        "title": "Take New Photos",
+        "description": "Ask an adult for help and follow the examples below to take the best photos.",
+        "instructions": "Capture instructions"
+      },
+      "pending": {
+        "title": "Time to Take Your Photos!",
+        "description": "Aligner {{number}} · {{count}} pending photo",
+        "description_plural": "Aligner {{number}} · {{count}} pending photos",
+        "required": "Required photos:",
+        "takeNow": "Take Photos Now",
+        "earnBonus": "Earn points! Submit all photos and earn up to 150 bonus points!"
+      },
+      "gallery": {
+        "title": "My Smile Gallery",
+        "noPhotos": "No photos yet",
+        "noPhotosDescription": "Start by taking your first progress photos!",
+        "takeFirst": "Take First Photo",
+        "alignerNumber": "Aligner {{number}}",
+        "initialPhotos": "Initial Photos",
+        "photoCount_one": "{{count}} photo",
+        "photoCount_other": "{{count}} photos",
+        "clickToEnlarge": "Click to enlarge",
+        "noPhoto": "No photo",
+        "clinicianNotes": "Clinician Notes:"
+      },
+      "types": {
+        "frontal": "Frontal Smile",
+        "right": "Right Side",
+        "left": "Left Side"
+      }
+    },
+    "chat": {
+      "title": "Conversations",
+      "selectConversation": "Select a conversation",
+      "selectOrthodontist": "Choose an orthodontist to chat with",
+      "selectPatient": "Choose a patient to chat with",
+      "noUsers": "No users found",
+      "placeholder": "Type your message...",
+      "send": "Send",
+      "search": "Search...",
+      "unreadCount_one": "{{count}} unread",
+      "unreadCount_other": "{{count}} unread",
+      "roles": {
+        "orthodontist": "Orthodontist",
+        "patient": "Patient",
+        "child-patient": "Child Patient"
+      },
+      "noMessages": "No messages yet. Send the first one!",
+      "errorSending": "Error sending message"
+    },
+    "treatment": {
+      "title": "Your Smile Journey",
+      "subtitle": "Track your adventure to an amazing smile!",
+      "timeline": {
+        "title": "Treatment Timeline",
+        "aligner": "Aligner #{{number}}",
+        "startDate": "Start",
+        "endDate": "End",
+        "daysUsed": "Accumulated wear",
+        "totalHours": "Total hours",
+        "expectedChange": "Expected change",
+        "notes": "Notes"
+      },
+      "phases": {
+        "title": "Treasure Map",
+        "phaseCount": "{{count}} Phases",
+        "loading": "Loading phases...",
+        "alignerRange": "Aligners {{start}} to {{end}}",
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "milestones": {
+          "start": "Adventure Begins",
+          "quarter": "Initial Progress",
+          "half": "Halfway There",
+          "threeQuarters": "Final Stretch",
+          "end": "Journey Complete!"
+        }
+      },
+      "progress": {
+        "title": "Current Progress",
+        "currentAligner": "Aligner {{number}}",
+        "completed": "You've completed {{percent}}% of your journey!"
+      }
+    },
+    "gamification": {
+      "stats": {
+        "coins": "Coins",
+        "level": "Level",
+        "xp": "XP",
+        "streak": "Streak",
+        "nextLevel": "{{current}}/{{target}} XP"
+      },
+      "levels": {
+        "current": "Level {{level}}",
+        "progress": "{{xp}} XP to next level"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "unlocked": "Unlocked",
+        "locked": "Locked"
+      },
+      "streak": {
+        "title": "Active Streak!",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "record": "Record: {{days}} days",
+        "messages": {
+          "start": "Start your journey today!",
+          "day1": "You started! Keep going tomorrow!",
+          "week1": "You're doing great! Keep it up!",
+          "week2": "Amazing! You're a champion!",
+          "month1": "LEGENDARY! You're unstoppable!"
+        }
+      }
+    },
+    "adventures": {
+      "title": "Adventure Hub",
+      "subtitle": "Track your journey and collect amazing badges!",
+      "loading": "Loading your story...",
+      "storyDirector": {
+        "title": "Story Director",
+        "description": "Create your own personalized magical story! You choose the setting, characters, and theme.",
+        "createButton": "Create Story"
+      },
+      "myStory": {
+        "title": "My Story",
+        "active": "Active",
+        "continue": "Continue your magical adventure! {{unlocked}} of {{total}} chapters available.",
+        "progress": "Progress",
+        "viewChapters": "View Chapters"
+      },
+      "badges": {
+        "title": "Badge Collection",
+        "earned": "✓ Earned",
+        "goldMonth": {
+          "name": "Golden Month",
+          "description": "Complete month of use"
+        },
+        "diligentPatient": {
+          "name": "Diligent Patient",
+          "description": "High adherence"
+        },
+        "superSmile": {
+          "name": "Super Smile",
+          "description": "Excellent progress"
+        },
+        "photographerPro": {
+          "name": "Photographer Pro",
+          "description": "Upload 10 photos"
+        }
+      }
+    },
+    "education": {
+      "title": "Smile Heroes School",
+      "subtitle": "Learn everything to have the most powerful smile of all!",
+      "earnRewards": {
+        "title": "Earn Rewards!",
+        "description": "Complete educational content and earn coins"
+      },
+      "lesson": {
+        "watchAndQuiz": "Watch and answer quiz",
+        "completed": "Completed",
+        "coins": "+{{coins}} coins"
+      },
+      "quiz": {
+        "title": "Quiz",
+        "question": "{{number}}. {{question}}",
+        "submit": "Submit answers",
+        "submitting": "Submitting...",
+        "close": "Close",
+        "successTitle": "🎉 Congratulations!",
+        "successMessage": "You passed with {{score}}%",
+        "failTitle": "Almost!",
+        "failMessage": "You scored {{score}}%. Try again!",
+        "submitError": "Failed to submit quiz"
+      }
+    },
+    "journey": {
+      "title": "Your Journey to a Super Smile!",
+      "currentProgress": "You are on aligner <strong>{{current}}</strong> of {{total}}!",
+      "percentComplete": "{{percent}}% complete",
+      "daysRemaining_one": "{{count}} day left!",
+      "daysRemaining_other": "{{count}} days left!",
+      "startTreatment": "Start Treatment",
+      "starting": "Starting...",
+      "nextAligner": "Move to next aligner!",
+      "changing": "Changing...",
+      "completed": "🎉 Congratulations! You completed your journey! 🎉"
+    },
+    "storyChapters": {
+      "title": "Stories and Chapters",
+      "progress": "Unlock Progress",
+      "chaptersCount": "{{unlocked}}/{{total}} chapters",
+      "chapter": "Chapter {{number}}",
+      "unlocked": "Unlocked",
+      "nextUnlock": "Next: Aligner #{{number}}",
+      "requiredAligner": "Aligner #{{number}}",
+      "nextChapterIn": "Next chapter unlocks at:",
+      "alignersRemaining_one": "{{count}} aligner left",
+      "alignersRemaining_other": "{{count}} aligners left",
+      "almostThere": "You are almost there!"
+    },
+    "parentZone": {
+      "title": "Parent Zone: Custom Items",
+      "newVoucher": "New Voucher",
+      "myVouchers": "My vouchers",
+      "loading": "Loading...",
+      "noItems": "No items created yet.",
+      "coins": "{{count}} coins",
+      "level": "level {{level}}+",
+      "form": {
+        "title": "New voucher",
+        "name": "Name",
+        "description": "Description",
+        "price": "Price (coins)",
+        "minLevel": "Minimum level",
+        "save": "Save"
+      },
+      "errors": {
+        "loadFailed": "Failed to load",
+        "createFailed": "Failed to create item"
+      }
+    }
+  },
+  "missions": {
+    "usage": {
+      "dailyPerfect": "Perfect Daily Wear",
+      "dailyPerfectDesc": "Wear your aligner for 22 hours or more today",
+      "weekComplete": "Week Complete",
+      "weekCompleteDesc": "Wear your aligner for 22h+ for 7 consecutive days",
+      "monthChampion": "Month Champion",
+      "monthChampionDesc": "Complete 30 days with 20h+ of aligner wear"
+    },
+    "hygiene": {
+      "impeccable": "Impeccable Hygiene",
+      "impeccableDesc": "Clean your aligner 2x daily for 7 days",
+      "dailyFloss": "Daily Flossing",
+      "dailyFlossDesc": "Use dental floss every day for a week"
+    },
+    "milestones": {
+      "firstWeek": "First Week",
+      "firstWeekDesc": "Complete your first week of treatment",
+      "firstMonth": "First Month",
+      "firstMonthDesc": "Complete your first month of treatment",
+      "halfway": "Halfway There",
+      "halfwayDesc": "Reach the midpoint of your aligners"
+    }
+  },
+  "timeline": {
+    "title": "Treatment Timeline",
+    "aligner": "Aligner #{{number}}",
+    "startDate": "Start",
+    "endDate": "End",
+    "daysUsed": "Accumulated wear",
+    "totalHours": "Total hours",
+    "expectedChange": "Expected change",
+    "notes": "Notes",
+    "status": {
+      "completed": "Completed",
+      "active": "Active",
+      "delayed": "Delayed",
+      "pending": "Pending"
+    }
+  },
+  "gamification": {
+    "level": "Level",
+    "points": "Points",
+    "coins": "Coins",
+    "xp": "XP",
+    "leaderboard": "Leaderboard",
+    "achievements": "Achievements",
+    "rewards": "Rewards"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "language": "Language",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "selectLanguage": "Select Language"
+  },
+  "languages": {
+    "pt-BR": "Português (Brasil)",
+    "pt-PT": "Português (Portugal)",
+    "en-US": "English (US)",
+    "es-ES": "Español (España)"
+  },
+  "store": {
+    "title": "Store",
+    "subtitle": "Use your coins to exchange for digital items and rewards.",
+    "myRewards": "My Rewards",
+    "loading": "Loading store...",
+    "loginRequired": "Log in to access the store.",
+    "noItems": "No items available at the moment.",
+    "buy": "Buy",
+    "buying": "Buying...",
+    "owned": "Already owned",
+    "purchaseSuccess": "✅ Item purchased! Check My Rewards.",
+    "purchaseRequestSuccess": "✅ Request submitted! Await approval.",
+    "purchaseError": "Error purchasing item",
+    "insufficientCoins": "Insufficient coins",
+    "requiredLevel": "Level {{level}}+",
+    "itemTypes": {
+      "real": "Voucher",
+      "digital": "Digital"
+    },
+    "categories": {
+      "all": "All",
+      "avatars": "Avatars",
+      "frames": "Frames",
+      "backgrounds": "Backgrounds",
+      "physical": "Physical Rewards"
+    }
+  },
+  "rewards": {
+    "title": "My Rewards",
+    "subtitle": "Purchased items and pending redemptions.",
+    "loginRequired": "Log in to see your rewards.",
+    "loading": "Loading...",
+    "goToStore": "Go to Store",
+    "approveRedemptions": "Approve Redemptions",
+    "inventory": {
+      "title": "My Backpack (Digital)",
+      "empty": "You haven't purchased digital items yet.",
+      "quantity": "x{{count}}",
+      "active": "Active",
+      "seeDetails": "See details",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "activated": "Cosmetic activated",
+      "deactivated": "Cosmetic deactivated",
+      "updateError": "Error updating cosmetic"
+    },
+    "redemptions": {
+      "title": "Redemptions (Vouchers)",
+      "empty": "No redemptions requested yet.",
+      "requestedOn": "Requested: {{date}}"
+    },
+    "status": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "delivered": "Delivered"
+    }
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "network": "Connection error. Check your internet.",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied",
+    "loadingPhotos": "Error loading photos",
+    "uploadingPhoto": "Error uploading photo",
+    "loadingMissions": "Error loading missions",
+    "completingMission": "Error completing mission",
+    "loadingConversations": "Error loading conversations"
+  }
+}

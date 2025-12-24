@@ -33,7 +33,19 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale/pt-BR'
+import { ptBR, enUS, es } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
+
+// Map i18n language codes to date-fns locales
+const getDateLocale = (lang: string) => {
+  const localeMap: Record<string, Locale> = {
+    'pt-BR': ptBR,
+    'pt-PT': ptBR,
+    'en-US': enUS,
+    'es-ES': es,
+  }
+  return localeMap[lang] || ptBR
+}
 
 export const AlignerTracker = ({
   showNextChange = true,
@@ -43,16 +55,18 @@ export const AlignerTracker = ({
   const currentAligner = useCurrentAligner()
   const { user } = useAuth()
   const { status, loading, pause, resume } = useAlignerWear(user?.id, currentAligner as any)
+  const { t, i18n } = useTranslation()
+  const dateLocale = getDateLocale(i18n.language)
 
   if (!currentAligner) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Rastreamento de Uso</CardTitle>
+          <CardTitle>{t('patient.aligner.tracker.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Nenhum alinhador ativo no momento.
+            {t('patient.aligner.tracker.noAligner')}
           </p>
         </CardContent>
       </Card>
@@ -66,9 +80,9 @@ export const AlignerTracker = ({
 
   const weekly = status?.weekly || []
   const chartData = weekly.map((d) => ({
-    name: format(new Date(d.date), 'EEE', { locale: ptBR }),
-    horas: ((d.wearMinutes || 0) / 60).toFixed(1),
-    meta: ((d.targetMinutes || 0) / 60).toFixed(1),
+    name: format(new Date(d.date), 'EEE', { locale: dateLocale }),
+    [t('patient.aligner.tracker.chartHours')]: ((d.wearMinutes || 0) / 60).toFixed(1),
+    [t('patient.aligner.tracker.chartTarget')]: ((d.targetMinutes || 0) / 60).toFixed(1),
   }))
 
   const nextAligner = currentAligner.number + 1
@@ -79,37 +93,40 @@ export const AlignerTracker = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Alinhador #{currentAligner.number}
+            {t('patient.aligner.tracker.alignerNumber', { number: currentAligner.number })}
           </CardTitle>
           <CardDescription>
-            Tempo de uso e aderência do alinhador atual
+            {t('patient.aligner.tracker.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Uso Hoje</p>
+              <p className="text-sm text-muted-foreground">{t('patient.aligner.tracker.usageToday')}</p>
               <p className="text-2xl font-bold">
                 {dailyHours.toFixed(1)}h
               </p>
               <p className="text-xs text-muted-foreground">
-                Meta: {currentAligner.wearTime}h/dia • mínimo {(status?.daily?.targetPercent ?? 80)}%
+                {t('patient.aligner.tracker.targetDaily', {
+                  hours: currentAligner.wearTime,
+                  percent: status?.daily?.targetPercent ?? 80
+                })}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Uso Acumulado</p>
+              <p className="text-sm text-muted-foreground">{t('patient.aligner.tracker.usageAccumulated')}</p>
               <p className="text-2xl font-bold">
-                {(currentAligner.usageHours || 0).toFixed(1)}h
+                {t('patient.aligner.tracker.totalHours', { hours: (currentAligner.usageHours || 0).toFixed(1) })}
               </p>
               <p className="text-xs text-muted-foreground">
-                {currentAligner.usageDays} dias de uso
+                {t('patient.aligner.tracker.daysUsed', { days: currentAligner.usageDays })}
               </p>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Aderência</span>
+              <span className="text-sm font-medium">{t('patient.aligner.tracker.adherence')}</span>
               <span className="text-sm font-bold">{adherence.toFixed(0)}%</span>
             </div>
             <Progress value={adherence} className="h-2" />
@@ -124,12 +141,12 @@ export const AlignerTracker = ({
             {status?.state === 'wearing' ? (
               <>
                 <Pause className="mr-2 h-4 w-4" />
-                Pausar Uso
+                {t('patient.aligner.tracker.pauseUsage')}
               </>
             ) : (
               <>
                 <Play className="mr-2 h-4 w-4" />
-                Retomar Uso
+                {t('patient.aligner.tracker.resumeUsage')}
               </>
             )}
           </Button>
@@ -141,7 +158,7 @@ export const AlignerTracker = ({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Próxima Troca
+              {t('patient.aligner.tracker.nextChange')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -149,27 +166,28 @@ export const AlignerTracker = ({
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-5 w-5" />
                 <div>
-                  <p className="font-bold">Troca Atrasada!</p>
+                  <p className="font-bold">{t('patient.aligner.tracker.changeDelayed')}</p>
                   <p className="text-sm">
-                    Você está {Math.abs(daysUntilChange)} dias atrasado
+                    {t('patient.aligner.tracker.daysDelayed', { days: Math.abs(daysUntilChange) })}
                   </p>
                 </div>
               </div>
             ) : (
               <div>
                 <p className="text-3xl font-bold text-primary">
-                  {daysUntilChange} {daysUntilChange === 1 ? 'dia' : 'dias'}
+                  {t('patient.aligner.tracker.daysUntilChange', { count: daysUntilChange })}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Para trocar para o Alinhador #{nextAligner}
+                  {t('patient.aligner.tracker.changeToAligner', { number: nextAligner })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Data esperada:{' '}
-                  {format(
-                    new Date(currentAligner.expectedEndDate),
-                    "dd 'de' MMMM",
-                    { locale: ptBR },
-                  )}
+                  {t('patient.aligner.tracker.expectedDate', {
+                    date: format(
+                      new Date(currentAligner.expectedEndDate),
+                      "dd 'de' MMMM",
+                      { locale: dateLocale },
+                    )
+                  })}
                 </p>
               </div>
             )}
@@ -181,10 +199,10 @@ export const AlignerTracker = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Aderência Semanal
+            {t('patient.aligner.tracker.weeklyAdherence')}
           </CardTitle>
           <CardDescription>
-            Horas de uso nos últimos 7 dias
+            {t('patient.aligner.tracker.weeklyDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -194,8 +212,8 @@ export const AlignerTracker = ({
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="horas" fill="hsl(var(--primary))" />
-              <Bar dataKey="meta" fill="hsl(var(--muted))" opacity={0.3} />
+              <Bar dataKey={t('patient.aligner.tracker.chartHours')} fill="hsl(var(--primary))" />
+              <Bar dataKey={t('patient.aligner.tracker.chartTarget')} fill="hsl(var(--muted))" opacity={0.3} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

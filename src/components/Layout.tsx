@@ -22,6 +22,10 @@ export default function Layout() {
 
   useEffect(() => {
     document.body.classList.toggle('child-theme', isChild)
+    return () => {
+      // Evita "vazamento" de tema ao sair de rotas que usam o Layout (ex: logout -> /).
+      document.body.classList.remove('child-theme')
+    }
   }, [isChild])
 
   if (noLayoutRoutes.includes(location.pathname)) {

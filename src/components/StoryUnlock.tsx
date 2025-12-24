@@ -10,6 +10,7 @@ import {
 import type { StoryChapter } from '@/types/aligner'
 import { Lock, Unlock, BookOpen, Sparkles } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import { useTranslation } from 'react-i18next'
 
 interface StoryUnlockProps {
   chapters?: StoryChapter[]
@@ -20,6 +21,7 @@ export const StoryUnlock = ({
   chapters: providedChapters,
   showProgress = true,
 }: StoryUnlockProps) => {
+  const { t } = useTranslation()
   const treatment = useTreatment()
   const currentAligner = useCurrentAligner()
 
@@ -39,16 +41,16 @@ export const StoryUnlock = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BookOpen className="h-5 w-5" />
-          Histórias e Capítulos
+          {t('patient.storyChapters.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {showProgress && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Progresso de Desbloqueio</span>
+              <span className="text-sm font-medium">{t('patient.storyChapters.progress')}</span>
               <span className="text-sm font-bold">
-                {progress.unlocked}/{progress.total} capítulos
+                {t('patient.storyChapters.chaptersCount', { unlocked: progress.unlocked, total: progress.total })}
               </span>
             </div>
             <Progress value={progress.percentage} className="h-2" />
@@ -86,7 +88,7 @@ export const StoryUnlock = ({
                       {chapter.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Capítulo {chapter.chapterNumber}
+                      {t('patient.storyChapters.chapter', { number: chapter.chapterNumber })}
                     </p>
                   </div>
                 </div>
@@ -94,15 +96,15 @@ export const StoryUnlock = ({
                   {unlocked ? (
                     <Badge variant="default" className="bg-green-500">
                       <Sparkles className="h-3 w-3 mr-1" />
-                      Desbloqueado
+                      {t('patient.storyChapters.unlocked')}
                     </Badge>
                   ) : isNext ? (
                     <Badge variant="outline" className="border-primary">
-                      Próximo: Alinhador #{chapter.requiredAlignerNumber}
+                      {t('patient.storyChapters.nextUnlock', { number: chapter.requiredAlignerNumber })}
                     </Badge>
                   ) : (
                     <Badge variant="secondary">
-                      Alinhador #{chapter.requiredAlignerNumber}
+                      {t('patient.storyChapters.requiredAligner', { number: chapter.requiredAlignerNumber })}
                     </Badge>
                   )}
                 </div>
@@ -114,18 +116,18 @@ export const StoryUnlock = ({
         {nextChapter && !isChapterUnlocked(nextChapter, currentAlignerNumber) && (
           <div className="p-3 rounded-lg bg-primary/10 border border-primary">
             <p className="text-sm font-medium text-primary">
-              Próximo capítulo desbloqueado em:
+              {t('patient.storyChapters.nextChapterIn')}
             </p>
             <p className="text-lg font-bold text-primary mt-1">
-              Alinhador #{nextChapter.requiredAlignerNumber}
+              {t('patient.storyChapters.requiredAligner', { number: nextChapter.requiredAlignerNumber })}
             </p>
             {currentAligner && (
               <p className="text-xs text-muted-foreground mt-1">
                 {nextChapter.requiredAlignerNumber - currentAlignerNumber > 0
-                  ? `Faltam ${
-                      nextChapter.requiredAlignerNumber - currentAlignerNumber
-                    } alinhador(es)`
-                  : 'Você está próximo!'}
+                  ? t(`patient.storyChapters.alignersRemaining_${
+                      nextChapter.requiredAlignerNumber - currentAlignerNumber === 1 ? 'one' : 'other'
+                    }`, { count: nextChapter.requiredAlignerNumber - currentAlignerNumber })
+                  : t('patient.storyChapters.almostThere')}
               </p>
             )}
           </div>
@@ -134,6 +136,8 @@ export const StoryUnlock = ({
     </Card>
   )
 }
+
+
 
 
 

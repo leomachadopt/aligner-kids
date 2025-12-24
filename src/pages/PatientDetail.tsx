@@ -235,6 +235,32 @@ const PatientDetail = () => {
     }
   }
 
+  const handleStartTreatment = async () => {
+    if (!treatment || !id) return
+
+    try {
+      setLoading(true)
+      const result = await alignerService.startTreatment(treatment.id)
+
+      toast.success(result.message || 'Tratamento iniciado com sucesso!')
+
+      // Recarregar dados do tratamento
+      const treatmentData = await alignerService.getTreatmentById(treatment.id)
+      setTreatment(treatmentData)
+
+      const alignersData = await alignerService.getAlignersByPatient(id)
+      setAligners(alignersData)
+
+      const phasesData = await PhaseService.getPhasesByTreatment(treatment.id)
+      setPhases(phasesData)
+    } catch (error) {
+      console.error('Error starting treatment:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar tratamento')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDeleteTreatment = async () => {
     if (!treatment || !id) return
 
@@ -436,16 +462,40 @@ const PatientDetail = () => {
               </div>
             ) : (
               <>
+                {/* Alerta para tratamento pending */}
+                {treatment.status === 'pending' && (
+                  <div className="mb-6 p-6 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 shadow-lg">
+                    <div className="flex items-start gap-4">
+                      <div className="text-4xl">⏳</div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-amber-900 mb-2">Tratamento Aguardando Início</h3>
+                        <p className="text-amber-800 mb-4">
+                          Este tratamento foi criado mas ainda não foi iniciado. As datas serão calculadas automaticamente quando o paciente começar a usar os alinhadores.
+                        </p>
+                        <Button
+                          onClick={handleStartTreatment}
+                          disabled={loading}
+                          className="rounded-full px-8 py-6 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg hover-bounce"
+                        >
+                          🚀 Iniciar Tratamento Agora
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-4 rounded-xl bg-white border-2 border-blue-200 shadow-sm">
                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Status</p>
                     <Badge className={`
                       font-bold text-sm px-3 py-1
+                      ${treatment.status === 'pending' ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-white' : ''}
                       ${treatment.status === 'active' ? 'bg-gradient-to-r from-green-400 to-teal-400 text-white' : ''}
                       ${treatment.status === 'completed' ? 'bg-gradient-to-r from-blue-400 to-purple-400 text-white' : ''}
                       ${treatment.status === 'paused' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : ''}
                       ${treatment.status === 'cancelled' ? 'bg-gradient-to-r from-red-400 to-pink-400 text-white' : ''}
                     `}>
+                      {treatment.status === 'pending' && 'Aguardando Início'}
                       {treatment.status === 'active' && 'Ativo'}
                       {treatment.status === 'completed' && 'Concluído'}
                       {treatment.status === 'paused' && 'Pausado'}
@@ -465,7 +515,7 @@ const PatientDetail = () => {
                   <div className="p-4 rounded-xl bg-white border-2 border-blue-200 shadow-sm">
                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Data de Início</p>
                     <p className="text-lg font-bold text-gray-800">
-                      {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
+                      {treatment.startDate ? new Date(treatment.startDate).toLocaleDateString('pt-BR') : 'A definir'}
                     </p>
                   </div>
                 </div>
@@ -799,12 +849,23 @@ const PatientDetail = () => {
 
       {/* Dialog: Editar Dados do Paciente */}
       <Dialog open={isEditPatientOpen} onOpenChange={setIsEditPatientOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Dados do Paciente</DialogTitle>
-            <DialogDescription>
-              Atualize as informações de {patient?.fullName}
-            </DialogDescription>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 border-gradient-to-r from-blue-300 via-purple-300 to-pink-300">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Editar Dados do Paciente
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 font-medium">
+                  Atualize as informações de {patient?.fullName}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {(() => {
@@ -1054,12 +1115,23 @@ const PatientDetail = () => {
       {/* Dialog: Visualizar Tratamento */}
       {treatment && (
         <Dialog open={isViewTreatmentOpen} onOpenChange={setIsViewTreatmentOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Detalhes do Tratamento</DialogTitle>
-              <DialogDescription>
-                Informações completas do tratamento de {patient?.fullName}
-              </DialogDescription>
+          <DialogContent className="max-w-2xl border-2 border-gradient-to-r from-cyan-300 via-blue-300 to-purple-300">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-400 flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    Detalhes do Tratamento
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600 font-medium">
+                    Informações completas do tratamento de {patient?.fullName}
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -1078,7 +1150,9 @@ const PatientDetail = () => {
                           ? 'default'
                           : 'secondary'
                     }
+                    className={treatment.status === 'pending' ? 'bg-amber-500' : ''}
                   >
+                    {treatment.status === 'pending' && 'Aguardando Início'}
                     {treatment.status === 'active' && 'Ativo'}
                     {treatment.status === 'completed' && 'Concluído'}
                     {treatment.status === 'paused' && 'Pausado'}
@@ -1163,50 +1237,64 @@ const PatientDetail = () => {
       {/* Dialog: Confirmar Exclusão de Tratamento */}
       {treatment && (
         <Dialog open={isDeleteTreatmentOpen} onOpenChange={setIsDeleteTreatmentOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Excluir Tratamento</DialogTitle>
-              <DialogDescription>
-                Tem certeza que deseja excluir este tratamento?
-              </DialogDescription>
+          <DialogContent className="border-2 border-red-300">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-400 to-pink-400 flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                    Excluir Tratamento
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600 font-medium">
+                    Tem certeza que deseja excluir este tratamento?
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
             <div className="space-y-4">
-              <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/20">
-                <p className="text-sm font-semibold text-destructive mb-2">⚠️ Atenção!</p>
-                <p className="text-sm text-muted-foreground">
+              <div className="rounded-xl bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-300 p-4 shadow-md">
+                <p className="text-base font-bold text-red-900 mb-2">⚠️ Atenção!</p>
+                <p className="text-sm text-red-800 leading-relaxed mb-3">
                   Esta ação não pode ser desfeita. Todos os dados relacionados ao tratamento
                   serão permanentemente excluídos:
                 </p>
-                <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                  <li>{phases.length} fase(s) do tratamento</li>
-                  <li>{aligners.length} alinhador(es) cadastrado(s)</li>
+                <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
+                  <li><strong>{phases.length}</strong> fase(s) do tratamento</li>
+                  <li><strong>{aligners.length}</strong> alinhador(es) cadastrado(s)</li>
                   <li>Histórico de uso e progresso</li>
                   <li>Dados de gamificação relacionados</li>
                 </ul>
               </div>
 
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-sm font-semibold">Tratamento:</p>
-                <p className="text-xs text-muted-foreground">ID: {treatment.id}</p>
-                <p className="text-xs text-muted-foreground">
-                  Paciente: {patient?.fullName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Início: {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
-                </p>
+              <div className="rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 border-2 border-slate-300 p-4 shadow-sm">
+                <p className="text-sm font-bold text-slate-900 mb-2">📋 Tratamento:</p>
+                <div className="space-y-1 text-xs text-slate-700">
+                  <p><strong>ID:</strong> <span className="font-mono">{treatment.id}</span></p>
+                  <p><strong>Paciente:</strong> {patient?.fullName}</p>
+                  <p><strong>Início:</strong> {new Date(treatment.startDate).toLocaleDateString('pt-BR')}</p>
+                </div>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="gap-3">
               <Button
                 variant="outline"
                 onClick={() => setIsDeleteTreatmentOpen(false)}
+                className="rounded-xl border-2 font-bold"
               >
                 Cancelar
               </Button>
-              <Button variant="destructive" onClick={handleDeleteTreatment}>
-                Excluir Tratamento
+              <Button
+                variant="destructive"
+                onClick={handleDeleteTreatment}
+                className="rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 font-bold shadow-lg"
+              >
+                🗑️ Excluir Tratamento
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1226,12 +1314,23 @@ const PatientDetail = () => {
 
       {/* Dialog: Listar Todos os Tratamentos */}
       <Dialog open={isListTreatmentsOpen} onOpenChange={setIsListTreatmentsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Todos os Tratamentos</DialogTitle>
-            <DialogDescription>
-              Histórico completo de tratamentos de {patient?.fullName}
-            </DialogDescription>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto border-2 border-gradient-to-r from-green-300 via-teal-300 to-cyan-300">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                  Todos os Tratamentos
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 font-medium">
+                  Histórico completo de tratamentos de {patient?.fullName}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4">

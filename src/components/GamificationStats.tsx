@@ -3,8 +3,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Coins, Flame, Star, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export const GamificationStats = ({ compact = false }: { compact?: boolean }) => {
+  const { t } = useTranslation()
   const { coins, xp, level, currentStreak } = useGamification()
 
   const xpForNextLevel = level * 100
@@ -19,7 +21,7 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
         </div>
         <div className="flex items-center gap-1 rounded-full bg-purple-400 px-3 py-1 shadow-md hover-scale">
           <Star className="h-4 w-4 text-purple-800" />
-          <span className="font-bold text-purple-900">Nv {level}</span>
+          <span className="font-bold text-purple-900">{t('gamification.level')} {level}</span>
         </div>
         {currentStreak > 0 && (
           <div className="flex items-center gap-1 rounded-full bg-orange-400 px-3 py-1 shadow-md hover-scale animate-glow">
@@ -37,7 +39,7 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-yellow-700">Moedas</p>
+              <p className="text-sm font-medium text-yellow-700">{t('gamification.coins')}</p>
               <p className="text-3xl font-bold text-yellow-900">{coins}</p>
             </div>
             <div className="rounded-full bg-yellow-400 p-3 animate-bounce-slow">
@@ -51,9 +53,9 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-sm font-medium text-purple-700">Nível {level}</p>
+              <p className="text-sm font-medium text-purple-700">{t('gamification.level')} {level}</p>
               <p className="text-xl font-bold text-purple-900">
-                {xp % 100}/{xpForNextLevel % 100} XP
+                {xp % 100}/{xpForNextLevel % 100} {t('gamification.xp')}
               </p>
             </div>
             <div className="rounded-full bg-purple-400 p-3 animate-wiggle-slow">
@@ -81,7 +83,7 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
                   currentStreak > 0 ? 'text-orange-700' : 'text-gray-600',
                 )}
               >
-                Sequência
+                {t('patient.gamification.stats.streak')}
               </p>
               <p
                 className={cn(
@@ -89,7 +91,7 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
                   currentStreak > 0 ? 'text-orange-900' : 'text-gray-700',
                 )}
               >
-                {currentStreak} {currentStreak === 1 ? 'dia' : 'dias'}
+                {t('patient.gamification.streak.days', { count: currentStreak })}
               </p>
             </div>
             <div
@@ -115,7 +117,16 @@ export const GamificationStats = ({ compact = false }: { compact?: boolean }) =>
 }
 
 export const StreakCounter = () => {
+  const { t } = useTranslation()
   const { currentStreak, longestStreak } = useGamification()
+
+  const getStreakMessage = () => {
+    if (currentStreak === 0) return t('patient.gamification.streak.messages.start')
+    if (currentStreak === 1) return t('patient.gamification.streak.messages.day1')
+    if (currentStreak < 7) return t('patient.gamification.streak.messages.week1')
+    if (currentStreak < 30) return t('patient.gamification.streak.messages.week2')
+    return t('patient.gamification.streak.messages.month1')
+  }
 
   return (
     <Card className="overflow-hidden border-2 border-orange-400 bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
@@ -132,21 +143,17 @@ export const StreakCounter = () => {
             </div>
           </div>
           <h3 className="font-display text-2xl font-extrabold text-orange-900">
-            Sequência Ativa!
+            {t('patient.gamification.streak.title')}
           </h3>
           <p className="mt-2 text-lg text-orange-700">
-            {currentStreak === 0 && 'Comece sua jornada hoje!'}
-            {currentStreak === 1 && 'Você começou! Continue amanhã!'}
-            {currentStreak > 1 && currentStreak < 7 && 'Você está indo bem! Continue assim!'}
-            {currentStreak >= 7 && currentStreak < 30 && 'Incrível! Você é um campeão!'}
-            {currentStreak >= 30 && 'LENDÁRIO! Você é imparável! 🔥'}
+            {getStreakMessage()}
           </p>
           {longestStreak > currentStreak && (
             <div className="mt-4 rounded-lg bg-orange-100 p-3">
               <div className="flex items-center justify-center gap-2">
                 <TrendingUp className="h-5 w-5 text-orange-600" />
                 <p className="text-sm font-semibold text-orange-800">
-                  Recorde: {longestStreak} dias
+                  {t('patient.gamification.streak.record', { days: longestStreak })}
                 </p>
               </div>
             </div>

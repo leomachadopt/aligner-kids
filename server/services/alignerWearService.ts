@@ -1,6 +1,7 @@
 import { db, aligner_wear_sessions, aligner_wear_daily, aligners, treatment_phases, aligner_quests, patient_points, point_transactions } from '../db'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { MissionProgressService } from './missionProgressService'
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10)
@@ -145,6 +146,10 @@ export class AlignerWearService {
           updatedAt: new Date(),
         } as any)
         .returning()
+
+      // 🎯 Atualizar progresso das missões
+      await MissionProgressService.updateUsageMissions(alignerRow.patientId, alignerRow.id, date)
+
       return { daily: inserted[0], wasOk: false, isOk: isDayOk }
     }
 
@@ -160,6 +165,10 @@ export class AlignerWearService {
       } as any)
       .where(eq(aligner_wear_daily.id, rowId))
       .returning()
+
+    // 🎯 Atualizar progresso das missões
+    await MissionProgressService.updateUsageMissions(alignerRow.patientId, alignerRow.id, date)
+
     return { daily: updated[0], wasOk, isOk: isDayOk }
   }
 

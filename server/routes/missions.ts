@@ -3,8 +3,9 @@
  */
 
 import { Router } from 'express'
-import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates } from '../db/index'
-import { eq, and } from 'drizzle-orm'
+import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates, users } from '../db/index'
+import { eq, and, inArray } from 'drizzle-orm'
+import { TranslationService } from '../services/translationService'
 
 const router = Router()
 
@@ -16,10 +17,15 @@ const router = Router()
 // ============================================
 
 // Get all mission templates
-router.get('/missions/templates', async (_req, res) => {
+router.get('/missions/templates', async (req, res) => {
   try {
+    const language = (req.query.language as string) || 'pt-BR'
     const result = await db.select().from(mission_templates)
-    res.json({ templates: result })
+
+    // Apply translations
+    const translated = await TranslationService.translateMissionTemplates(result, language)
+
+    res.json({ templates: translated })
   } catch (error) {
     console.error('Error fetching mission templates:', error)
     res.status(500).json({ error: 'Failed to fetch mission templates' })
@@ -120,13 +126,48 @@ router.delete('/missions/templates/:id', async (req, res) => {
 router.get('/missions/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params
-    const result = await db
+
+    // Get patient's language preference
+    const patient = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, patientId))
+      .limit(1)
+
+    const language = patient[0]?.preferredLanguage || 'pt-BR'
+
+    // Get patient missions
+    const missions = await db
       .select()
       .from(patient_missions)
       .where(eq(patient_missions.patientId, patientId))
       .orderBy(patient_missions.createdAt)
 
-    res.json({ missions: result })
+    // Get unique template IDs
+    const templateIds = [...new Set(missions.map(m => m.missionTemplateId))]
+
+    // Fetch templates
+    let templates: any[] = []
+    if (templateIds.length > 0) {
+      templates = await db
+        .select()
+        .from(mission_templates)
+        .where(inArray(mission_templates.id, templateIds))
+    }
+
+    // Translate templates
+    const translatedTemplates = await TranslationService.translateMissionTemplates(templates, language)
+
+    // Create a map for quick lookup
+    const templateMap = new Map(translatedTemplates.map(t => [t.id, t]))
+
+    // Attach translated template to each mission
+    const missionsWithTemplates = missions.map(mission => ({
+      ...mission,
+      template: templateMap.get(mission.missionTemplateId),
+    }))
+
+    res.json({ missions: missionsWithTemplates })
   } catch (error) {
     console.error('Error fetching patient missions:', error)
     res.status(500).json({ error: 'Failed to fetch patient missions' })

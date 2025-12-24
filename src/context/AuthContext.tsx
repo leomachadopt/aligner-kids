@@ -26,6 +26,7 @@ interface AuthContextType extends AuthState {
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (updates: UpdateUserInput) => Promise<void>
+  updateUser: (updates: Partial<User>) => void
   changePassword: (input: ChangePasswordInput) => Promise<void>
   refreshUser: () => void
 }
@@ -139,6 +140,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [state.user],
   )
 
+  const updateUser = useCallback(
+    (updates: Partial<User>) => {
+      setState((prev) => ({
+        ...prev,
+        user: prev.user ? { ...prev.user, ...updates } : null,
+      }))
+    },
+    []
+  )
+
   const changePassword = useCallback(
     async (input: ChangePasswordInput) => {
       if (!state.user) {
@@ -166,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         logout,
         updateProfile,
+        updateUser,
         changePassword,
         refreshUser,
       }}

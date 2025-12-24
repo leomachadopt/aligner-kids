@@ -153,35 +153,47 @@ export function PhotoUploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{PHOTO_TYPE_LABELS[photoType]}</DialogTitle>
-          <DialogDescription>
-            Tire uma foto ou selecione um arquivo para enviar
-          </DialogDescription>
+      <DialogContent className="sm:max-w-lg border-2 border-gradient-to-r from-pink-300 via-purple-300 to-blue-300">
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                {PHOTO_TYPE_LABELS[photoType]}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-600 font-medium">
+                Tire uma foto ou selecione um arquivo para enviar
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Select Mode */}
           {mode === 'select' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <Button
                 onClick={startCamera}
                 size="lg"
-                className="gap-2"
+                className="gap-3 rounded-xl py-6 text-lg font-bold bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg"
               >
-                <Camera className="h-5 w-5" />
-                Abrir Câmera
+                <Camera className="h-6 w-6" />
+                📸 Abrir Câmera
               </Button>
 
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
                 size="lg"
-                className="gap-2"
+                className="gap-3 rounded-xl py-6 text-lg font-bold border-2 border-purple-300 hover:bg-purple-50"
               >
-                <Upload className="h-5 w-5" />
-                Selecionar Arquivo
+                <Upload className="h-6 w-6" />
+                📁 Selecionar Arquivo
               </Button>
 
               <input
@@ -197,7 +209,7 @@ export function PhotoUploadModal({
           {/* Camera Mode */}
           {mode === 'camera' && (
             <div className="space-y-4">
-              <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+              <div className="relative aspect-video overflow-hidden rounded-2xl bg-black border-4 border-purple-400 shadow-xl">
                 <video
                   ref={videoRef}
                   className="h-full w-full object-cover"
@@ -207,13 +219,20 @@ export function PhotoUploadModal({
                 />
               </div>
 
-              <div className="flex gap-2">
-                <Button onClick={capturePhoto} className="flex-1 gap-2">
-                  <Camera className="h-4 w-4" />
-                  Capturar Foto
+              <div className="flex gap-3">
+                <Button
+                  onClick={capturePhoto}
+                  className="flex-1 gap-2 rounded-xl py-6 text-base font-bold bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 shadow-lg"
+                >
+                  <Camera className="h-5 w-5" />
+                  📸 Capturar Foto
                 </Button>
-                <Button onClick={retake} variant="outline">
-                  <X className="h-4 w-4" />
+                <Button
+                  onClick={retake}
+                  variant="outline"
+                  className="rounded-xl border-2 px-6"
+                >
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -222,7 +241,7 @@ export function PhotoUploadModal({
           {/* Preview Mode */}
           {mode === 'preview' && photoData && (
             <div className="space-y-4">
-              <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+              <div className="relative aspect-video overflow-hidden rounded-2xl bg-black border-4 border-green-400 shadow-xl">
                 <img
                   src={photoData}
                   alt="Preview"
@@ -230,26 +249,31 @@ export function PhotoUploadModal({
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Button
                   onClick={handleUpload}
                   disabled={isUploading}
-                  className="flex-1 gap-2"
+                  className="flex-1 gap-2 rounded-xl py-6 text-base font-bold bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg"
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Enviando...
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      ⏳ Enviando...
                     </>
                   ) : (
                     <>
-                      <Check className="h-4 w-4" />
-                      Confirmar e Enviar
+                      <Check className="h-5 w-5" />
+                      ✅ Confirmar e Enviar
                     </>
                   )}
                 </Button>
-                <Button onClick={retake} variant="outline" disabled={isUploading}>
-                  <X className="h-4 w-4" />
+                <Button
+                  onClick={retake}
+                  variant="outline"
+                  disabled={isUploading}
+                  className="rounded-xl border-2 px-6"
+                >
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>

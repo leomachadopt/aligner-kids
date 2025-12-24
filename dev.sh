@@ -9,6 +9,9 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}🚀 Iniciando Kids Aligner...${NC}\n"
 
+# Porta padrão do Vite neste projeto (vite.config.ts)
+FRONTEND_PORT="${FRONTEND_PORT:-8080}"
+
 # Verifica se o .env existe
 if [ ! -f .env ]; then
   echo -e "${RED}❌ Arquivo .env não encontrado!${NC}"
@@ -39,10 +42,10 @@ if lsof -Pi :3001 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
   sleep 1
 fi
 
-if lsof -Pi :5173 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-  echo -e "${YELLOW}⚠️  Porta 5173 já está em uso${NC}"
+if lsof -Pi :"$FRONTEND_PORT" -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+  echo -e "${YELLOW}⚠️  Porta ${FRONTEND_PORT} já está em uso${NC}"
   echo -e "${BLUE}Matando processo existente...${NC}"
-  lsof -ti:5173 | xargs kill -9 2>/dev/null
+  lsof -ti:"$FRONTEND_PORT" | xargs kill -9 2>/dev/null
   sleep 1
 fi
 
@@ -68,8 +71,9 @@ for i in {1..30}; do
 done
 
 # Inicia o frontend
-echo -e "${BLUE}🎨 Iniciando frontend na porta 5173...${NC}"
-pnpm run dev > frontend.log 2>&1 &
+echo -e "${BLUE}🎨 Iniciando frontend na porta ${FRONTEND_PORT}...${NC}"
+export PORT="$FRONTEND_PORT"
+pnpm run dev:frontend > frontend.log 2>&1 &
 FRONTEND_PID=$!
 
 # Aguarda o frontend iniciar
@@ -79,7 +83,7 @@ sleep 3
 echo -e "\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✅ Kids Aligner está rodando!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-echo -e "${BLUE}📱 Frontend:  ${NC}http://localhost:5173"
+echo -e "${BLUE}📱 Frontend:  ${NC}http://localhost:${FRONTEND_PORT}"
 echo -e "${BLUE}🔧 Backend:   ${NC}http://localhost:3001"
 echo -e "${BLUE}⚕️  Health:    ${NC}http://localhost:3001/api/health"
 echo -e "${BLUE}📊 DB Studio: ${NC}pnpm db:studio\n"

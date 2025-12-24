@@ -6,6 +6,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/context/AuthContext'
 import { UserRoleProvider } from '@/context/UserRoleContext'
 import { GamificationProvider } from '@/context/GamificationContext'
+import { LanguageProvider } from '@/context/LanguageContext'
+import '@/i18n/config' // Initialize i18n
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -61,12 +63,13 @@ const App = () => (
     future={{ v7_startTransition: false, v7_relativeSplatPath: false }}
   >
     <AuthProvider>
-      <UserRoleProvider>
-        <GamificationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BackendStatusIndicator />
+      <LanguageProvider>
+        <UserRoleProvider>
+          <GamificationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BackendStatusIndicator />
             <Routes>
             {/* Rotas Públicas */}
             <Route path="/" element={<Index />} />
@@ -133,6 +136,7 @@ const App = () => (
         </TooltipProvider>
       </GamificationProvider>
     </UserRoleProvider>
+      </LanguageProvider>
     </AuthProvider>
   </BrowserRouter>
 )

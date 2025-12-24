@@ -15,16 +15,13 @@ import { StoreService } from '@/services/storeService'
 import { toast } from 'sonner'
 import type { PhotoPeriod, PhotoType, ProgressPhoto } from '@/types/photo'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR, enUS, es } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
 import { normalizeActivePhotoFrame } from '@/utils/photoFrames'
-
-const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
-  frontal: 'Sorriso Frontal',
-  right: 'Lado Direito',
-  left: 'Lado Esquerdo',
-}
+import { useTranslation } from 'react-i18next'
 
 const Photos = () => {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [periods, setPeriods] = useState<PhotoPeriod[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +34,16 @@ const Photos = () => {
   const [viewingPhoto, setViewingPhoto] = useState<ProgressPhoto | null>(null)
   const [viewingPhotoType, setViewingPhotoType] = useState<string>('')
   const [activePhotoFrame, setActivePhotoFrame] = useState<any>(null)
+
+  const getDateLocale = (): Locale => {
+    const localeMap: Record<string, Locale> = {
+      'pt-BR': ptBR,
+      'pt-PT': ptBR,
+      'en-US': enUS,
+      'es-ES': es,
+    }
+    return localeMap[i18n.language] || ptBR
+  }
 
   useEffect(() => {
     if (user?.id) {
@@ -124,7 +131,7 @@ const Photos = () => {
 
   const handleViewPhoto = (photo: ProgressPhoto, type: PhotoType) => {
     setViewingPhoto(photo)
-    setViewingPhotoType(PHOTO_TYPE_LABELS[type])
+    setViewingPhotoType(t(`patient.photos.types.${type}`))
   }
 
   if (loading) {
@@ -135,16 +142,18 @@ const Photos = () => {
     )
   }
 
+  const dateLocale = getDateLocale()
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
       <div className="flex flex-col items-center text-center">
         <Camera className="h-16 w-16 text-primary mb-4" />
         <h1 className="font-display text-4xl font-extrabold text-primary">
-          Estúdio de Fotos Mágicas
+          {t('patient.photos.title')}
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          Vamos registrar a evolução do seu super sorriso!
+          {t('patient.photos.subtitle')}
         </p>
       </div>
 
@@ -154,12 +163,12 @@ const Photos = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-900">
               <Info className="h-5 w-5" />
-              Fotos Pendentes - Alinhador {currentAligner}
+              {t('patient.photos.pending.title')} - {t('patient.photos.gallery.alignerNumber', { number: currentAligner })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-amber-800">
-              Você ainda precisa enviar as seguintes fotos para o alinhador atual:
+              {t('patient.photos.pending.description', { number: currentAligner, count: requiredPhotos.length })}
             </p>
             <div className="flex flex-wrap gap-2">
               {requiredPhotos.map((type) => (
@@ -171,7 +180,7 @@ const Photos = () => {
                   className="gap-2 bg-amber-600 hover:bg-amber-700"
                 >
                   <Camera className="h-4 w-4" />
-                  {PHOTO_TYPE_LABELS[type]}
+                  {t(`patient.photos.types.${type}`)}
                 </Button>
               ))}
             </div>
@@ -182,11 +191,11 @@ const Photos = () => {
       {/* Upload Section - Always Available */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Tirar Novas Fotos</CardTitle>
+          <CardTitle>{t('patient.photos.upload.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-muted-foreground">
-            Peça ajuda a um adulto e siga os exemplos abaixo para tirar as melhores fotos.
+            {t('patient.photos.upload.description')}
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             {(['frontal', 'right', 'left'] as PhotoType[]).map((type) => (
@@ -197,7 +206,7 @@ const Photos = () => {
                 className="h-auto flex-col gap-2 p-4"
               >
                 <Camera className="h-6 w-6" />
-                <span>{PHOTO_TYPE_LABELS[type]}</span>
+                <span>{t(`patient.photos.types.${type}`)}</span>
               </Button>
             ))}
           </div>
@@ -207,7 +216,7 @@ const Photos = () => {
       {/* Photos Gallery - Organized by Period */}
       {periods.length > 0 ? (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Minha Galeria de Sorrisos</h2>
+          <h2 className="text-2xl font-bold">{t('patient.photos.gallery.title')}</h2>
           {periods.map((period) => {
             const isExpanded = expandedPeriods.has(period.period)
             const frontal = getPhotoByType(period.photos, 'frontal')
@@ -226,13 +235,13 @@ const Photos = () => {
                       <div>
                         <CardTitle>
                           {period.alignerNumber
-                            ? `Alinhador ${period.alignerNumber}`
-                            : 'Fotos Iniciais'}
+                            ? t('patient.photos.gallery.alignerNumber', { number: period.alignerNumber })
+                            : t('patient.photos.gallery.initialPhotos')}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {period.photos.length} foto{period.photos.length !== 1 ? 's' : ''}
+                          {t(`patient.photos.gallery.photoCount_${period.photos.length === 1 ? 'one' : 'other'}`, { count: period.photos.length })}
                           {period.photos[0] && (
-                            <> · {format(new Date(period.photos[0].capturedAt), 'dd MMM yyyy', { locale: ptBR })}</>
+                            <> · {format(new Date(period.photos[0].capturedAt), 'dd MMM yyyy', { locale: dateLocale })}</>
                           )}
                         </p>
                       </div>
@@ -253,7 +262,7 @@ const Photos = () => {
 
                         return (
                           <div key={type} className="space-y-2">
-                            <p className="font-medium text-sm">{PHOTO_TYPE_LABELS[type]}</p>
+                            <p className="font-medium text-sm">{t(`patient.photos.types.${type}`)}</p>
                             {photo ? (
                               <div
                                 className="group relative aspect-video overflow-hidden rounded-lg border-2 border-primary/20 cursor-pointer"
@@ -261,7 +270,7 @@ const Photos = () => {
                               >
                                 <img
                                   src={photo.photoUrl}
-                                  alt={PHOTO_TYPE_LABELS[type]}
+                                  alt={t(`patient.photos.types.${type}`)}
                                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                 />
                                 {/* Moldura ativa já na miniatura (preview) */}
@@ -280,17 +289,17 @@ const Photos = () => {
                                 <div className="absolute inset-0 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 flex flex-col items-center justify-center gap-2">
                                   <Maximize2 className="h-8 w-8 text-white" />
                                   <p className="font-bold text-white text-sm">
-                                    Clique para ampliar
+                                    {t('patient.photos.gallery.clickToEnlarge')}
                                   </p>
                                   <p className="text-xs text-white">
-                                    {format(new Date(photo.capturedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                    {format(new Date(photo.capturedAt), 'dd/MM/yyyy HH:mm', { locale: dateLocale })}
                                   </p>
                                 </div>
                               </div>
                             ) : (
                               <div className="aspect-video flex items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30">
                                 <p className="text-sm text-muted-foreground">
-                                  Sem foto
+                                  {t('patient.photos.gallery.noPhoto')}
                                 </p>
                               </div>
                             )}
@@ -302,10 +311,10 @@ const Photos = () => {
                     {/* Clinician Notes */}
                     {period.photos.some(p => p.clinicianNotes) && (
                       <div className="mt-4 rounded-lg bg-blue-50 p-4">
-                        <p className="font-semibold text-blue-900 mb-2">Observações Clínicas:</p>
+                        <p className="font-semibold text-blue-900 mb-2">{t('patient.photos.gallery.clinicianNotes')}</p>
                         {period.photos.filter(p => p.clinicianNotes).map(photo => (
                           <div key={photo.id} className="text-sm text-blue-800">
-                            <span className="font-medium">{PHOTO_TYPE_LABELS[photo.photoType]}:</span>{' '}
+                            <span className="font-medium">{t(`patient.photos.types.${photo.photoType}`)}:</span>{' '}
                             {photo.clinicianNotes}
                           </div>
                         ))}
@@ -321,13 +330,13 @@ const Photos = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Camera className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma foto ainda</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('patient.photos.gallery.noPhotos')}</h3>
             <p className="text-muted-foreground mb-4">
-              Comece tirando suas primeiras fotos de progresso!
+              {t('patient.photos.gallery.noPhotosDescription')}
             </p>
             <Button onClick={() => openUploadModal('frontal')} className="gap-2">
               <Camera className="h-4 w-4" />
-              Tirar Primeira Foto
+              {t('patient.photos.gallery.takeFirst')}
             </Button>
           </CardContent>
         </Card>
