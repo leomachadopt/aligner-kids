@@ -45,7 +45,7 @@ async function addMissingPhase1() {
           phaseName: 'Fase 1',
           startAlignerNumber: firstAligner.alignerNumber,
           endAlignerNumber: lastAligner.alignerNumber,
-          totalAlignersInPhase: treatmentAligners.length,
+          totalAligners: treatmentAligners.length,
           currentAlignerNumber: treatment.currentAlignerNumber || 1,
           status: 'active',
           startDate: treatment.startDate,

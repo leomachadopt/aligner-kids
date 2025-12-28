@@ -11,30 +11,20 @@ import { useCurrentAligner } from '@/context/AlignerContext'
 import { useAuth } from '@/context/AuthContext'
 import { useAlignerWear } from '@/hooks/useAlignerWear'
 import {
-  calculateAdherence,
   calculateDaysUntilChange,
   isAlignerOverdue,
 } from '@/utils/alignerCalculations'
 import {
-  Play,
-  Pause,
   Clock,
   Calendar,
-  TrendingUp,
   AlertCircle,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
 import { format } from 'date-fns'
 import { ptBR, enUS, es } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 // Map i18n language codes to date-fns locales
 const getDateLocale = (lang: string) => {
@@ -54,7 +44,7 @@ export const AlignerTracker = ({
 }) => {
   const currentAligner = useCurrentAligner()
   const { user } = useAuth()
-  const { status, loading, pause, resume } = useAlignerWear(user?.id, currentAligner as any)
+  const { status, loading, checkin } = useAlignerWear(user?.id, currentAligner as any)
   const { t, i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
 
@@ -74,16 +64,9 @@ export const AlignerTracker = ({
   }
 
   const daysUntilChange = calculateDaysUntilChange(currentAligner)
-  const dailyHours = (status?.daily?.wearMinutes || 0) / 60
-  const adherence = calculateAdherence(currentAligner, dailyHours)
+  const isDayOk = !!status?.daily?.isDayOk
+  const streakDays = Math.max(0, Number(status?.streakDays || 0))
   const isOverdue = isAlignerOverdue(currentAligner)
-
-  const weekly = status?.weekly || []
-  const chartData = weekly.map((d) => ({
-    name: format(new Date(d.date), 'EEE', { locale: dateLocale }),
-    [t('patient.aligner.tracker.chartHours')]: ((d.wearMinutes || 0) / 60).toFixed(1),
-    [t('patient.aligner.tracker.chartTarget')]: ((d.targetMinutes || 0) / 60).toFixed(1),
-  }))
 
   const nextAligner = currentAligner.number + 1
 
@@ -100,56 +83,69 @@ export const AlignerTracker = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">{t('patient.aligner.tracker.usageToday')}</p>
-              <p className="text-2xl font-bold">
-                {dailyHours.toFixed(1)}h
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t('patient.aligner.tracker.targetDaily', {
-                  hours: currentAligner.wearTime,
-                  percent: status?.daily?.targetPercent ?? 80
-                })}
-              </p>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">
+              {t('patient.aligner.tracker.dailyCheckinTitle')}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              {isDayOk ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold text-green-700">{t('patient.aligner.tracker.checkedInYes')}</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <span className="font-semibold text-red-700">{t('patient.aligner.tracker.checkedInNo')}</span>
+                </>
+              )}
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('patient.aligner.tracker.usageAccumulated')}</p>
-              <p className="text-2xl font-bold">
-                {t('patient.aligner.tracker.totalHours', { hours: (currentAligner.usageHours || 0).toFixed(1) })}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t('patient.aligner.tracker.daysUsed', { days: currentAligner.usageDays })}
-              </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button onClick={() => checkin(true)} disabled={loading} className="w-full">
+                {t('patient.aligner.tracker.checkinYes')}
+              </Button>
+              <Button onClick={() => checkin(false)} disabled={loading} variant="outline" className="w-full">
+                {t('patient.aligner.tracker.checkinNo')}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('patient.aligner.tracker.dailyCheckinHint')}
+            </p>
+
+            <div className="mt-4 rounded-lg bg-muted/40 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">
+                  {t('patient.aligner.tracker.streakLabel')}
+                </span>
+                <span
+                  className={cn(
+                    'text-sm font-bold',
+                    streakDays >= 7 ? 'text-green-700' : 'text-primary',
+                  )}
+                >
+                  {t('patient.aligner.tracker.streakDays', { count: streakDays })}
+                </span>
+              </div>
+
+              <div className="mt-2 space-y-2">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>{t('patient.aligner.tracker.streakToWeek')}</span>
+                    <span>{Math.min(streakDays, 7)}/7</span>
+                  </div>
+                  <Progress value={(Math.min(streakDays, 7) / 7) * 100} className="h-2" />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>{t('patient.aligner.tracker.streakToMonth')}</span>
+                    <span>{Math.min(streakDays, 30)}/30</span>
+                  </div>
+                  <Progress value={(Math.min(streakDays, 30) / 30) * 100} className="h-2" />
+                </div>
+              </div>
             </div>
           </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">{t('patient.aligner.tracker.adherence')}</span>
-              <span className="text-sm font-bold">{adherence.toFixed(0)}%</span>
-            </div>
-            <Progress value={adherence} className="h-2" />
-          </div>
-
-          <Button
-            onClick={status?.state === 'wearing' ? pause : resume}
-            className="w-full"
-            variant={status?.state === 'wearing' ? 'destructive' : 'default'}
-            disabled={loading}
-          >
-            {status?.state === 'wearing' ? (
-              <>
-                <Pause className="mr-2 h-4 w-4" />
-                {t('patient.aligner.tracker.pauseUsage')}
-              </>
-            ) : (
-              <>
-                <Play className="mr-2 h-4 w-4" />
-                {t('patient.aligner.tracker.resumeUsage')}
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
 
@@ -194,30 +190,6 @@ export const AlignerTracker = ({
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            {t('patient.aligner.tracker.weeklyAdherence')}
-          </CardTitle>
-          <CardDescription>
-            {t('patient.aligner.tracker.weeklyDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey={t('patient.aligner.tracker.chartHours')} fill="hsl(var(--primary))" />
-              <Bar dataKey={t('patient.aligner.tracker.chartTarget')} fill="hsl(var(--muted))" opacity={0.3} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   )
 }

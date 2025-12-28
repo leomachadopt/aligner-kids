@@ -12,6 +12,7 @@ export type MissionCategory =
   | 'aligner_change'   // Troca de alinhador
   | 'appointments'     // Consultas
   | 'challenges'       // Desafios especiais
+  | 'photos'           // Fotos do progresso
 
 export type MissionFrequency =
   | 'once'             // Única vez (marcos)
@@ -34,6 +35,8 @@ export type CompletionCriteria =
   | 'percentage'       // X% de algo
   | 'time_based'       // Baseado em tempo
   | 'manual'           // Marcação manual pelo ortodontista
+  | 'photo_upload'     // Conclusão via upload de foto
+  | 'photo_set_complete' // Conclusão via set completo de fotos
 
 /**
  * Tipos de triggers (gatilhos) para ativação automática de missões

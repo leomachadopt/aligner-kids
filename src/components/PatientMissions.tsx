@@ -8,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   CheckCircle2,
   Circle,
   Camera,
@@ -20,6 +28,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { HygieneService, type HygieneDayInput } from '@/services/hygieneService'
 
 interface MissionTemplate {
   id: string
@@ -30,6 +39,7 @@ interface MissionTemplate {
   color?: string
   basePoints: number
   bonusPoints?: number
+  completionCriteria?: string
 }
 
 interface PatientMission {
@@ -39,6 +49,7 @@ interface PatientMission {
   status: string // 'available' | 'in_progress' | 'completed' | 'failed' | 'expired'
   progress: number
   targetValue: number | null
+  triggerAlignerNumber?: number | null
   template?: MissionTemplate
 }
 
@@ -65,6 +76,10 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
   const [templates, setTemplates] = React.useState<Record<string, MissionTemplate>>({})
   const [loading, setLoading] = React.useState(true)
   const [completingId, setCompletingId] = React.useState<string | null>(null)
+  const [currentAligner, setCurrentAligner] = React.useState<number | null>(null)
+  const [hygieneOpen, setHygieneOpen] = React.useState(false)
+  const [hygieneSaving, setHygieneSaving] = React.useState(false)
+  const [hygieneDays, setHygieneDays] = React.useState<HygieneDayInput[]>([])
 
   React.useEffect(() => {
     loadMissions()
@@ -77,14 +92,27 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
       // Buscar missões do paciente (agora inclui templates traduzidos)
       const missionsRes = await fetch(`/api/missions/patient/${patientId}`)
       const missionsData = await missionsRes.json()
+      const ca =
+        typeof missionsData.currentAlignerOverall === 'number'
+          ? missionsData.currentAlignerOverall
+          : null
+      if (ca !== null) setCurrentAligner(ca)
 
       // Filtrar apenas missões ativas (não completadas/expiradas)
-      const activeMissions = missionsData.missions.filter(
+      const activeMissions = (missionsData.missions || []).filter(
         (m: any) => m.status === 'in_progress' || m.status === 'available'
       )
 
+      // Para fotos: só exibir a missão do alinhador atual (evita aparecer missão futura)
+      const filteredMissions = activeMissions.filter((m: any) => {
+        const cat = m?.template?.category
+        if (cat !== 'photos') return true
+        if (typeof ca !== 'number') return true
+        return m.triggerAlignerNumber === ca
+      })
+
       // Remover duplicatas - manter apenas uma missão por template
-      const uniqueMissions = activeMissions.reduce((acc: any[], current: any) => {
+      const uniqueMissions = filteredMissions.reduce((acc: any[], current: any) => {
         const existing = acc.find(m => m.missionTemplateId === current.missionTemplateId)
         if (!existing) {
           acc.push(current)
@@ -131,6 +159,39 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
       alert('Erro ao completar missão')
     } finally {
       setCompletingId(null)
+    }
+  }
+
+  const openHygieneModal = () => {
+    // Últimos 7 dias (inclui hoje)
+    const days: HygieneDayInput[] = []
+    const today = new Date()
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const date = d.toISOString().slice(0, 10)
+      days.push({ date, flossOk: false, alignerCleanCount: 0 })
+    }
+    setHygieneDays(days)
+    setHygieneOpen(true)
+  }
+
+  const saveHygiene = async () => {
+    try {
+      setHygieneSaving(true)
+      await HygieneService.submitWeeklyCheckin({
+        patientId,
+        userId: patientId,
+        days: hygieneDays,
+      })
+      setHygieneOpen(false)
+      await loadMissions()
+      alert('✅ Higiene registrada!')
+    } catch (e) {
+      console.error('Erro ao registrar higiene:', e)
+      alert('Erro ao registrar higiene')
+    } finally {
+      setHygieneSaving(false)
     }
   }
 
@@ -192,6 +253,66 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <Dialog open={hygieneOpen} onOpenChange={setHygieneOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{t('patient.missions.hygieneCheckin.title')}</DialogTitle>
+              <DialogDescription>{t('patient.missions.hygieneCheckin.description')}</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              {hygieneDays.map((d, idx) => (
+                <div key={d.date} className="grid grid-cols-12 gap-2 items-center rounded-md border p-2">
+                  <div className="col-span-4">
+                    <div className="text-sm font-semibold">{d.date}</div>
+                    <div className="text-xs text-muted-foreground">{t('patient.missions.hygieneCheckin.dayLabel')}</div>
+                  </div>
+
+                  <div className="col-span-4 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={d.flossOk}
+                      onChange={(e) => {
+                        const next = [...hygieneDays]
+                        next[idx] = { ...next[idx], flossOk: e.target.checked }
+                        setHygieneDays(next)
+                      }}
+                    />
+                    <span className="text-sm">{t('patient.missions.hygieneCheckin.floss')}</span>
+                  </div>
+
+                  <div className="col-span-4 flex items-center gap-2 justify-end">
+                    <span className="text-sm">{t('patient.missions.hygieneCheckin.clean')}</span>
+                    <select
+                      className="h-9 rounded-md border px-2"
+                      value={d.alignerCleanCount}
+                      onChange={(e) => {
+                        const val = Number(e.target.value || 0)
+                        const next = [...hygieneDays]
+                        next[idx] = { ...next[idx], alignerCleanCount: val }
+                        setHygieneDays(next)
+                      }}
+                    >
+                      <option value={0}>0</option>
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setHygieneOpen(false)} disabled={hygieneSaving}>
+                {t('patient.missions.hygieneCheckin.cancel')}
+              </Button>
+              <Button onClick={saveHygiene} disabled={hygieneSaving}>
+                {hygieneSaving ? t('patient.missions.hygieneCheckin.saving') : t('patient.missions.hygieneCheckin.save')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {missions.slice(0, variant === 'compact' ? 3 : undefined).map((mission) => {
           const template = templates[mission.missionTemplateId]
           if (!template) return null
@@ -201,6 +322,8 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
           const progressPercent = mission.targetValue
             ? (mission.progress / mission.targetValue) * 100
             : 0
+          const isPhoto = template.category === 'photos'
+          const isHygiene = template.category === 'hygiene'
 
           return (
             <div
@@ -288,19 +411,42 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                   {isCompleted ? (
                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCompleteMission(mission.id)}
-                      disabled={completingId === mission.id}
-                      className="hover-bounce"
-                    >
-                      {completingId === mission.id ? (
-                        <Circle className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Circle className="h-4 w-4" />
-                      )}
-                    </Button>
+                    (isPhoto || isHygiene || template.completionCriteria === 'manual') ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (isPhoto) {
+                            window.location.href = '/photos'
+                            return
+                          }
+                          if (isHygiene) {
+                            openHygieneModal()
+                            return
+                          }
+                          handleCompleteMission(mission.id)
+                        }}
+                        disabled={completingId === mission.id}
+                        className="hover-bounce whitespace-nowrap"
+                      >
+                        {completingId === mission.id ? (
+                          <>
+                            <Circle className="h-4 w-4 animate-spin mr-2" />
+                            {isPhoto
+                              ? t('patient.missions.list.goToPhotosButton')
+                              : isHygiene
+                                ? t('patient.missions.hygieneCheckin.button')
+                                : t('patient.missions.list.completeButton')}
+                          </>
+                        ) : (
+                          isPhoto
+                            ? t('patient.missions.list.goToPhotosButton')
+                            : isHygiene
+                              ? t('patient.missions.hygieneCheckin.button')
+                              : t('patient.missions.list.completeButton')
+                        )}
+                      </Button>
+                    ) : null
                   )}
                 </div>
               </div>

@@ -14,6 +14,11 @@ CREATE TABLE IF NOT EXISTS "translations" (
 );
 
 --> statement-breakpoint
+-- If the table already existed without the UNIQUE constraint (older DBs), ensure a matching unique index exists.
+-- This is required for the ON CONFLICT clause below to work.
+CREATE UNIQUE INDEX IF NOT EXISTS "translations_unique_key_idx"
+	ON "translations" ("entity_type", "entity_id", "field_name", "language");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_translations_lookup"
 	ON "translations" ("entity_type", "entity_id", "language");
 --> statement-breakpoint

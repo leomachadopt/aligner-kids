@@ -214,17 +214,20 @@
     "aligner": {
       "tracker": {
         "title": "Seguimiento de Uso",
-        "description": "Tiempo de uso y adherencia del alineador actual",
+        "description": "Check-in diario del uso del alineador",
         "noAligner": "Ningún alineador activo en este momento.",
         "alignerNumber": "Alineador #{{number}}",
-        "usageToday": "Uso Hoy",
-        "usageAccumulated": "Uso Acumulado",
-        "targetDaily": "Meta: {{hours}}h/día • mínimo {{percent}}%",
-        "totalHours": "{{hours}}h totales",
-        "daysUsed": "{{days}} días de uso",
-        "adherence": "Adherencia",
-        "pauseUsage": "Pausar Uso",
-        "resumeUsage": "Reanudar Uso",
+        "dailyCheckinTitle": "¿Tu hijo usó el alineador hoy?",
+        "checkedInYes": "Confirmado: Sí",
+        "checkedInNo": "Confirmado: No",
+        "checkinYes": "Sí",
+        "checkinNo": "No",
+        "dailyCheckinHint": "Marca una vez al día. Esto alimenta misiones automáticas de racha.",
+        "streakLabel": "Racha actual",
+        "streakDays_one": "{{count}} día seguido",
+        "streakDays_other": "{{count}} días seguidos",
+        "streakToWeek": "Hacia la Primera Semana",
+        "streakToMonth": "Hacia el Primer Mes",
         "nextChange": "Próximo Cambio",
         "changeDelayed": "¡Cambio Retrasado!",
         "daysDelayed": "Llevas {{days}} días de retraso",
@@ -233,9 +236,7 @@
         "changeToAligner": "Para cambiar al Alineador #{{number}}",
         "expectedDate": "Fecha esperada: {{date}}",
         "weeklyAdherence": "Adherencia Semanal",
-        "weeklyDescription": "Horas de uso en los últimos 7 días",
-        "chartHours": "horas",
-        "chartTarget": "meta"
+        "weeklyDescription": "Últimos 7 días"
       },
       "usage": {
         "currentAligner": "Alineador Actual",
@@ -284,7 +285,20 @@
         "monthComplete": "¡Mes completo!",
         "progress": "{{current}} / {{target}}",
         "earnPoints": "+{{points}} puntos",
-        "earnBonus": "+{{bonus}} bonificación"
+        "earnBonus": "+{{bonus}} bonificación",
+        "completeButton": "Marcar como completada",
+        "goToPhotosButton": "Enviar fotos"
+      },
+      "hygieneCheckin": {
+        "button": "Registrar higiene",
+        "title": "Higiene semanal (últimos 7 días)",
+        "description": "Completa con el responsable. Esto actualiza las misiones de higiene automáticamente.",
+        "dayLabel": "Marcación diaria",
+        "floss": "Hilo dental",
+        "clean": "Limpieza (0-2x)",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "saving": "Guardando..."
       }
     },
     "photos": {

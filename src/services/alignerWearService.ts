@@ -19,6 +19,7 @@ export type WearStatusResponse = {
   state: WearState
   daily: WearDaily
   weekly?: WearDaily[]
+  streakDays?: number
   celebration?: any | null
 }
 
@@ -33,5 +34,20 @@ export class AlignerWearApi {
 
   static async resume(patientId: string, userId: string, alignerId: string): Promise<WearStatusResponse> {
     return apiClient.post(`/aligners/${encodeURIComponent(alignerId)}/wear/resume`, { patientId, userId })
+  }
+
+  static async checkin(
+    patientId: string,
+    userId: string,
+    alignerId: string,
+    woreAligner: boolean,
+    date?: string,
+  ): Promise<WearStatusResponse> {
+    return apiClient.post(`/aligners/${encodeURIComponent(alignerId)}/wear/checkin`, {
+      patientId,
+      userId,
+      woreAligner,
+      date,
+    })
   }
 }

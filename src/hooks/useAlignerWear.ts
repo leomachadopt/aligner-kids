@@ -43,8 +43,17 @@ export function useAlignerWear(patientId: string | null | undefined, aligner: Al
     setStatus(res)
   }, [patientId, aligner?.id])
 
+  const checkin = useCallback(
+    async (woreAligner: boolean, date?: string) => {
+      if (!patientId || !aligner?.id) return
+      const res = await AlignerWearApi.checkin(patientId, patientId, aligner.id, woreAligner, date)
+      setStatus(res)
+    },
+    [patientId, aligner?.id],
+  )
+
   const dailyHours = useMemo(() => (status?.daily?.wearMinutes || 0) / 60, [status])
   const targetHours = useMemo(() => (status?.daily?.targetMinutes || 0) / 60, [status])
 
-  return { status, loading, refresh, pause, resume, dailyHours, targetHours }
+  return { status, loading, refresh, pause, resume, checkin, dailyHours, targetHours }
 }

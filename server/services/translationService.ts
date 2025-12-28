@@ -114,7 +114,7 @@ export class TranslationService {
 
     for (const field of fields) {
       if (translationMap[field]) {
-        translated[field] = translationMap[field]
+        ;(translated as any)[field] = translationMap[field]
       }
     }
 

@@ -1,4 +1,4 @@
-import { db, aligner_wear_sessions, aligner_wear_daily, aligners, treatment_phases, aligner_quests, patient_points, point_transactions } from '../db'
+import { db, aligner_wear_sessions, aligner_wear_daily, aligners, treatment_phases, aligner_quests, patient_points, point_transactions, treatments } from '../db'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { MissionProgressService } from './missionProgressService'
@@ -120,15 +120,21 @@ export class AlignerWearService {
     const { alignerRow, date } = params
     const targetMinutes = Number(alignerRow.targetHoursPerDay || 22) * 60
     const targetPercent = await this.getPhaseTargetPercent(alignerRow.phaseId)
-    const wearMinutes = await this.computeWearMinutesForDay({ alignerId: String(alignerRow.id), date })
-    const minOk = Math.floor(targetMinutes * (targetPercent / 100))
-    const isDayOk = wearMinutes >= minOk
-
     const existing = await db
       .select()
       .from(aligner_wear_daily)
       .where(and(eq(aligner_wear_daily.alignerId, String(alignerRow.id)), eq(aligner_wear_daily.date, date)))
       .limit(1)
+
+    // If parent already submitted a check-in for the day, do NOT overwrite it with session-derived minutes.
+    if (existing.length > 0 && String((existing[0] as any).source || '') === 'parent_checkin') {
+      const daily = existing[0] as any
+      return { daily, wasOk: !!daily.isDayOk, isOk: !!daily.isDayOk }
+    }
+
+    const wearMinutes = await this.computeWearMinutesForDay({ alignerId: String(alignerRow.id), date })
+    const minOk = Math.floor(targetMinutes * (targetPercent / 100))
+    const isDayOk = wearMinutes >= minOk
 
     const rowId = existing[0]?.id || `awd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     if (existing.length === 0) {
@@ -143,6 +149,7 @@ export class AlignerWearService {
           targetMinutes,
           targetPercent,
           isDayOk,
+          source: 'session',
           updatedAt: new Date(),
         } as any)
         .returning()
@@ -161,6 +168,7 @@ export class AlignerWearService {
         targetMinutes,
         targetPercent,
         isDayOk,
+        source: 'session',
         updatedAt: new Date(),
       } as any)
       .where(eq(aligner_wear_daily.id, rowId))
@@ -197,7 +205,91 @@ export class AlignerWearService {
 
     const weekly = await this.getWeeklyDaily(patientId, String(alignerId))
 
-    return { patientId, alignerId, state, daily, weekly, celebration }
+    const treatmentRows = await db
+      .select()
+      .from(treatments)
+      .where(and(eq(treatments.patientId, patientId), eq(treatments.overallStatus, 'active')))
+      .limit(1)
+    const treatmentStartDate = (treatmentRows[0] as any)?.startDate || null
+    const streakDays = await this.getTrailingOkStreakDays({ patientId, endDate: date, startDate: treatmentStartDate })
+
+    return { patientId, alignerId, state, daily, weekly, streakDays, celebration }
+  }
+
+  /**
+   * Parent daily check-in (simple yes/no). This is the preferred mechanism going forward.
+   */
+  static async checkin(params: { patientId: string; alignerId: string; userId: string; date?: string; woreAligner: boolean }) {
+    const { patientId, alignerId, userId, woreAligner } = params
+    const alignerRow = await this.getAlignerOrThrow(alignerId)
+    if (String(alignerRow.patientId) !== String(patientId)) throw new Error('Sem permissão')
+
+    const date = params.date || ymd(new Date())
+    const targetMinutes = Number(alignerRow.targetHoursPerDay || 22) * 60
+    const targetPercent = await this.getPhaseTargetPercent(alignerRow.phaseId)
+    const minOk = Math.floor(targetMinutes * (targetPercent / 100))
+
+    // For compatibility, store "minutes" as either 0 or minOk (so legacy UI can still show something).
+    const wearMinutes = woreAligner ? minOk : 0
+    const isDayOk = !!woreAligner
+
+    const existing = await db
+      .select()
+      .from(aligner_wear_daily)
+      .where(and(eq(aligner_wear_daily.alignerId, String(alignerId)), eq(aligner_wear_daily.date, date)))
+      .limit(1)
+    const rowId = existing[0]?.id || `awd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    const wasOk = !!existing[0]?.isDayOk
+    let daily: any
+    if (existing.length === 0) {
+      const inserted = await db
+        .insert(aligner_wear_daily)
+        .values({
+          id: rowId,
+          patientId,
+          alignerId,
+          date,
+          wearMinutes,
+          targetMinutes,
+          targetPercent,
+          isDayOk,
+          source: 'parent_checkin',
+          reportedByUserId: userId,
+          updatedAt: new Date(),
+        } as any)
+        .returning()
+      daily = inserted[0]
+    } else {
+      const updated = await db
+        .update(aligner_wear_daily)
+        .set({
+          wearMinutes,
+          targetMinutes,
+          targetPercent,
+          isDayOk,
+          source: 'parent_checkin',
+          reportedByUserId: userId,
+          updatedAt: new Date(),
+        } as any)
+        .where(eq(aligner_wear_daily.id, rowId))
+        .returning()
+      daily = updated[0]
+    }
+
+    // Update missions idempotently
+    await MissionProgressService.updateUsageMissions(patientId, String(alignerId), date)
+
+    // Return status snapshot (do not trigger celebration here; keep it in getStatus)
+    const weekly = await this.getWeeklyDaily(patientId, String(alignerId))
+    const treatmentRows = await db
+      .select()
+      .from(treatments)
+      .where(and(eq(treatments.patientId, patientId), eq(treatments.overallStatus, 'active')))
+      .limit(1)
+    const treatmentStartDate = (treatmentRows[0] as any)?.startDate || null
+    const streakDays = await this.getTrailingOkStreakDays({ patientId, endDate: date, startDate: treatmentStartDate })
+    return { patientId, alignerId, state: 'wearing' as WearState, daily, weekly, streakDays, celebration: (!wasOk && isDayOk) ? { kind: 'daily_goal', title: 'Meta do dia batida!', coins: 10, xp: 5 } : null }
   }
 
   static async getWeeklyDaily(patientId: string, alignerId: string) {
@@ -235,6 +327,44 @@ export class AlignerWearService {
         }
       )
     })
+  }
+
+  static async getTrailingOkStreakDays(params: { patientId: string; endDate: string; startDate?: string | null }) {
+    const { patientId, endDate } = params
+    const limitDays = 40
+    const end = new Date(`${endDate}T00:00:00.000Z`)
+    const start = new Date(end)
+    start.setDate(start.getDate() - (limitDays - 1))
+    const fromStr = ymd(start)
+    const startStr = params.startDate ? ymd(new Date(`${params.startDate}T00:00:00.000Z`)) : null
+    const lowerBound = startStr && startStr > fromStr ? startStr : fromStr
+
+    const rows = await db
+      .select()
+      .from(aligner_wear_daily)
+      .where(
+        and(
+          eq(aligner_wear_daily.patientId, patientId),
+          sql`${aligner_wear_daily.date} >= ${lowerBound} AND ${aligner_wear_daily.date} <= ${endDate}`
+        )
+      )
+
+    const map = new Map<string, boolean>()
+    for (const r of rows as any[]) {
+      map.set(String(r.date), !!r.isDayOk)
+    }
+
+    let streak = 0
+    for (let i = 0; i < limitDays; i++) {
+      const d = new Date(end)
+      d.setDate(d.getDate() - i)
+      const ds = ymd(d)
+      if (startStr && ds < startStr) break
+      if (map.get(ds) !== true) break
+      streak++
+    }
+
+    return streak
   }
 
   static async pause(params: { patientId: string; alignerId: string; userId: string }) {

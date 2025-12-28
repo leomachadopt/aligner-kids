@@ -214,17 +214,20 @@
     "aligner": {
       "tracker": {
         "title": "Usage Tracking",
-        "description": "Wear time and adherence of current aligner",
+        "description": "Daily check-in for aligner usage",
         "noAligner": "No active aligner at the moment.",
         "alignerNumber": "Aligner #{{number}}",
-        "usageToday": "Usage Today",
-        "usageAccumulated": "Accumulated Usage",
-        "targetDaily": "Goal: {{hours}}h/day • minimum {{percent}}%",
-        "totalHours": "{{hours}}h total",
-        "daysUsed": "{{days}} days of wear",
-        "adherence": "Adherence",
-        "pauseUsage": "Pause Usage",
-        "resumeUsage": "Resume Usage",
+        "dailyCheckinTitle": "Did your child wear the aligner today?",
+        "checkedInYes": "Confirmed: Yes",
+        "checkedInNo": "Confirmed: No",
+        "checkinYes": "Yes",
+        "checkinNo": "No",
+        "dailyCheckinHint": "Mark once per day. This powers automatic streak missions.",
+        "streakLabel": "Current streak",
+        "streakDays_one": "{{count}} day in a row",
+        "streakDays_other": "{{count}} days in a row",
+        "streakToWeek": "Towards First Week",
+        "streakToMonth": "Towards First Month",
         "nextChange": "Next Change",
         "changeDelayed": "Change Delayed!",
         "daysDelayed": "You are {{days}} days behind",
@@ -233,9 +236,7 @@
         "changeToAligner": "To change to Aligner #{{number}}",
         "expectedDate": "Expected date: {{date}}",
         "weeklyAdherence": "Weekly Adherence",
-        "weeklyDescription": "Wear hours in the last 7 days",
-        "chartHours": "hours",
-        "chartTarget": "goal"
+        "weeklyDescription": "Last 7 days"
       },
       "usage": {
         "currentAligner": "Current Aligner",
@@ -284,7 +285,20 @@
         "monthComplete": "Month complete!",
         "progress": "{{current}} / {{target}}",
         "earnPoints": "+{{points}} points",
-        "earnBonus": "+{{bonus}} bonus"
+        "earnBonus": "+{{bonus}} bonus",
+        "completeButton": "Mark as complete",
+        "goToPhotosButton": "Submit photos"
+      },
+      "hygieneCheckin": {
+        "button": "Hygiene check-in",
+        "title": "Weekly Hygiene (last 7 days)",
+        "description": "Fill with the parent/guardian. This updates hygiene missions automatically.",
+        "dayLabel": "Daily mark",
+        "floss": "Floss",
+        "clean": "Aligner cleaning (0-2x)",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving..."
       }
     },
     "photos": {

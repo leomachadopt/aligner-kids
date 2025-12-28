@@ -3,16 +3,64 @@
  * Integra o sistema de rastreamento de uso com o sistema de missões
  */
 
-import { db, patient_missions, mission_templates, aligner_wear_daily, patient_points } from '../db'
+import { db, patient_missions, mission_templates, aligner_wear_daily, patient_points, treatments } from '../db'
 import { eq, and, sql } from 'drizzle-orm'
 
 export class MissionProgressService {
+  private static ymd(d: Date) {
+    return d.toISOString().slice(0, 10)
+  }
+
+  /**
+   * Compute trailing consecutive "OK days" ending at `date` (inclusive).
+   * Missing days are treated as NOT OK (break streak).
+   */
+  private static async computeTrailingOkStreak(params: { patientId: string; startDate?: string | null; endDate: string }) {
+    const { patientId, startDate, endDate } = params
+    // We only need up to 40 days for current rules (30-day streak + buffer)
+    const end = new Date(`${endDate}T00:00:00.000Z`)
+    const daysToFetch = 40
+    const start = new Date(end)
+    start.setDate(start.getDate() - (daysToFetch - 1))
+    const startStr = this.ymd(startDate ? new Date(`${startDate}T00:00:00.000Z`) : start)
+    const fromStr = this.ymd(start)
+    const lowerBound = startDate ? (startStr > fromStr ? startStr : fromStr) : fromStr
+
+    const rows = await db
+      .select()
+      .from(aligner_wear_daily)
+      .where(
+        and(
+          eq(aligner_wear_daily.patientId, patientId),
+          sql`${aligner_wear_daily.date} >= ${lowerBound} AND ${aligner_wear_daily.date} <= ${endDate}`
+        )
+      )
+
+    const map = new Map<string, boolean>()
+    for (const r of rows as any[]) {
+      map.set(String(r.date), !!r.isDayOk)
+    }
+
+    let streak = 0
+    for (let i = 0; i < daysToFetch; i++) {
+      const d = new Date(end)
+      d.setDate(d.getDate() - i)
+      const ds = this.ymd(d)
+      if (startDate && ds < startStr) break
+      const ok = map.get(ds) === true
+      if (!ok) break
+      streak++
+    }
+
+    return streak
+  }
+
   /**
    * Atualiza o progresso das missões baseado no uso diário do alinhador
    */
   static async updateUsageMissions(patientId: string, alignerId: string, date: string) {
     try {
-      // Buscar missões ativas de uso do paciente
+      // Buscar missões ativas do paciente (uso + marcos ligados ao uso)
       const activeMissions = await db
         .select()
         .from(patient_missions)
@@ -49,52 +97,47 @@ export class MissionProgressService {
       if (dailyRecord.length === 0) return
 
       const daily = dailyRecord[0]
-      const wearHours = Number(daily.wearMinutes || 0) / 60
+      const isDayOk = !!(daily as any).isDayOk
+
+      // Treatment start date (for milestone streaks)
+      const treatmentRows = await db
+        .select()
+        .from(treatments)
+        .where(and(eq(treatments.patientId, patientId), eq(treatments.overallStatus, 'active')))
+        .limit(1)
+      const treatmentStartDate = (treatmentRows[0] as any)?.startDate || null
 
       // Processar cada missão
       for (const mission of activeMissions) {
         const template = templatesMap.get(mission.missionTemplateId)
-        if (!template || template.category !== 'usage') continue
+        if (!template) continue
 
         let shouldUpdate = false
         let newProgress = mission.progress || 0
         let newStatus = mission.status
 
-        // Uso Diário Perfeito (22h por dia)
+        // Daily "check-in" style missions: treat isDayOk as completion.
+        // (We keep completionCriteria === 'time_based' for backwards compatibility with existing templates.)
         if (template.frequency === 'daily' && template.completionCriteria === 'time_based') {
-          if (wearHours >= (template.targetValue || 22)) {
-            newProgress = template.targetValue || 22
+          if (isDayOk) {
+            newProgress = template.targetValue || 1
             newStatus = 'completed'
             shouldUpdate = true
           }
         }
 
-        // Semana Completa (7 dias consecutivos com 22h+)
-        if (template.frequency === 'weekly' && template.completionCriteria === 'days_streak') {
-          if (daily.isDayOk) {
-            newProgress = (mission.progress || 0) + 1
-            shouldUpdate = true
-
-            if (newProgress >= (template.targetValue || 7)) {
-              newStatus = 'completed'
-            } else {
-              newStatus = 'in_progress'
-            }
-          }
-        }
-
-        // Mês Campeão (30 dias com 20h+)
-        if (template.frequency === 'monthly' && template.completionCriteria === 'days_streak') {
-          if (wearHours >= 20) {
-            newProgress = (mission.progress || 0) + 1
-            shouldUpdate = true
-
-            if (newProgress >= (template.targetValue || 30)) {
-              newStatus = 'completed'
-            } else {
-              newStatus = 'in_progress'
-            }
-          }
+        // Any streak-based mission: set progress to trailing OK streak (idempotent).
+        // This supports both usage and milestone templates (e.g. Primeira Semana, Primeiro Mês).
+        if (template.completionCriteria === 'days_streak') {
+          const target = template.targetValue || 1
+          const streak = await this.computeTrailingOkStreak({
+            patientId,
+            startDate: template.frequency === 'once' ? treatmentStartDate : null,
+            endDate: date,
+          })
+          newProgress = Math.min(streak, target)
+          newStatus = streak >= target ? 'completed' : streak > 0 ? 'in_progress' : mission.status
+          shouldUpdate = true
         }
 
         if (shouldUpdate) {
@@ -121,6 +164,67 @@ export class MissionProgressService {
       }
     } catch (error) {
       console.error('Erro ao atualizar progresso de missões:', error)
+    }
+  }
+
+  /**
+   * Atualiza missões de progresso (ex.: percentage) baseado no tratamento ativo.
+   */
+  static async updateTreatmentProgressMissions(patientId: string) {
+    try {
+      const treatmentRows = await db
+        .select()
+        .from(treatments)
+        .where(and(eq(treatments.patientId, patientId), eq(treatments.overallStatus, 'active')))
+        .limit(1)
+      const t = treatmentRows[0] as any
+      if (!t) return
+      const total = Number(t.totalAlignersOverall || t.totalAligners || 0)
+      const current = Number(t.currentAlignerOverall || 0)
+      if (!total || total <= 0) return
+      const percent = (current / total) * 100
+
+      const missions = await db
+        .select()
+        .from(patient_missions)
+        .where(and(eq(patient_missions.patientId, patientId), sql`${patient_missions.status} IN ('available','in_progress')`))
+
+      if (missions.length === 0) return
+      const templateIds = [...new Set(missions.map(m => m.missionTemplateId))]
+      const templates = await db
+        .select()
+        .from(mission_templates)
+        .where(sql`${mission_templates.id} IN (${sql.join(templateIds.map(id => sql`${id}`), sql`, `)})`)
+      const templatesMap = new Map(templates.map(tt => [tt.id, tt]))
+
+      for (const m of missions as any[]) {
+        const tmpl = templatesMap.get(m.missionTemplateId) as any
+        if (!tmpl) continue
+        if (tmpl.completionCriteria !== 'percentage') continue
+
+        const target = Number(tmpl.targetValue || 100)
+        const newProgress = Math.min(Math.round(percent), target)
+        const isNowCompleted = percent >= target
+        const newStatus = isNowCompleted ? 'completed' : m.status === 'available' ? 'in_progress' : m.status
+
+        const wasCompleted = m.status === 'completed'
+        await db
+          .update(patient_missions)
+          .set({
+            progress: newProgress,
+            status: newStatus,
+            completedAt: isNowCompleted && !wasCompleted ? new Date() : m.completedAt,
+            updatedAt: new Date(),
+          } as any)
+          .where(eq(patient_missions.id, m.id))
+
+        if (isNowCompleted && !wasCompleted) {
+          const points = Number(tmpl.basePoints || 0) + Number(tmpl.bonusPoints || 0)
+          await this.awardPoints(patientId, points, m.id, tmpl.name)
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao atualizar missões de progresso do tratamento:', e)
     }
   }
 
@@ -230,6 +334,12 @@ export class MissionProgressService {
           updatedAt: new Date(),
         } as any)
         .where(eq(patient_missions.id, missionId))
+
+      // Keep missionName referenced for TS + observability
+      if (missionName) {
+        // eslint-disable-next-line no-console
+        console.log(`💰 Pontos atribuídos via missão: ${missionName} (+${points})`)
+      }
     } catch (error) {
       console.error('Erro ao atribuir pontos:', error)
     }

@@ -5,7 +5,7 @@
 
 import { Router } from 'express'
 import { db, progress_photos, treatments, patient_missions, mission_templates, patient_points, aligners } from '../db/index'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 const router = Router()
@@ -46,6 +46,20 @@ router.post('/upload', async (req, res) => {
     const base64Data = matches[2]
     const fileSize = Buffer.from(base64Data, 'base64').length
 
+    // Se alignerNumber não vier, tenta inferir pelo tratamento (evita missões não atualizarem)
+    let effectiveAlignerNumber: number | null =
+      typeof alignerNumber === 'number' ? alignerNumber : null
+    if (effectiveAlignerNumber === null) {
+      const t = await db
+        .select()
+        .from(treatments)
+        .where(eq(treatments.id, treatmentId))
+        .limit(1)
+      if (t.length > 0 && typeof t[0].currentAlignerOverall === 'number') {
+        effectiveAlignerNumber = t[0].currentAlignerOverall
+      }
+    }
+
     // Cria registro no banco
     const photoId = nanoid()
     const now = new Date()
@@ -55,11 +69,11 @@ router.post('/upload', async (req, res) => {
       patientId,
       treatmentId,
       phaseId: phaseId || null,
-      alignerNumber: alignerNumber || null,
+      alignerNumber: effectiveAlignerNumber,
       photoType,
       photoUrl: photoData, // Em produção, isso seria uma URL do S3/Cloudinary
       thumbnailUrl: null, // Pode ser gerado posteriormente
-      fileName: `${photoType}-${alignerNumber || 'inicial'}-${Date.now()}.jpg`,
+      fileName: `${photoType}-${effectiveAlignerNumber ?? 'inicial'}-${Date.now()}.jpg`,
       fileSize,
       mimeType,
       capturedAt: capturedAt ? new Date(capturedAt) : now,
@@ -74,7 +88,9 @@ router.post('/upload', async (req, res) => {
     await db.insert(progress_photos).values(newPhoto)
 
     // Atualizar missões de fotos e gamificação
-    await updatePhotoMissions(patientId, alignerNumber || 0, photoType)
+    if (typeof effectiveAlignerNumber === 'number') {
+      await updatePhotoMissions(patientId, effectiveAlignerNumber, photoType)
+    }
 
     res.status(201).json({
       success: true,
@@ -264,6 +280,47 @@ router.get('/required/:patientId', async (req, res) => {
 
     const treatment = treatmentResults[0]
     const currentAligner = treatment.currentAlignerOverall
+
+    // Só exigir fotos quando houver missão de fotos para o alinhador atual
+    const photoTemplates = await db
+      .select({ id: mission_templates.id })
+      .from(mission_templates)
+      .where(eq(mission_templates.category, 'photos'))
+
+    const photoTemplateIds = photoTemplates.map(t => t.id)
+    if (photoTemplateIds.length === 0) {
+      return res.json({
+        success: true,
+        required: false,
+        currentAligner,
+        missingTypes: [],
+        existingPhotos: 0,
+        message: 'Nenhuma missão de fotos configurada'
+      })
+    }
+
+    const hasPhotoMissionForCurrentAligner = await db
+      .select({ id: patient_missions.id })
+      .from(patient_missions)
+      .where(
+        and(
+          eq(patient_missions.patientId, patientId),
+          inArray(patient_missions.missionTemplateId, photoTemplateIds),
+          eq(patient_missions.triggerAlignerNumber, currentAligner)
+        )
+      )
+      .limit(1)
+
+    if (hasPhotoMissionForCurrentAligner.length === 0) {
+      return res.json({
+        success: true,
+        required: false,
+        currentAligner,
+        missingTypes: [],
+        existingPhotos: 0,
+        message: 'Fotos não são necessárias neste alinhador'
+      })
+    }
 
     // Verifica se já existem fotos para o alinhador atual
     const existingPhotos = await db

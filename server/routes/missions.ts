@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates, users } from '../db/index'
+import { db, mission_templates, patient_missions, patient_points, mission_programs, mission_program_templates, users, treatments } from '../db/index'
 import { eq, and, inArray } from 'drizzle-orm'
 import { TranslationService } from '../services/translationService'
 
@@ -143,6 +143,20 @@ router.get('/missions/patient/:patientId', async (req, res) => {
       .where(eq(patient_missions.patientId, patientId))
       .orderBy(patient_missions.createdAt)
 
+    // Get active treatment (to expose current aligner for UI filtering, esp. photos)
+    const treatmentResults = await db
+      .select()
+      .from(treatments)
+      .where(
+        and(
+          eq(treatments.patientId, patientId),
+          eq(treatments.overallStatus, 'active')
+        )
+      )
+      .limit(1)
+
+    const currentAlignerOverall = treatmentResults[0]?.currentAlignerOverall ?? null
+
     // Get unique template IDs
     const templateIds = [...new Set(missions.map(m => m.missionTemplateId))]
 
@@ -167,7 +181,7 @@ router.get('/missions/patient/:patientId', async (req, res) => {
       template: templateMap.get(mission.missionTemplateId),
     }))
 
-    res.json({ missions: missionsWithTemplates })
+    res.json({ missions: missionsWithTemplates, currentAlignerOverall })
   } catch (error) {
     console.error('Error fetching patient missions:', error)
     res.status(500).json({ error: 'Failed to fetch patient missions' })
@@ -272,6 +286,14 @@ router.post('/missions/:id/complete', async (req, res) => {
       .where(eq(mission_templates.id, mission.missionTemplateId))
 
     const template = templateResult[0]
+    // Guardrails: manual confirms only for truly manual templates.
+    const isManuallyCompletable = template?.completionCriteria === 'manual'
+    if (!isManuallyCompletable) {
+      return res.status(403).json({
+        error: 'This mission cannot be completed manually',
+      })
+    }
+
     const rewardCoins = mission.customPoints ?? template?.basePoints ?? 0
     const rewardXp = Math.floor(rewardCoins / 2)
 
@@ -495,6 +517,28 @@ async function applyProgramToPatient(programId: string, patientId: string, total
 
     if (templateResult.length === 0) continue
     const template = templateResult[0]
+
+    if (template.frequency === 'once') {
+      const missionId = `mission-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`
+      missionsToInsert.push({
+        id: missionId,
+        patientId,
+        missionTemplateId: template.id,
+        status: 'available',
+        progress: 0,
+        targetValue: template.targetValue || 1,
+        trigger: pt.trigger || 'on_treatment_start',
+        triggerAlignerNumber: null,
+        triggerDaysOffset: pt.triggerDaysOffset || null,
+        autoActivated: true,
+        expiresAt: null,
+        pointsEarned: 0,
+        customPoints: pt.customPoints || template.basePoints,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      continue
+    }
 
     const interval = pt.alignerInterval || 1
     const maxAligners = totalAligners || template.targetValue || 1

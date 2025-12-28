@@ -143,6 +143,7 @@ export const aligners = pgTable('aligners', {
   status: varchar('status', { length: 50 }).default('upcoming').notNull(),
   usageHours: integer('usage_hours').default(0),
   targetHoursPerDay: integer('target_hours_per_day').default(22),
+  changeInterval: integer('change_interval').default(14),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -174,6 +175,24 @@ export const aligner_wear_daily = pgTable('aligner_wear_daily', {
   targetMinutes: integer('target_minutes').default(0).notNull(),
   targetPercent: integer('target_percent').default(80).notNull(),
   isDayOk: boolean('is_day_ok').default(false).notNull(),
+  source: varchar('source', { length: 30 }).default('session').notNull(), // 'session' | 'parent_checkin'
+  reportedByUserId: varchar('reported_by_user_id', { length: 255 }),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ============================================
+// HYGIENE DAILY (parent weekly check-in writes 7 daily rows)
+// ============================================
+
+export const patient_hygiene_daily = pgTable('patient_hygiene_daily', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
+  flossOk: boolean('floss_ok').default(false).notNull(),
+  alignerCleanCount: integer('aligner_clean_count').default(0).notNull(), // 0..2 per day
+  source: varchar('source', { length: 30 }).default('weekly_checkin').notNull(), // 'weekly_checkin'
+  reportedByUserId: varchar('reported_by_user_id', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 

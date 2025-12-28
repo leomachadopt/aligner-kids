@@ -42,6 +42,21 @@ router.post('/aligners/:alignerId/wear/resume', async (req, res) => {
   }
 })
 
+// POST /api/aligners/:alignerId/wear/checkin
+// Body: { patientId, userId, date?: 'YYYY-MM-DD', woreAligner: boolean }
+router.post('/aligners/:alignerId/wear/checkin', async (req, res) => {
+  try {
+    const { patientId, userId, date, woreAligner } = req.body || {}
+    if (!patientId || !userId) return res.status(400).json({ error: 'patientId e userId são obrigatórios' })
+    if (typeof woreAligner !== 'boolean') return res.status(400).json({ error: 'woreAligner deve ser boolean' })
+    const result = await AlignerWearService.checkin({ patientId, alignerId: req.params.alignerId, userId, date, woreAligner })
+    res.json(result)
+  } catch (e: any) {
+    console.error('Error wear checkin:', e)
+    res.status(500).json({ error: String(e?.message || e) })
+  }
+})
+
 export default router
 
 

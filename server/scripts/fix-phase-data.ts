@@ -45,7 +45,7 @@ async function fixPhaseData() {
       phaseName: 'Fase 1',
       startAlignerNumber: firstAligner.alignerNumber,
       endAlignerNumber: lastAligner.alignerNumber,
-      totalAlignersInPhase: treatmentAligners.length,
+      totalAligners: treatmentAligners.length,
       status: 'active',
       updatedAt: new Date(),
     })

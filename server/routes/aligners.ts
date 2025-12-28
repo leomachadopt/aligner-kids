@@ -18,13 +18,34 @@ async function assignMissionsForTreatment(patientId: string, treatmentId: string
   const missionsToInsert: any[] = []
 
   for (const template of activeTemplates) {
+    // "Once" missions should exist only once per patient
+    if (template.frequency === 'once') {
+      missionsToInsert.push({
+        id: `mission-${Date.now()}-once-${Math.random().toString(36).slice(2, 5)}`,
+        patientId,
+        missionTemplateId: template.id,
+        status: 'available',
+        progress: 0,
+        targetValue: template.targetValue || 1,
+        trigger: 'on_treatment_start',
+        triggerAlignerNumber: null,
+        triggerDaysOffset: null,
+        autoActivated: true,
+        expiresAt: null,
+        pointsEarned: 0,
+        customPoints: template.basePoints,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      continue
+    }
     const interval = template.alignerInterval || 1
     for (let alignerNumber = 1; alignerNumber <= totalAligners; alignerNumber += interval) {
       missionsToInsert.push({
         id: `mission-${Date.now()}-${alignerNumber}-${Math.random().toString(36).slice(2, 5)}`,
         patientId,
         missionTemplateId: template.id,
-        status: interval === 1 && alignerNumber === 1 ? 'in_progress' : 'available',
+        status: alignerNumber === 1 ? 'in_progress' : 'available',
         progress: 0,
         targetValue: template.targetValue || 1,
         trigger: 'on_aligner_N_start',
@@ -69,6 +90,27 @@ async function applyProgramToPatient(programId: string, patientId: string, total
 
     if (templateResult.length === 0) continue
     const template = templateResult[0]
+
+    if (template.frequency === 'once') {
+      missionsToInsert.push({
+        id: `mission-${Date.now()}-once-${Math.random().toString(36).slice(2, 5)}`,
+        patientId,
+        missionTemplateId: template.id,
+        status: 'available',
+        progress: 0,
+        targetValue: template.targetValue || 1,
+        trigger: pt.trigger || 'on_treatment_start',
+        triggerAlignerNumber: null,
+        triggerDaysOffset: pt.triggerDaysOffset || null,
+        autoActivated: true,
+        expiresAt: null,
+        pointsEarned: 0,
+        customPoints: pt.customPoints || template.basePoints,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      continue
+    }
 
     const interval = pt.alignerInterval || 1
     const maxAligners = totalAligners || template.targetValue || 1
@@ -558,6 +600,45 @@ router.post('/aligners/:id/confirm', async (req, res) => {
       })
       .where(eq(aligners.id, alignerId))
 
+    // 🎯 Troca Pontual (apenas por dia): completar missão se trocou exatamente no dia previsto
+    try {
+      if (aligner.endDate && String(aligner.endDate) === String(todayStr)) {
+        const tmplRows = await db
+          .select()
+          .from(mission_templates)
+          .where(eq(mission_templates.name, 'Troca Pontual'))
+          .limit(1)
+        const tmpl = tmplRows[0] as any
+        if (tmpl) {
+          const pmRows = await db
+            .select()
+            .from(patient_missions)
+            .where(
+              and(
+                eq(patient_missions.patientId, aligner.patientId),
+                eq(patient_missions.missionTemplateId, tmpl.id),
+                eq(patient_missions.triggerAlignerNumber, aligner.alignerNumber),
+              )
+            )
+            .limit(1)
+          const pm = pmRows[0] as any
+          if (pm && pm.status !== 'completed') {
+            await db
+              .update(patient_missions)
+              .set({
+                status: 'completed',
+                progress: pm.targetValue || 1,
+                completedAt: new Date(),
+                updatedAt: new Date(),
+              } as any)
+              .where(eq(patient_missions.id, pm.id))
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     // Finalizar quest do alinhador (aderência + recompensa) - best-effort
     try {
       await AlignerWearService.finalizeQuestForAligner(alignerId)
@@ -702,6 +783,9 @@ router.post('/aligners/:id/confirm', async (req, res) => {
 
       // 🎯 Ativar missões cujo gatilho é iniciar este alinhador
       await MissionProgressService.activateMissionsForAligner(aligner.patientId, nextAligner.alignerNumber)
+
+      // 🎯 Atualizar missões de progresso do tratamento (ex.: Meio do Caminho)
+      await MissionProgressService.updateTreatmentProgressMissions(aligner.patientId)
 
       res.json({
         success: true,
@@ -888,6 +972,22 @@ router.post('/treatments/:id/start', async (req, res) => {
         )
       )
 
+    // Ativar missões de tratamento (frequency=once) no início do tratamento
+    await db
+      .update(patient_missions)
+      .set({
+        status: 'in_progress',
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      } as any)
+      .where(
+        and(
+          eq(patient_missions.patientId, treatment.patientId),
+          eq(patient_missions.trigger, 'on_treatment_start'),
+          eq(patient_missions.status, 'available')
+        )
+      )
+
     console.log(`✅ Tratamento ${treatmentId} iniciado - Alinhador ${firstPhase.startAlignerNumber} ativado (${today} até ${endDateStr})`)
 
     res.json({
@@ -961,7 +1061,18 @@ router.get('/aligners/:id/can-activate', async (req, res) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const targetDate = new Date(aligner.status === 'active' ? aligner.endDate : aligner.startDate)
+    const targetRaw = aligner.status === 'active' ? aligner.endDate : aligner.startDate
+    if (!targetRaw) {
+      return res.json({
+        canActivate: false,
+        daysRemaining: 0,
+        nextActivationDate: aligner.startDate,
+        currentStatus: aligner.status,
+        message: 'Alinhador sem data alvo (startDate/endDate) definida',
+      })
+    }
+
+    const targetDate = new Date(targetRaw)
     targetDate.setHours(0, 0, 0, 0)
 
     const diffTime = targetDate.getTime() - today.getTime()
