@@ -136,6 +136,20 @@ const mission_programs = pgTable('mission_programs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const mission_program_templates = pgTable('mission_program_templates', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  missionTemplateId: varchar('mission_template_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true),
+  alignerInterval: integer('aligner_interval').default(1).notNull(),
+  trigger: varchar('trigger', { length: 100 }),
+  triggerAlignerNumber: integer('trigger_aligner_number'),
+  triggerDaysOffset: integer('trigger_days_offset'),
+  customPoints: integer('custom_points'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -164,7 +178,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates } })
 }
 
 // Health check handler
@@ -634,6 +648,29 @@ app.get('/api/mission-programs', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching mission programs:', error)
     res.status(500).json({ error: 'Failed to fetch mission programs' })
+  }
+})
+
+// Get single mission program with templates
+app.get('/api/mission-programs/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDb()
+
+    const program = await db.select().from(mission_programs).where(eq(mission_programs.id, id))
+    if (program.length === 0) {
+      return res.status(404).json({ error: 'Program not found' })
+    }
+
+    const templates = await db
+      .select()
+      .from(mission_program_templates)
+      .where(eq(mission_program_templates.programId, id))
+
+    res.json({ program: program[0], templates })
+  } catch (error: any) {
+    console.error('Error fetching mission program:', error)
+    res.status(500).json({ error: 'Failed to fetch mission program' })
   }
 })
 
