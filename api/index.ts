@@ -1411,48 +1411,19 @@ app.get('/api/aligners/:alignerId/wear/status', async (req, res) => {
     }
 
     const aligner = alignerResult[0]
-
-    // Get current open session
-    const openSession = await db
-      .select()
-      .from(aligner_wear_sessions)
-      .where(
-        and(
-          eq(aligner_wear_sessions.alignerId, alignerId),
-          sql`${aligner_wear_sessions.endedAt} is null`
-        )
-      )
-      .orderBy(desc(aligner_wear_sessions.startedAt))
-      .limit(1)
-
-    const currentState = openSession.length > 0 ? openSession[0].state : 'paused'
-
-    // Get today's date
-    const today = new Date().toISOString().slice(0, 10)
-
-    // Get today's wear data
-    const todayWear = await db
-      .select()
-      .from(aligner_wear_daily)
-      .where(
-        and(
-          eq(aligner_wear_daily.alignerId, alignerId),
-          eq(aligner_wear_daily.date, today)
-        )
-      )
-      .limit(1)
-
-    const wearMinutes = todayWear.length > 0 ? todayWear[0].wearMinutes : 0
-    const targetMinutes = aligner.targetHoursPerDay * 60
+    const targetMinutes = (aligner.targetHoursPerDay || 22) * 60
     const targetPercent = 80
 
+    // Simplified response without wear session tables
+    // Returns basic structure for compatibility
     res.json({
-      state: currentState,
-      wearMinutesToday: wearMinutes,
+      state: 'paused',
+      wearMinutesToday: 0,
       targetMinutesPerDay: targetMinutes,
       targetPercent,
-      isDayOk: wearMinutes >= (targetMinutes * targetPercent / 100),
-      session: openSession.length > 0 ? openSession[0] : null
+      isDayOk: false,
+      session: null,
+      message: 'Wear tracking not available in serverless mode'
     })
   } catch (error: any) {
     console.error('Error getting wear status:', error)
