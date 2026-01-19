@@ -77,7 +77,9 @@ const PatientDetail = () => {
   const [isDeleteTreatmentOpen, setIsDeleteTreatmentOpen] = useState(false)
   const [isListTreatmentsOpen, setIsListTreatmentsOpen] = useState(false)
   const [isCreateTreatmentOpen, setIsCreateTreatmentOpen] = useState(false)
+  const [isEditTreatmentOpen, setIsEditTreatmentOpen] = useState(false)
   const [allTreatments, setAllTreatments] = useState<Treatment[]>([])
+  const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [editPatientData, setEditPatientData] = useState({
     fullName: '',
@@ -262,21 +264,153 @@ const PatientDetail = () => {
   }
 
   const handleDeleteTreatment = async () => {
-    if (!treatment || !id) return
+    const treatmentToDelete = selectedTreatment || treatment
+    if (!treatmentToDelete || !id) return
 
     try {
-      await alignerService.deleteTreatment(treatment.id)
+      await alignerService.deleteTreatment(treatmentToDelete.id)
 
-      // Recarregar dados
-      setTreatment(null)
-      setAligners([])
-      setPhases([])
+      // Se for o tratamento atual, limpar dados
+      if (treatment?.id === treatmentToDelete.id) {
+        setTreatment(null)
+        setAligners([])
+        setPhases([])
+      }
+
+      // Atualizar lista de tratamentos
+      setAllTreatments(prev => prev.filter(t => t.id !== treatmentToDelete.id))
 
       toast.success('Tratamento excluído com sucesso!')
       setIsDeleteTreatmentOpen(false)
+      setSelectedTreatment(null)
     } catch (error) {
       console.error('Error deleting treatment:', error)
       toast.error('Erro ao excluir tratamento')
+    }
+  }
+
+  const handleViewTreatment = (treatment: Treatment) => {
+    setSelectedTreatment(treatment)
+    setIsViewTreatmentOpen(true)
+  }
+
+  const handleDeleteTreatmentClick = (treatment: Treatment) => {
+    setSelectedTreatment(treatment)
+    setIsDeleteTreatmentOpen(true)
+  }
+
+  const handleEditTreatmentClick = async (treatment: Treatment) => {
+    setSelectedTreatment(treatment)
+
+    // Buscar os alinhadores para obter changeInterval e targetHoursPerDay
+    try {
+      const treatmentAligners = await alignerService.getAlignersByPatient(treatment.patientId, treatment.id)
+
+      // Pegar valores do primeiro alinhador (como referência)
+      const firstAligner = treatmentAligners[0]
+
+      // Armazenar os valores no tratamento selecionado para passar ao formulário
+      setSelectedTreatment({
+        ...treatment,
+        changeInterval: firstAligner?.changeInterval || 14,
+        targetHoursPerDay: firstAligner?.wearTime || 22,
+      } as any)
+    } catch (error) {
+      console.error('Error loading aligner data:', error)
+    }
+
+    setIsEditTreatmentOpen(true)
+  }
+
+  const handleUpdateTreatment = async (data: any) => {
+    if (!selectedTreatment) return
+
+    try {
+      setLoading(true)
+      console.log('💾 Atualizando tratamento com dados:', data)
+
+      // Atualizar o tratamento
+      const updated = await alignerService.updateTreatment(selectedTreatment.id, {
+        name: data.name,
+        totalAligners: data.totalAligners,
+        notes: data.notes,
+      })
+
+      console.log('✅ Tratamento atualizado:', updated)
+
+      // Atualizar os alinhadores com os novos valores de changeInterval e targetHoursPerDay
+      try {
+        const treatmentAligners = await alignerService.getAlignersByPatient(selectedTreatment.patientId, selectedTreatment.id)
+
+        // Atualizar todos os alinhadores com os novos valores
+        await Promise.all(
+          treatmentAligners.map(aligner =>
+            alignerService.updateAligner(aligner.id, {
+              changeInterval: data.changeInterval,
+              wearTime: data.targetHoursPerDay,
+            } as any)
+          )
+        )
+        console.log('✅ Alinhadores atualizados')
+      } catch (error) {
+        console.error('Error updating aligners:', error)
+        // Continua mesmo se falhar ao atualizar alinhadores
+      }
+
+      // Atualizar na lista
+      setAllTreatments(prev => {
+        const newList = prev.map(t => (t.id === selectedTreatment.id ? { ...t, ...updated } : t))
+        console.log('📋 Lista de tratamentos atualizada:', newList)
+        return newList
+      })
+
+      // Se for o tratamento atual, atualizar também
+      if (treatment?.id === selectedTreatment.id) {
+        setTreatment(updated)
+        console.log('✅ Tratamento atual atualizado:', updated)
+        // Recarregar alinhadores para refletir as mudanças
+        const updatedAligners = await alignerService.getAlignersByPatient(selectedTreatment.patientId, selectedTreatment.id)
+        setAligners(updatedAligners)
+      }
+
+      // Recarregar lista completa para garantir sincronização
+      const freshTreatments = await alignerService.getTreatmentsByPatient(selectedTreatment.patientId)
+      setAllTreatments(freshTreatments)
+      console.log('🔄 Lista de tratamentos recarregada do servidor')
+
+      toast.success('Tratamento atualizado com sucesso!')
+      setIsEditTreatmentOpen(false)
+      setSelectedTreatment(null)
+    } catch (error) {
+      console.error('Error updating treatment:', error)
+      toast.error('Erro ao atualizar tratamento')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSetActiveTreatment = async (selectedTreatment: Treatment) => {
+    if (!id) return
+
+    try {
+      setLoading(true)
+
+      // Carregar os dados do tratamento selecionado
+      const alignersData = await alignerService.getAlignersByPatient(id, selectedTreatment.id)
+      setTreatment(selectedTreatment)
+      setAligners(alignersData)
+
+      // Carregar fases
+      const phasesData = await PhaseService.getPhasesByTreatment(selectedTreatment.id)
+      setPhases(phasesData)
+
+      toast.success('Tratamento ativado como visualização atual!')
+      setIsListTreatmentsOpen(false)
+    } catch (error) {
+      console.error('Error activating treatment:', error)
+      toast.error('Erro ao ativar tratamento')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -668,7 +802,7 @@ const PatientDetail = () => {
               <>
                 <Button
                   className="w-full rounded-xl py-6 text-base font-bold bg-white border-2 border-purple-300 text-purple-700 hover:bg-purple-50 shadow-sm hover-scale"
-                  onClick={() => setIsViewTreatmentOpen(true)}
+                  onClick={() => handleViewTreatment(treatment)}
                 >
                   👁️ Visualizar Tratamento Atual
                 </Button>
@@ -680,7 +814,7 @@ const PatientDetail = () => {
                 </Button>
                 <Button
                   className="w-full rounded-xl py-6 text-base font-bold bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-md hover-bounce"
-                  onClick={() => setIsDeleteTreatmentOpen(true)}
+                  onClick={() => handleDeleteTreatmentClick(treatment)}
                 >
                   🗑️ Excluir Tratamento
                 </Button>
@@ -1113,8 +1247,11 @@ const PatientDetail = () => {
       )}
 
       {/* Dialog: Visualizar Tratamento */}
-      {treatment && (
-        <Dialog open={isViewTreatmentOpen} onOpenChange={setIsViewTreatmentOpen}>
+      {selectedTreatment && (
+        <Dialog open={isViewTreatmentOpen} onOpenChange={(open) => {
+          setIsViewTreatmentOpen(open)
+          if (!open) setSelectedTreatment(null)
+        }}>
           <DialogContent className="max-w-2xl border-2 border-gradient-to-r from-cyan-300 via-blue-300 to-purple-300">
             <DialogHeader className="space-y-3">
               <div className="flex items-center gap-3">
@@ -1138,25 +1275,25 @@ const PatientDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">ID do Tratamento</p>
-                  <p className="text-sm font-mono">{treatment.id}</p>
+                  <p className="text-sm font-mono">{selectedTreatment.id}</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Status</p>
                   <Badge
                     variant={
-                      treatment.status === 'active'
+                      selectedTreatment.status === 'active'
                         ? 'default'
-                        : treatment.status === 'completed'
+                        : selectedTreatment.status === 'completed'
                           ? 'default'
                           : 'secondary'
                     }
-                    className={treatment.status === 'pending' ? 'bg-amber-500' : ''}
+                    className={selectedTreatment.status === 'pending' ? 'bg-amber-500' : ''}
                   >
-                    {treatment.status === 'pending' && 'Aguardando Início'}
-                    {treatment.status === 'active' && 'Ativo'}
-                    {treatment.status === 'completed' && 'Concluído'}
-                    {treatment.status === 'paused' && 'Pausado'}
-                    {treatment.status === 'cancelled' && 'Cancelado'}
+                    {selectedTreatment.status === 'pending' && 'Aguardando Início'}
+                    {selectedTreatment.status === 'active' && 'Ativo'}
+                    {selectedTreatment.status === 'completed' && 'Concluído'}
+                    {selectedTreatment.status === 'paused' && 'Pausado'}
+                    {selectedTreatment.status === 'cancelled' && 'Cancelado'}
                   </Badge>
                 </div>
               </div>
@@ -1165,14 +1302,14 @@ const PatientDetail = () => {
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Data de Início</p>
                   <p className="text-sm">
-                    {new Date(treatment.startDate).toLocaleDateString('pt-BR')}
+                    {selectedTreatment.startDate ? new Date(selectedTreatment.startDate).toLocaleDateString('pt-BR') : 'A definir'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Data de Término</p>
                   <p className="text-sm">
-                    {treatment.endDate
-                      ? new Date(treatment.endDate).toLocaleDateString('pt-BR')
+                    {selectedTreatment.expectedEndDate
+                      ? new Date(selectedTreatment.expectedEndDate).toLocaleDateString('pt-BR')
                       : 'Em andamento'}
                   </p>
                 </div>
@@ -1181,62 +1318,42 @@ const PatientDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Total de Alinhadores</p>
-                  <p className="text-lg font-semibold">{treatment.totalAligners}</p>
+                  <p className="text-lg font-semibold">{selectedTreatment.totalAligners}</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Alinhador Atual</p>
-                  <p className="text-lg font-semibold">#{treatment.currentAlignerNumber}</p>
+                  <p className="text-lg font-semibold">#{selectedTreatment.currentAlignerNumber}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Progresso</p>
-                  <p className="text-lg font-semibold">{progress.toFixed(0)}%</p>
+                  <p className="text-lg font-semibold">{calculateTreatmentProgress(selectedTreatment).toFixed(0)}%</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Fase Atual</p>
-                  <p className="text-lg font-semibold">#{treatment.currentPhaseNumber || 1}</p>
+                  <p className="text-lg font-semibold">#{selectedTreatment.currentPhaseNumber || 1}</p>
                 </div>
               </div>
-
-              {phases.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-2">Fases</p>
-                  <div className="space-y-2">
-                    {phases.map((phase) => (
-                      <div
-                        key={phase.id}
-                        className="flex items-center justify-between p-2 rounded border"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold">{phase.phaseName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Alinhadores #{phase.startAlignerNumber} a #{phase.endAlignerNumber}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={phase.status === 'active' ? 'default' : 'secondary'}
-                        >
-                          {PhaseService.getStatusLabel(phase.status)}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <DialogFooter>
-              <Button onClick={() => setIsViewTreatmentOpen(false)}>Fechar</Button>
+              <Button onClick={() => {
+                setIsViewTreatmentOpen(false)
+                setSelectedTreatment(null)
+              }}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
       {/* Dialog: Confirmar Exclusão de Tratamento */}
-      {treatment && (
-        <Dialog open={isDeleteTreatmentOpen} onOpenChange={setIsDeleteTreatmentOpen}>
+      {(selectedTreatment || treatment) && (
+        <Dialog open={isDeleteTreatmentOpen} onOpenChange={(open) => {
+          setIsDeleteTreatmentOpen(open)
+          if (!open) setSelectedTreatment(null)
+        }}>
           <DialogContent className="border-2 border-red-300">
             <DialogHeader className="space-y-3">
               <div className="flex items-center gap-3">
@@ -1264,8 +1381,8 @@ const PatientDetail = () => {
                   serão permanentemente excluídos:
                 </p>
                 <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
-                  <li><strong>{phases.length}</strong> fase(s) do tratamento</li>
-                  <li><strong>{aligners.length}</strong> alinhador(es) cadastrado(s)</li>
+                  <li>Todas as fases do tratamento</li>
+                  <li>Todos os alinhadores cadastrados</li>
                   <li>Histórico de uso e progresso</li>
                   <li>Dados de gamificação relacionados</li>
                 </ul>
@@ -1274,9 +1391,11 @@ const PatientDetail = () => {
               <div className="rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 border-2 border-slate-300 p-4 shadow-sm">
                 <p className="text-sm font-bold text-slate-900 mb-2">📋 Tratamento:</p>
                 <div className="space-y-1 text-xs text-slate-700">
-                  <p><strong>ID:</strong> <span className="font-mono">{treatment.id}</span></p>
+                  <p><strong>ID:</strong> <span className="font-mono">{(selectedTreatment || treatment)?.id}</span></p>
                   <p><strong>Paciente:</strong> {patient?.fullName}</p>
-                  <p><strong>Início:</strong> {new Date(treatment.startDate).toLocaleDateString('pt-BR')}</p>
+                  {(selectedTreatment || treatment)?.startDate && (
+                    <p><strong>Início:</strong> {new Date((selectedTreatment || treatment)!.startDate).toLocaleDateString('pt-BR')}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1284,7 +1403,10 @@ const PatientDetail = () => {
             <DialogFooter className="gap-3">
               <Button
                 variant="outline"
-                onClick={() => setIsDeleteTreatmentOpen(false)}
+                onClick={() => {
+                  setIsDeleteTreatmentOpen(false)
+                  setSelectedTreatment(null)
+                }}
                 className="rounded-xl border-2 font-bold"
               >
                 Cancelar
@@ -1408,6 +1530,44 @@ const PatientDetail = () => {
                             </p>
                           </div>
                         )}
+
+                        {/* Botões de Ação */}
+                        <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewTreatment(t)}
+                            className="flex-1 min-w-[100px]"
+                          >
+                            👁️ Visualizar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditTreatmentClick(t)}
+                            className="flex-1 min-w-[100px] border-blue-300 text-blue-700 hover:bg-blue-50"
+                          >
+                            ✏️ Editar
+                          </Button>
+                          {!isCurrent && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleSetActiveTreatment(t)}
+                              className="flex-1 min-w-[100px] bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+                            >
+                              ✓ Ativar
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteTreatmentClick(t)}
+                            className="flex-1 min-w-[100px]"
+                          >
+                            🗑️ Excluir
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   )
@@ -1449,6 +1609,47 @@ const PatientDetail = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Dialog: Editar Tratamento */}
+      {selectedTreatment && (
+        <Dialog open={isEditTreatmentOpen} onOpenChange={(open) => {
+          setIsEditTreatmentOpen(open)
+          if (!open) setSelectedTreatment(null)
+        }}>
+          <DialogContent className="max-w-2xl border-2 border-gradient-to-r from-blue-300 via-indigo-300 to-purple-300">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    Editar Tratamento
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600 font-medium">
+                    Atualize as informações do tratamento de {patient?.fullName}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <TreatmentForm
+              onSubmit={handleUpdateTreatment}
+              defaultValues={{
+                patientId: id || '',
+                name: selectedTreatment.name || '',
+                totalAligners: selectedTreatment.totalAligners,
+                changeInterval: (selectedTreatment as any).changeInterval || 14,
+                targetHoursPerDay: (selectedTreatment as any).targetHoursPerDay || 22,
+                notes: selectedTreatment.notes || '',
+              }}
+              isLoading={loading}
+              isEditing={true}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

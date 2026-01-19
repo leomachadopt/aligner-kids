@@ -68,6 +68,7 @@ export interface Treatment {
   currentAlignerNumber?: number
   status?: TreatmentStatus
 
+  notes?: string
   aligners?: Aligner[]
   phases?: TreatmentPhase[]
 }

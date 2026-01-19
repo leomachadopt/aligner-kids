@@ -4,7 +4,7 @@
 
 import { Router } from 'express'
 import { db, treatments, aligners, mission_templates, patient_missions, mission_programs, mission_program_templates, users, treatment_phases } from '../db/index'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, asc } from 'drizzle-orm'
 import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
 import { AlignerWearService } from '../services/alignerWearService'
 import { MissionProgressService } from '../services/missionProgressService'
@@ -221,6 +221,12 @@ router.post('/treatments', async (req, res) => {
       currentAlignerNumber: 1,
       status: 'pending',
       notes: req.body.notes || null,
+      // Adicionar explicitamente os campos com defaults
+      overallStatus: 'pending',
+      totalPhasesPlanned: 1,
+      currentPhaseNumber: 1,
+      totalAlignersOverall: req.body.totalAligners,
+      currentAlignerOverall: 0,
     }
     // Não incluir startDate e expectedEndDate - deixar como NULL no banco
 
@@ -305,20 +311,6 @@ router.post('/treatments', async (req, res) => {
 
     console.log('✅ Alinhadores vinculados à fase')
 
-    // Atualizar o tratamento com informações da fase
-    console.log('📝 Atualizando tratamento...')
-    await db
-      .update(treatments)
-      .set({
-        totalPhasesPlanned: 1,
-        currentPhaseNumber: 1,
-        totalAlignersOverall: req.body.totalAligners,
-        currentAlignerOverall: 0, // Ainda não iniciou
-        overallStatus: 'pending', // Aguardando início
-        status: 'pending',
-      })
-      .where(eq(treatments.id, treatment.id))
-
     // NÃO inicializar quest ainda - será feito quando tratamento for iniciado
 
     console.log(`✅ Tratamento criado com ${req.body.totalAligners} alinhadores e Fase 1 automática`)
@@ -372,17 +364,30 @@ router.post('/treatments', async (req, res) => {
 // Update treatment
 router.put('/treatments/:id', async (req, res) => {
   try {
+    console.log('🔵 PUT /api/treatments/:id - Atualizando tratamento:', {
+      id: req.params.id,
+      body: req.body
+    })
+
+    const updateData: any = {
+      updatedAt: new Date(),
+    }
+
+    // Só atualiza campos que foram enviados
+    if (req.body.name !== undefined) updateData.name = req.body.name
+    if (req.body.startDate !== undefined) updateData.startDate = req.body.startDate
+    if (req.body.expectedEndDate !== undefined) updateData.expectedEndDate = req.body.expectedEndDate
+    if (req.body.estimatedEndDate !== undefined) updateData.expectedEndDate = req.body.estimatedEndDate
+    if (req.body.totalAligners !== undefined) updateData.totalAligners = req.body.totalAligners
+    if (req.body.currentAlignerNumber !== undefined) updateData.currentAlignerNumber = req.body.currentAlignerNumber
+    if (req.body.status !== undefined) updateData.status = req.body.status
+    if (req.body.notes !== undefined) updateData.notes = req.body.notes
+
+    console.log('📝 Dados a serem atualizados:', updateData)
+
     const updated = await db
       .update(treatments)
-      .set({
-        startDate: req.body.startDate,
-        expectedEndDate: req.body.expectedEndDate || req.body.estimatedEndDate,
-        totalAligners: req.body.totalAligners,
-        currentAlignerNumber: req.body.currentAlignerNumber,
-        status: req.body.status,
-        notes: req.body.notes,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(treatments.id, req.params.id))
       .returning()
 
@@ -454,7 +459,7 @@ router.get('/aligners/patient/:patientId', async (req, res) => {
       .select()
       .from(aligners)
       .where(baseWhere)
-      .orderBy(aligners.alignerNumber)
+      .orderBy(asc(aligners.alignerNumber))
 
     console.log('📊 Alinhadores encontrados:', result.length)
     res.json({ aligners: result })
@@ -551,6 +556,7 @@ router.put('/aligners/:id', async (req, res) => {
         status: req.body.status,
         usageHours: req.body.usageHours,
         targetHoursPerDay: req.body.targetHoursPerDay,
+        changeInterval: req.body.changeInterval,
         notes: req.body.notes,
         updatedAt: new Date(),
       })
@@ -881,7 +887,7 @@ router.post('/treatments/:id/start', async (req, res) => {
       .select()
       .from(treatment_phases)
       .where(eq(treatment_phases.treatmentId, treatmentId))
-      .orderBy(treatment_phases.phaseNumber)
+      .orderBy(asc(treatment_phases.phaseNumber))
 
     if (phases.length === 0) {
       return res.status(400).json({ error: 'Nenhuma fase encontrada para este tratamento' })

@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, User, Lock, Mail, Phone, Calendar, Building2, FileText, Camera, X } from 'lucide-react'
 import type { UpdateUserInput, ChangePasswordInput } from '@/types/user'
+import { ImageCropDialog } from '@/components/ImageCropDialog'
 
 const Profile = () => {
   const { user, updateProfile, changePassword } = useAuth()
@@ -33,6 +34,10 @@ const Profile = () => {
 
   // Ref para input de arquivo
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Estado para crop de imagem
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [tempImageSrc, setTempImageSrc] = useState('')
 
   // Estado para mudança de senha
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -134,23 +139,32 @@ const Profile = () => {
       return
     }
 
-    // Validar tamanho (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
+    // Validar tamanho (max 5MB antes do crop)
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: 'Arquivo muito grande',
-        description: 'A imagem deve ter no máximo 2MB.',
+        description: 'A imagem deve ter no máximo 5MB.',
         variant: 'destructive',
       })
       return
     }
 
-    // Converter para base64
+    // Converter para base64 e abrir modal de crop
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64String = reader.result as string
-      setProfileData({ ...profileData, profilePhotoUrl: base64String })
+      setTempImageSrc(base64String)
+      setCropDialogOpen(true)
     }
     reader.readAsDataURL(file)
+
+    // Resetar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = ''
+  }
+
+  // Handler para quando o crop for concluído
+  const handleCropComplete = (croppedImage: string) => {
+    setProfileData({ ...profileData, profilePhotoUrl: croppedImage })
   }
 
   // Handler para remover foto
@@ -552,6 +566,14 @@ const Profile = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de crop de imagem */}
+      <ImageCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageSrc={tempImageSrc}
+        onCropComplete={handleCropComplete}
+      />
     </div>
   )
 }

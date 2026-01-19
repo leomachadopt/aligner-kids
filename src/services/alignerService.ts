@@ -43,6 +43,7 @@ function mapTreatment(apiTreatment: any): Treatment {
     currentAlignerNumber: apiTreatment.currentAlignerNumber ?? 1,
     status: apiTreatment.status || apiTreatment.overallStatus || 'active',
 
+    notes: apiTreatment.notes,
     aligners: [],
     phases: [],
   }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -6,24 +6,44 @@ import { Loader2 } from 'lucide-react'
 
 export type TreatmentFormValues = {
   patientId: string
+  name?: string
   totalAligners: number
   changeInterval: number
   targetHoursPerDay: number
+  notes?: string
 }
 
 interface TreatmentFormProps {
   onSubmit: (data: TreatmentFormValues) => Promise<void>
   defaultValues?: Partial<TreatmentFormValues>
   isLoading?: boolean
+  isEditing?: boolean
 }
 
-export function TreatmentForm({ onSubmit, defaultValues, isLoading }: TreatmentFormProps) {
+export function TreatmentForm({ onSubmit, defaultValues, isLoading, isEditing }: TreatmentFormProps) {
   const [formData, setFormData] = useState<TreatmentFormValues>({
     patientId: defaultValues?.patientId || '',
+    name: defaultValues?.name || '',
     totalAligners: defaultValues?.totalAligners || 10,
     changeInterval: defaultValues?.changeInterval || 14,
     targetHoursPerDay: defaultValues?.targetHoursPerDay || 22,
+    notes: defaultValues?.notes || '',
   })
+
+  // Atualizar o formulário quando os valores padrão mudarem
+  useEffect(() => {
+    if (defaultValues) {
+      console.log('🔄 Atualizando formulário com novos defaultValues:', defaultValues)
+      setFormData({
+        patientId: defaultValues.patientId || '',
+        name: defaultValues.name || '',
+        totalAligners: defaultValues.totalAligners || 10,
+        changeInterval: defaultValues.changeInterval || 14,
+        targetHoursPerDay: defaultValues.targetHoursPerDay || 22,
+        notes: defaultValues.notes || '',
+      })
+    }
+  }, [defaultValues])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,11 +63,31 @@ export function TreatmentForm({ onSubmit, defaultValues, isLoading }: TreatmentF
       return
     }
 
+    console.log('📤 Enviando dados do formulário:', formData)
     await onSubmit(formData)
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="name" className="text-sm font-bold uppercase text-gray-600">
+          Nome do Tratamento
+        </Label>
+        <Input
+          id="name"
+          type="text"
+          value={formData.name}
+          onChange={(e) =>
+            setFormData({ ...formData, name: e.target.value })
+          }
+          className="rounded-xl border-2 border-green-200 focus:border-green-400"
+          placeholder="Ex: Tratamento Principal, Refinamento, etc."
+        />
+        <p className="text-xs text-gray-500">
+          Nome opcional para identificar o tratamento
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="totalAligners" className="text-sm font-bold uppercase text-gray-600">
           Número de Alinhadores *
@@ -114,6 +154,24 @@ export function TreatmentForm({ onSubmit, defaultValues, isLoading }: TreatmentF
         </p>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="notes" className="text-sm font-bold uppercase text-gray-600">
+          Observações
+        </Label>
+        <textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) =>
+            setFormData({ ...formData, notes: e.target.value })
+          }
+          className="w-full rounded-xl border-2 border-green-200 focus:border-green-400 min-h-[80px] p-3"
+          placeholder="Observações sobre o tratamento..."
+        />
+        <p className="text-xs text-gray-500">
+          Notas ou observações sobre o tratamento
+        </p>
+      </div>
+
       <Button
         type="submit"
         disabled={isLoading}
@@ -122,10 +180,10 @@ export function TreatmentForm({ onSubmit, defaultValues, isLoading }: TreatmentF
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Criando tratamento...
+            {isEditing ? 'Atualizando tratamento...' : 'Criando tratamento...'}
           </>
         ) : (
-          '✨ Criar Tratamento e Alinhadores'
+          isEditing ? '✏️ Atualizar Tratamento' : '✨ Criar Tratamento e Alinhadores'
         )}
       </Button>
 
