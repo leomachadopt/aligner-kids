@@ -386,6 +386,16 @@ const reward_redemptions = pgTable('reward_redemptions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const patient_cosmetics = pgTable('patient_cosmetics', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  slot: varchar('slot', { length: 50 }).notNull(),
+  inventoryId: varchar('inventory_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 const story_option_templates = pgTable('story_option_templates', {
   id: varchar('id', { length: 100 }).primaryKey(),
   type: varchar('type', { length: 20 }).notNull(),
@@ -505,7 +515,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, patient_reward_programs, reward_program_items, parent_store_items, patient_inventory, reward_redemptions, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, patient_reward_programs, reward_program_items, parent_store_items, patient_inventory, reward_redemptions, patient_cosmetics, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1549,6 +1559,29 @@ app.get('/api/store/redemptions/patient/:patientId', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching redemptions:', error)
     res.status(500).json({ error: 'Failed to fetch redemptions' })
+  }
+})
+
+// Get active cosmetics for patient
+app.get('/api/store/cosmetics/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    const cosmetics = await db
+      .select()
+      .from(patient_cosmetics)
+      .where(
+        and(
+          eq(patient_cosmetics.patientId, patientId),
+          eq(patient_cosmetics.isActive, true)
+        )
+      )
+
+    res.json({ cosmetics })
+  } catch (error: any) {
+    console.error('Error fetching cosmetics:', error)
+    res.status(500).json({ error: 'Failed to fetch cosmetics' })
   }
 })
 

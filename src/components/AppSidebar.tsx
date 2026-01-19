@@ -70,7 +70,13 @@ const getSuperAdminMenu = (t: any) => [
   { href: '/storage-status', label: t('navigation.superAdmin.storageStatus'), icon: Database },
 ]
 
-export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
+export const AppSidebar = ({
+  userRole,
+  variant = 'desktop'
+}: {
+  userRole: UserRole | null
+  variant?: 'desktop' | 'mobile'
+}) => {
   const location = useLocation()
   const { isChild } = useUserRole()
   const { t } = useTranslation()
@@ -94,7 +100,10 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
   const currentMenu = getCurrentMenu()
 
   return (
-    <aside className="hidden h-screen w-72 flex-col border-r border-border/60 bg-background/80 backdrop-blur-md shadow-[0_15px_50px_-25px_rgba(0,0,0,0.35)] md:flex">
+    <aside className={cn(
+      "h-screen w-72 flex-col border-r border-border/60 bg-background/80 backdrop-blur-md shadow-[0_15px_50px_-25px_rgba(0,0,0,0.35)] flex",
+      variant === 'desktop' && "hidden md:flex"
+    )}>
       <div className="flex items-center justify-center border-b border-border/60 px-4 py-4">
         <Link to="/dashboard" className="w-full">
           <img

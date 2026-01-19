@@ -170,7 +170,7 @@ export const Header = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-3/4 p-0">
-                <AppSidebar userRole={role} />
+                <AppSidebar userRole={role} variant="mobile" />
               </SheetContent>
             </Sheet>
           </div>
