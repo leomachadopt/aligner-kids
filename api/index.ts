@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser'
 import bcrypt from 'bcryptjs'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
-import { eq, and, desc, asc } from 'drizzle-orm'
+import { eq, and, desc, asc, or, sql } from 'drizzle-orm'
 import { pgTable, text, timestamp, boolean, varchar, integer } from 'drizzle-orm/pg-core'
 
 // Schema inline (necessário para serverless)
@@ -90,6 +90,17 @@ const patient_points = pgTable('patient_points', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const messages = pgTable('messages', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  senderId: varchar('sender_id', { length: 255 }).notNull(),
+  receiverId: varchar('receiver_id', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  readAt: timestamp('read_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -118,7 +129,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages } })
 }
 
 // Health check handler
@@ -246,6 +257,313 @@ app.get('/api/points/patient/:patientId', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching patient points:', error)
     res.status(500).json({ error: 'Failed to fetch patient points' })
+  }
+})
+
+// ============================================
+// MESSAGES ENDPOINTS
+// ============================================
+
+// Helper: Verify token
+async function verifyToken(token: string) {
+  if (!token || !token.startsWith('token-')) {
+    return null
+  }
+
+  const userId = token.replace('token-', '')
+  const db = getDb()
+  const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
+  if (userResult.length === 0) {
+    return null
+  }
+
+  const { password_hash, ...userWithoutPassword } = userResult[0]
+  return userWithoutPassword
+}
+
+// Get conversations list
+app.get('/api/messages/conversations/list', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const db = getDb()
+
+    // Get all messages where user is sender or receiver
+    const userMessages = await db
+      .select()
+      .from(messages)
+      .where(or(eq(messages.senderId, currentUser.id), eq(messages.receiverId, currentUser.id)))
+      .orderBy(desc(messages.createdAt))
+
+    // Group messages by conversation partner
+    const conversationMap = new Map()
+
+    for (const message of userMessages) {
+      const partnerId = message.senderId === currentUser.id ? message.receiverId : message.senderId
+
+      if (!conversationMap.has(partnerId)) {
+        conversationMap.set(partnerId, [])
+      }
+
+      conversationMap.get(partnerId).push({
+        id: message.id,
+        senderId: message.senderId,
+        receiverId: message.receiverId,
+        content: message.content,
+        isRead: message.isRead,
+        readAt: message.readAt ? new Date(message.readAt).toISOString() : null,
+        createdAt: new Date(message.createdAt).toISOString(),
+        updatedAt: new Date(message.updatedAt).toISOString(),
+      })
+    }
+
+    // Build conversations with user info
+    const conversations = []
+
+    for (const [partnerId, msgs] of conversationMap.entries()) {
+      const partnerUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, partnerId))
+        .limit(1)
+
+      if (partnerUser.length === 0) continue
+
+      const partner = partnerUser[0]
+      const lastMessage = msgs[0]
+
+      // Count unread messages from partner
+      const unreadCount = msgs.filter(
+        (m: any) => m.senderId === partnerId && !m.isRead
+      ).length
+
+      conversations.push({
+        userId: partnerId,
+        userName: partner.fullName,
+        userRole: partner.role,
+        lastMessage,
+        unreadCount,
+      })
+    }
+
+    // Sort by last message date (most recent first)
+    conversations.sort((a: any, b: any) => {
+      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0
+      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0
+      return bTime - aTime
+    })
+
+    res.json(conversations)
+  } catch (error: any) {
+    console.error('Error getting conversations:', error)
+    res.status(500).json({ error: 'Erro ao buscar conversas' })
+  }
+})
+
+// Get messages between users
+app.get('/api/messages/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const db = getDb()
+    const result = await db
+      .select({
+        id: messages.id,
+        senderId: messages.senderId,
+        receiverId: messages.receiverId,
+        content: messages.content,
+        isRead: messages.isRead,
+        readAt: messages.readAt,
+        createdAt: messages.createdAt,
+        updatedAt: messages.updatedAt,
+        senderName: users.fullName,
+        senderRole: users.role,
+      })
+      .from(messages)
+      .leftJoin(users, eq(messages.senderId, users.id))
+      .where(
+        or(
+          and(eq(messages.senderId, currentUser.id), eq(messages.receiverId, userId)),
+          and(eq(messages.senderId, userId), eq(messages.receiverId, currentUser.id))
+        )
+      )
+      .orderBy(messages.createdAt)
+
+    const formatted = result.map((row) => ({
+      id: row.id,
+      senderId: row.senderId,
+      receiverId: row.receiverId,
+      content: row.content,
+      isRead: row.isRead,
+      readAt: row.readAt ? new Date(row.readAt).toISOString() : null,
+      createdAt: new Date(row.createdAt).toISOString(),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+      senderName: row.senderName || 'Unknown',
+      senderRole: row.senderRole || 'unknown',
+    }))
+
+    res.json(formatted)
+  } catch (error: any) {
+    console.error('Error getting messages:', error)
+    res.status(500).json({ error: 'Erro ao buscar mensagens' })
+  }
+})
+
+// Send a message
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { receiverId, content } = req.body
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    if (!receiverId || !content) {
+      return res.status(400).json({ error: 'receiverId e content são obrigatórios' })
+    }
+
+    const db = getDb()
+    const now = new Date()
+    const newMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      senderId: currentUser.id,
+      receiverId,
+      content,
+      isRead: false,
+      readAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db.insert(messages).values(newMessage)
+
+    res.status(201).json({
+      ...newMessage,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    })
+  } catch (error: any) {
+    console.error('Error sending message:', error)
+    res.status(500).json({ error: 'Erro ao enviar mensagem' })
+  }
+})
+
+// Mark messages as read
+app.put('/api/messages/:userId/read', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const db = getDb()
+    await db
+      .update(messages)
+      .set({
+        isRead: true,
+        readAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(messages.senderId, userId),
+          eq(messages.receiverId, currentUser.id),
+          eq(messages.isRead, false)
+        )
+      )
+
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error marking messages as read:', error)
+    res.status(500).json({ error: 'Erro ao marcar mensagens como lidas' })
+  }
+})
+
+// Get unread count
+app.get('/api/messages/unread/count', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const db = getDb()
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(messages)
+      .where(and(eq(messages.receiverId, currentUser.id), eq(messages.isRead, false)))
+
+    const count = Number(result[0]?.count || 0)
+    res.json({ count })
+  } catch (error: any) {
+    console.error('Error getting unread count:', error)
+    res.status(500).json({ error: 'Erro ao contar mensagens não lidas' })
+  }
+})
+
+// Delete a message
+app.delete('/api/messages/:messageId', async (req, res) => {
+  try {
+    const { messageId } = req.params
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Não autorizado' })
+    }
+
+    const currentUser = await verifyToken(token)
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const db = getDb()
+    await db
+      .delete(messages)
+      .where(and(eq(messages.id, messageId), eq(messages.senderId, currentUser.id)))
+
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error deleting message:', error)
+    res.status(500).json({ error: 'Erro ao deletar mensagem' })
   }
 })
 
