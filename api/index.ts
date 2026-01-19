@@ -249,6 +249,34 @@ const aligner_wear_daily = pgTable('aligner_wear_daily', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const education_lessons = pgTable('education_lessons', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  videoUrl: text('video_url').notNull(),
+  phaseId: varchar('phase_id', { length: 255 }),
+  quiz: jsonb('quiz').default([]).notNull(),
+  passPercent: integer('pass_percent').default(70).notNull(),
+  rewardCoins: integer('reward_coins').default(30).notNull(),
+  rewardXp: integer('reward_xp').default(20).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const patient_lesson_progress = pgTable('patient_lesson_progress', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  lessonId: varchar('lesson_id', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).default('not_started').notNull(),
+  scorePercent: integer('score_percent'),
+  attempts: integer('attempts').default(0).notNull(),
+  lastAttemptAt: timestamp('last_attempt_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 const store_item_templates = pgTable('store_item_templates', {
   id: varchar('id', { length: 255 }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -416,7 +444,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1234,6 +1262,76 @@ app.delete('/api/admin/story-option-templates/:id', async (req, res) => {
     res.json({ success: true })
   } catch (error: any) {
     console.error('Error deleting story option template:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// ============================================
+// EDUCATION ENDPOINTS
+// ============================================
+
+// Get education lessons for patient
+app.get('/api/education/lessons', async (req, res) => {
+  try {
+    const patientId = String(req.query.patientId || '')
+
+    if (!patientId) {
+      return res.status(400).json({ error: 'patientId é obrigatório' })
+    }
+
+    const db = getDb()
+
+    // Get active aligner to filter lessons by phase
+    const activeAligner = await db
+      .select()
+      .from(aligners)
+      .where(
+        and(
+          eq(aligners.patientId, patientId),
+          eq(aligners.status, 'active')
+        )
+      )
+      .orderBy(desc(aligners.alignerNumber))
+      .limit(1)
+
+    const phaseId = activeAligner[0]?.phaseId || null
+
+    // Get all active lessons
+    const lessons = await db
+      .select()
+      .from(education_lessons)
+      .where(eq(education_lessons.isActive, true))
+      .orderBy(desc(education_lessons.createdAt))
+
+    // Filter lessons by phase (show lessons with no phase or matching phase)
+    const filtered = lessons.filter((l: any) => !l.phaseId || String(l.phaseId) === String(phaseId))
+    const ids = filtered.map((l: any) => String(l.id))
+
+    // Get patient progress for these lessons
+    const progress = ids.length > 0
+      ? await db
+          .select()
+          .from(patient_lesson_progress)
+          .where(eq(patient_lesson_progress.patientId, patientId))
+      : []
+
+    const progMap = new Map<string, any>()
+    for (const p of progress) {
+      progMap.set(String(p.lessonId), p)
+    }
+
+    // Attach progress to each lesson
+    const items = filtered.map((l: any) => ({
+      ...l,
+      progress: progMap.get(String(l.id)) || null,
+    }))
+
+    res.json({
+      lessons: items,
+      activeAligner: activeAligner[0] || null
+    })
+  } catch (error: any) {
+    console.error('Error listing education lessons:', error)
     res.status(500).json({ error: String(error?.message || error) })
   }
 })
