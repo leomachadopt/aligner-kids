@@ -18,6 +18,8 @@ import {
   Building2,
   Calendar,
   Shield,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react'
 import { AuthService } from '@/services/authService'
 import { ClinicService } from '@/services/clinicService'
@@ -108,6 +110,39 @@ const AdminOrthodontists = () => {
       loadData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao desativar')
+    }
+  }
+
+  const handleDelete = async (orthodontistId: string, orthodontistName: string) => {
+    if (!confirm(`ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE o ortodontista "${orthodontistName}"?\n\nEsta ação não pode ser desfeita e removerá todos os dados associados.`)) {
+      return
+    }
+
+    // Confirmação dupla
+    if (!confirm('Esta é uma ação irreversível. Confirma a exclusão permanente?')) {
+      return
+    }
+
+    try {
+      await AuthService.deleteUser(orthodontistId)
+      toast.success('Ortodontista excluído permanentemente')
+      loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao excluir')
+    }
+  }
+
+  const handleReactivate = async (orthodontistId: string) => {
+    if (!confirm('Tem certeza que deseja reativar este ortodontista?')) {
+      return
+    }
+
+    try {
+      await AuthService.approveOrthodontist('current-admin-id', orthodontistId)
+      toast.success('Ortodontista reativado com sucesso!')
+      loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao reativar')
     }
   }
 
@@ -281,6 +316,15 @@ const AdminOrthodontists = () => {
                         <XCircle className="mr-1 h-4 w-4" />
                         Rejeitar
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(ortho.id, ortho.fullName)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Excluir
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -381,13 +425,21 @@ const AdminOrthodontists = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="ml-4">
+                    <div className="flex gap-2 ml-4">
                       <Button
                         size="sm"
-                        variant="destructive"
+                        variant="secondary"
                         onClick={() => handleDeactivate(ortho.id)}
                       >
                         Desativar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(ortho.id, ortho.fullName)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -430,6 +482,26 @@ const AdminOrthodontists = () => {
                           {getClinicName(ortho.clinicId)}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleReactivate(ortho.id)}
+                      >
+                        <RotateCcw className="mr-1 h-4 w-4" />
+                        Reativar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(ortho.id, ortho.fullName)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Excluir
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
