@@ -69,6 +69,26 @@ const treatments = pgTable('treatments', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const treatment_phases = pgTable('treatment_phases', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  treatmentId: varchar('treatment_id', { length: 255 }).notNull(),
+  phaseNumber: integer('phase_number').notNull(),
+  phaseName: varchar('phase_name', { length: 255 }).notNull(),
+  description: text('description'),
+  startAlignerNumber: integer('start_aligner_number').notNull(),
+  endAlignerNumber: integer('end_aligner_number').notNull(),
+  totalAligners: integer('total_aligners').notNull(),
+  currentAlignerNumber: integer('current_aligner_number').default(0).notNull(),
+  adherenceTargetPercent: integer('adherence_target_percent').default(80).notNull(),
+  status: varchar('status', { length: 50 }).default('pending').notNull(),
+  startDate: varchar('start_date', { length: 10 }),
+  expectedEndDate: varchar('expected_end_date', { length: 10 }),
+  actualEndDate: varchar('actual_end_date', { length: 10 }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 const aligners = pgTable('aligners', {
   id: varchar('id', { length: 255 }).primaryKey(),
   patientId: varchar('patient_id', { length: 255 }).notNull(),
@@ -396,7 +416,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1215,6 +1235,29 @@ app.delete('/api/admin/story-option-templates/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting story option template:', error)
     res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// ============================================
+// PHASES ENDPOINTS
+// ============================================
+
+// Get all phases for a treatment
+app.get('/api/phases/treatment/:treatmentId', async (req, res) => {
+  try {
+    const { treatmentId } = req.params
+    const db = getDb()
+
+    const phases = await db
+      .select()
+      .from(treatment_phases)
+      .where(eq(treatment_phases.treatmentId, treatmentId))
+      .orderBy(asc(treatment_phases.phaseNumber))
+
+    res.json(phases)
+  } catch (error: any) {
+    console.error('Error fetching phases:', error)
+    res.status(500).json({ error: 'Failed to fetch phases' })
   }
 })
 
