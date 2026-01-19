@@ -20,7 +20,12 @@ const users = pgTable('users', {
   role: varchar('role', { length: 50 }).notNull(),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   cpf: varchar('cpf', { length: 20 }),
+  birthDate: varchar('birth_date', { length: 10 }),
+  phone: varchar('phone', { length: 50 }),
+  preferredLanguage: varchar('preferred_language', { length: 10 }).default('pt-BR'),
   clinicId: varchar('clinic_id', { length: 255 }),
+  profilePhotoUrl: text('profile_photo_url'),
+  responsiblePinHash: varchar('responsible_pin_hash', { length: 255 }),
   isActive: boolean('is_active').default(true).notNull(),
   isApproved: boolean('is_approved').default(false).notNull(),
   lastLoginAt: timestamp('last_login_at'),
@@ -886,6 +891,57 @@ app.get('/api/auth/users/clinic/:clinicId', async (req, res) => {
   } catch (error: any) {
     console.error('Error getting clinic users:', error)
     res.status(500).json({ error: 'Failed to get users' })
+  }
+})
+
+// Update user profile
+app.put('/api/auth/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl, responsiblePin } = req.body
+    const db = getDb()
+
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, id))
+    if (existingUser.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Handle responsiblePin if provided
+    let responsiblePinHash: string | null | undefined = undefined
+    if (responsiblePin !== undefined) {
+      const pin = String(responsiblePin)
+      if (pin.length === 0) {
+        responsiblePinHash = null
+      } else {
+        if (!/^\d{4,8}$/.test(pin)) {
+          return res.status(400).json({ error: 'PIN deve ter 4 a 8 dígitos' })
+        }
+        responsiblePinHash = await bcrypt.hash(pin, 10)
+      }
+    }
+
+    // Update user
+    const updated = await db
+      .update(users)
+      .set({
+        fullName: fullName || existingUser[0].fullName,
+        email: email || existingUser[0].email,
+        phone: phone || existingUser[0].phone,
+        birthDate: birthDate || existingUser[0].birthDate,
+        preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
+        profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
+        ...(responsiblePinHash !== undefined ? { responsiblePinHash } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error: any) {
+    console.error('Error updating user:', error)
+    res.status(500).json({ error: 'Failed to update user' })
   }
 })
 
