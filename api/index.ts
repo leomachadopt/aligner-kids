@@ -125,6 +125,17 @@ const mission_templates = pgTable('mission_templates', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const mission_programs = pgTable('mission_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  isDefault: boolean('is_default').default(false),
+  createdBy: varchar('created_by', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -153,7 +164,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs } })
 }
 
 // Health check handler
@@ -606,6 +617,23 @@ app.get('/api/missions/templates', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching mission templates:', error)
     res.status(500).json({ error: 'Failed to fetch mission templates' })
+  }
+})
+
+// Get mission programs
+app.get('/api/mission-programs', async (req, res) => {
+  try {
+    const clinicId = req.query.clinicId as string | undefined
+    const db = getDb()
+
+    const programs = clinicId
+      ? await db.select().from(mission_programs).where(eq(mission_programs.clinicId, clinicId))
+      : await db.select().from(mission_programs)
+
+    res.json({ programs })
+  } catch (error: any) {
+    console.error('Error fetching mission programs:', error)
+    res.status(500).json({ error: 'Failed to fetch mission programs' })
   }
 })
 
