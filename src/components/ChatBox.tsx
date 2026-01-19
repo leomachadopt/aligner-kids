@@ -117,7 +117,7 @@ export function ChatBox({ otherUserId, otherUserName, otherUserRole }: ChatBoxPr
   }
 
   return (
-    <Card className="flex flex-col h-[600px]">
+    <Card className="flex flex-col h-[calc(100vh-14rem)] md:h-[600px]">
       <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div>

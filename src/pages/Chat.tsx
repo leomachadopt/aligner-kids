@@ -123,9 +123,9 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] gap-6 animate-fade-in-up">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-10rem)] gap-3 md:gap-6 animate-fade-in-up">
       {/* Sidebar - User List */}
-      <Card className="w-96 flex flex-col rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl">
+      <Card className={`w-full md:w-96 flex flex-col rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-2xl font-bold">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-teal-400 flex items-center justify-center shadow-md">
@@ -214,13 +214,22 @@ const Chat = () => {
       </Card>
 
       {/* Chat Area */}
-      <div className="flex-1">
+      <div className={`flex-1 ${selectedUser ? 'flex' : 'hidden md:flex'}`}>
         {selectedUser ? (
-          <ChatBox
-            otherUserId={selectedUser.id}
-            otherUserName={selectedUser.name}
-            otherUserRole={selectedUser.role}
-          />
+          <div className="w-full">
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedUser(null)}
+              className="mb-2 md:hidden"
+            >
+              ← {t('patient.chat.back')}
+            </Button>
+            <ChatBox
+              otherUserId={selectedUser.id}
+              otherUserName={selectedUser.name}
+              otherUserRole={selectedUser.role}
+            />
+          </div>
         ) : (
           <Card className="h-full flex items-center justify-center rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl">
             <CardContent className="text-center py-16">
