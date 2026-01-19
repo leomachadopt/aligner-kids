@@ -361,6 +361,31 @@ const parent_store_items = pgTable('parent_store_items', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const patient_inventory = pgTable('patient_inventory', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  itemId: varchar('item_id', { length: 255 }).notNull(),
+  quantity: integer('quantity').default(1).notNull(),
+  isActive: boolean('is_active').default(false).notNull(),
+  acquiredAt: timestamp('acquired_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const reward_redemptions = pgTable('reward_redemptions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  itemId: varchar('item_id', { length: 255 }).notNull(),
+  status: varchar('status', { length: 30 }).notNull(),
+  requestedAt: timestamp('requested_at').defaultNow().notNull(),
+  approvedAt: timestamp('approved_at'),
+  fulfilledAt: timestamp('fulfilled_at'),
+  approvedByUserId: varchar('approved_by_user_id', { length: 255 }),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 const story_option_templates = pgTable('story_option_templates', {
   id: varchar('id', { length: 100 }).primaryKey(),
   type: varchar('type', { length: 20 }).notNull(),
@@ -480,7 +505,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, patient_reward_programs, reward_program_items, parent_store_items, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, patient_reward_programs, reward_program_items, parent_store_items, patient_inventory, reward_redemptions, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1486,6 +1511,44 @@ app.get('/api/store/catalog/patient/:patientId', async (req, res) => {
   } catch (error: any) {
     console.error('Error resolving catalog:', error)
     res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// Get patient inventory
+app.get('/api/store/inventory/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    const inventory = await db
+      .select()
+      .from(patient_inventory)
+      .where(eq(patient_inventory.patientId, patientId))
+      .orderBy(desc(patient_inventory.acquiredAt))
+
+    res.json({ inventory })
+  } catch (error: any) {
+    console.error('Error fetching inventory:', error)
+    res.status(500).json({ error: 'Failed to fetch inventory' })
+  }
+})
+
+// Get patient redemptions
+app.get('/api/store/redemptions/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    const redemptions = await db
+      .select()
+      .from(reward_redemptions)
+      .where(eq(reward_redemptions.patientId, patientId))
+      .orderBy(desc(reward_redemptions.requestedAt))
+
+    res.json({ redemptions })
+  } catch (error: any) {
+    console.error('Error fetching redemptions:', error)
+    res.status(500).json({ error: 'Failed to fetch redemptions' })
   }
 })
 
