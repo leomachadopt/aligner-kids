@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppSidebar } from '@/components/AppSidebar'
 import { NotificationPanel } from '@/components/NotificationPanel'
@@ -170,6 +170,7 @@ export const Header = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-3/4 p-0">
+                <SheetTitle className="sr-only">{t('navigation.menu')}</SheetTitle>
                 <AppSidebar userRole={role} variant="mobile" />
               </SheetContent>
             </Sheet>

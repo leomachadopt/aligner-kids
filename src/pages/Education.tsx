@@ -63,8 +63,8 @@ const Education = () => {
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col items-center text-center">
         <img
-          src="https://img.usecurling.com/p/150/150?q=wise%20owl%20teacher%20mascot"
-          alt="Mascote Coruja"
+          src="/heroisdosorriso.png"
+          alt="Heróis do Sorriso"
           className="mb-4 animate-float hover-wiggle"
         />
         <h1 className="font-display text-4xl font-extrabold text-primary">
