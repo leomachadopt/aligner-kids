@@ -369,6 +369,69 @@ app.get('/api/clinics/:id', async (req, res) => {
   }
 })
 
+// Create clinic
+app.post('/api/clinics', async (req, res) => {
+  try {
+    const db = getDb()
+    const newClinic = await db.insert(clinics).values({
+      id: `clinic-${Date.now()}`,
+      name: req.body.name,
+      slug: req.body.slug,
+      country: req.body.country || 'BR',
+      email: req.body.email,
+      phone: req.body.phone || null,
+      website: req.body.website || null,
+      addressCity: req.body.addressCity || null,
+      addressState: req.body.addressState || null,
+      primaryColor: req.body.primaryColor || '#3B82F6',
+      timezone: req.body.timezone || 'America/Sao_Paulo',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning()
+
+    res.json({ clinic: newClinic[0] })
+  } catch (error: any) {
+    console.error('Error creating clinic:', error)
+    res.status(500).json({ error: 'Failed to create clinic' })
+  }
+})
+
+// Update clinic
+app.put('/api/clinics/:id', async (req, res) => {
+  try {
+    const db = getDb()
+    const updated = await db.update(clinics)
+      .set({
+        ...req.body,
+        updatedAt: new Date()
+      })
+      .where(eq(clinics.id, req.params.id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Clinic not found' })
+    }
+
+    res.json({ clinic: updated[0] })
+  } catch (error: any) {
+    console.error('Error updating clinic:', error)
+    res.status(500).json({ error: 'Failed to update clinic' })
+  }
+})
+
+// Delete clinic
+app.delete('/api/clinics/:id', async (req, res) => {
+  try {
+    const db = getDb()
+    await db.delete(clinics).where(eq(clinics.id, req.params.id))
+    res.json({ message: 'Clinic deleted successfully' })
+  } catch (error: any) {
+    console.error('Error deleting clinic:', error)
+    res.status(500).json({ error: 'Failed to delete clinic' })
+  }
+})
+
 // ============================================
 // POINTS ENDPOINTS
 // ============================================
