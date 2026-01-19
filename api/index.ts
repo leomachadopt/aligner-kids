@@ -184,6 +184,20 @@ const clinic_store_items = pgTable('clinic_store_items', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const reward_programs = pgTable('reward_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ageMin: integer('age_min'),
+  ageMax: integer('age_max'),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -212,7 +226,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs } })
 }
 
 // Health check handler
@@ -738,6 +752,23 @@ app.get('/api/clinic/:clinicId/store/items', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching clinic store items:', error)
     res.status(500).json({ error: 'Failed to fetch clinic store items' })
+  }
+})
+
+// Get clinic reward programs
+app.get('/api/clinic/:clinicId/reward-programs', async (req, res) => {
+  try {
+    const { clinicId } = req.params
+    const db = getDb()
+    const programs = await db
+      .select()
+      .from(reward_programs)
+      .where(eq(reward_programs.clinicId, clinicId))
+      .orderBy(desc(reward_programs.createdAt))
+    res.json({ programs })
+  } catch (error: any) {
+    console.error('Error fetching reward programs:', error)
+    res.status(500).json({ error: 'Failed to fetch reward programs' })
   }
 })
 
