@@ -237,6 +237,63 @@ const clinic_story_options = pgTable('clinic_story_options', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const stories = pgTable('stories', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  promptId: varchar('prompt_id', { length: 255 }),
+  preferencesSnapshot: jsonb('preferences_snapshot'),
+  storyTitle: varchar('story_title', { length: 500 }),
+  totalChapters: integer('total_chapters').default(1),
+  currentChapter: integer('current_chapter').default(1),
+  title: varchar('title', { length: 500 }),
+  content: text('content'),
+  wordCount: integer('word_count'),
+  estimatedReadingTime: integer('estimated_reading_time'),
+  modelUsed: varchar('model_used', { length: 100 }),
+  tokensUsed: integer('tokens_used'),
+  generationTimeMs: integer('generation_time_ms'),
+  liked: boolean('liked').default(false),
+  readCount: integer('read_count').default(0),
+  lastReadAt: timestamp('last_read_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const story_chapters = pgTable('story_chapters', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  storyId: varchar('story_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  chapterNumber: integer('chapter_number').notNull(),
+  requiredAlignerNumber: integer('required_aligner_number').notNull().default(1),
+  title: varchar('title', { length: 500 }).notNull(),
+  content: text('content').notNull(),
+  wordCount: integer('word_count'),
+  isUnlocked: boolean('is_unlocked').default(false).notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  audioUrl: varchar('audio_url', { length: 500 }),
+  audioGenerated: boolean('audio_generated').default(false),
+  audioDurationSeconds: integer('audio_duration_seconds'),
+  readCount: integer('read_count').default(0),
+  lastReadAt: timestamp('last_read_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const story_preferences = pgTable('story_preferences', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  ageGroup: integer('age_group').notNull(),
+  environment: varchar('environment', { length: 100 }).notNull(),
+  mainCharacter: varchar('main_character', { length: 100 }).notNull(),
+  mainCharacterName: varchar('main_character_name', { length: 255 }),
+  sidekick: varchar('sidekick', { length: 100 }),
+  theme: varchar('theme', { length: 100 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -265,7 +322,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1268,6 +1325,43 @@ app.put('/api/auth/users/:id/deactivate', async (req, res) => {
   } catch (error: any) {
     console.error('Error deactivating user:', error)
     res.status(500).json({ error: 'Failed to deactivate user' })
+  }
+})
+
+// Delete user permanently
+app.delete('/api/auth/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDb()
+
+    // Carregar usuário
+    const existing = await db.select().from(users).where(eq(users.id, id))
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    const user = existing[0]
+
+    // Cascade delete de dados do paciente
+    if (user.role === 'patient' || user.role === 'child-patient') {
+      // story chapters -> stories -> preferences
+      const patientStories = await db.select().from(stories).where(eq(stories.patientId, id))
+      for (const st of patientStories) {
+        await db.delete(story_chapters).where(eq(story_chapters.storyId, st.id))
+      }
+      await db.delete(stories).where(eq(stories.patientId, id))
+      await db.delete(story_preferences).where(eq(story_preferences.patientId, id))
+
+      // aligners e treatments
+      await db.delete(aligners).where(eq(aligners.patientId, id))
+      await db.delete(treatments).where(eq(treatments.patientId, id))
+    }
+
+    // Excluir usuário
+    await db.delete(users).where(eq(users.id, id))
+    res.json({ message: 'User deleted successfully' })
+  } catch (error: any) {
+    console.error('Error deleting user:', error)
+    res.status(500).json({ error: 'Failed to delete user' })
   }
 })
 
