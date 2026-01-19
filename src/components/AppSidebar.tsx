@@ -98,7 +98,7 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
       <div className="flex items-center justify-center border-b border-border/60 px-4 py-4">
         <Link to="/dashboard" className="w-full">
           <img
-            src="/kidsaligner.png"
+            src="/kidsaligner-quadrada-horiz.png"
             alt="Kids Aligner Logo"
             className="w-full h-auto"
           />
