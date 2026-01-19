@@ -39,6 +39,9 @@ const Profile = () => {
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [tempImageSrc, setTempImageSrc] = useState('')
 
+  // Estado para upload de avatar direto
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false)
+
   // Estado para mudança de senha
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordData, setPasswordData] = useState<ChangePasswordInput>({
@@ -162,14 +165,56 @@ const Profile = () => {
     e.target.value = ''
   }
 
-  // Handler para quando o crop for concluído
+  // Handler para quando o crop for concluído (edição de perfil)
   const handleCropComplete = (croppedImage: string) => {
     setProfileData({ ...profileData, profilePhotoUrl: croppedImage })
   }
 
-  // Handler para remover foto
+  // Handler para quando o crop for concluído (upload direto de avatar)
+  const handleAvatarCropComplete = async (croppedImage: string) => {
+    try {
+      setIsSavingAvatar(true)
+      await updateProfile({ profilePhotoUrl: croppedImage })
+
+      toast({
+        title: 'Avatar atualizado',
+        description: 'Sua foto de perfil foi atualizada com sucesso.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Erro ao atualizar avatar',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao atualizar o avatar.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSavingAvatar(false)
+    }
+  }
+
+  // Handler para remover foto (edição de perfil)
   const handleRemovePhoto = () => {
     setProfileData({ ...profileData, profilePhotoUrl: '' })
+  }
+
+  // Handler para remover avatar direto
+  const handleRemoveAvatar = async () => {
+    try {
+      setIsSavingAvatar(true)
+      await updateProfile({ profilePhotoUrl: '' })
+
+      toast({
+        title: 'Avatar removido',
+        description: 'Sua foto de perfil foi removida.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Erro ao remover avatar',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao remover o avatar.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSavingAvatar(false)
+    }
   }
 
   // Obter iniciais do nome
@@ -205,45 +250,61 @@ const Profile = () => {
                 </AvatarFallback>
               </Avatar>
 
-              {isEditingProfile && (
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+              {/* Botão de câmera sempre visível */}
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full shadow-lg"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSavingAvatar}
+              >
+                {isSavingAvatar ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
                   <Camera className="h-4 w-4" />
-                </Button>
-              )}
+                )}
+              </Button>
             </div>
 
             <div className="flex-1">
               <h3 className="text-lg font-semibold">{user.fullName}</h3>
               <p className="text-sm text-muted-foreground">{user.email}</p>
 
-              {isEditingProfile && (
-                <div className="flex gap-2 mt-3">
+              {/* Botões de gerenciamento de foto sempre visíveis */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isSavingAvatar}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  {user.profilePhotoUrl ? 'Alterar Foto' : 'Adicionar Foto'}
+                </Button>
+
+                {user.profilePhotoUrl && !isEditingProfile && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={handleRemoveAvatar}
+                    disabled={isSavingAvatar}
                   >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Alterar Foto
+                    <X className="h-4 w-4 mr-2" />
+                    Remover
                   </Button>
+                )}
 
-                  {profileData.profilePhotoUrl && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRemovePhoto}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Remover Foto
-                    </Button>
-                  )}
-                </div>
-              )}
+                {isEditingProfile && profileData.profilePhotoUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRemovePhoto}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remover Foto
+                  </Button>
+                )}
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -572,7 +633,7 @@ const Profile = () => {
         open={cropDialogOpen}
         onOpenChange={setCropDialogOpen}
         imageSrc={tempImageSrc}
-        onCropComplete={handleCropComplete}
+        onCropComplete={isEditingProfile ? handleCropComplete : handleAvatarCropComplete}
       />
     </div>
   )
