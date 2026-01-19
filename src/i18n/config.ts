@@ -19,21 +19,30 @@ export type SupportedLanguage = typeof supportedLanguages[number]
 
 // Get initial language from localStorage (from user session)
 function getInitialLanguage(): SupportedLanguage {
-  if (typeof window === 'undefined') return 'pt-BR'
+  if (typeof window === 'undefined') {
+    console.log('🌐 [i18n] SSR mode, using default pt-BR')
+    return 'pt-BR'
+  }
 
   try {
     const session = localStorage.getItem('auth_session')
+    console.log('🌐 [i18n] Loading session from localStorage:', session ? 'found' : 'not found')
+
     if (session) {
       const parsed = JSON.parse(session)
       const userLang = parsed?.user?.preferredLanguage
+      console.log('🌐 [i18n] User preferred language:', userLang)
+
       if (userLang && supportedLanguages.includes(userLang)) {
+        console.log('🌐 [i18n] ✅ Using saved language:', userLang)
         return userLang as SupportedLanguage
       }
     }
   } catch (error) {
-    console.warn('Error loading language from localStorage:', error)
+    console.warn('🌐 [i18n] ❌ Error loading language from localStorage:', error)
   }
 
+  console.log('🌐 [i18n] Using default fallback: pt-BR')
   return 'pt-BR' // Default fallback
 }
 

@@ -37,22 +37,33 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const changeLanguage = React.useCallback(
     async (lang: SupportedLanguage) => {
+      console.log('🌐 [LanguageContext] Changing language to:', lang)
       setIsChanging(true)
       try {
         // Change i18n language immediately for better UX
         await i18n.changeLanguage(lang)
+        console.log('🌐 [LanguageContext] i18n language changed to:', i18n.language)
 
         // If user is logged in, update backend
         if (user) {
+          console.log('🌐 [LanguageContext] Updating backend for user:', user.id)
           await apiClient.put(`/auth/users/${user.id}`, {
             preferredLanguage: lang,
           })
 
           // Update user in AuthContext
+          console.log('🌐 [LanguageContext] Updating AuthContext with new language')
           updateUser({ preferredLanguage: lang })
+
+          // Verify localStorage after update
+          const session = localStorage.getItem('auth_session')
+          if (session) {
+            const parsed = JSON.parse(session)
+            console.log('🌐 [LanguageContext] ✅ Language saved in localStorage:', parsed?.user?.preferredLanguage)
+          }
         }
       } catch (error) {
-        console.error('Error changing language:', error)
+        console.error('🌐 [LanguageContext] ❌ Error changing language:', error)
         // Revert to previous language on error
         if (user?.preferredLanguage) {
           await i18n.changeLanguage(user.preferredLanguage as SupportedLanguage)

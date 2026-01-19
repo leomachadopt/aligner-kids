@@ -142,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = useCallback(
     (updates: Partial<User>) => {
+      console.log('🔄 [AuthContext] updateUser called with updates:', updates)
       setState((prev) => {
         const updatedUser = prev.user ? { ...prev.user, ...updates } : null
 
@@ -154,8 +155,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               expiresAt: AuthService.getCurrentSession()?.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
             }
             localStorage.setItem('auth_session', JSON.stringify(session))
+            console.log('🔄 [AuthContext] ✅ Session persisted to localStorage. User preferredLanguage:', updatedUser.preferredLanguage)
           } catch (error) {
-            console.warn('Failed to persist user update to localStorage:', error)
+            console.warn('🔄 [AuthContext] ❌ Failed to persist user update to localStorage:', error)
           }
         }
 
