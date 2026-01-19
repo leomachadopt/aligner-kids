@@ -18,6 +18,7 @@ import type { Conversation } from '@/types/message'
 import type { User } from '@/types/user'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 const Chat = () => {
   const { t } = useTranslation()
@@ -123,7 +124,10 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-10rem)] gap-3 md:gap-6 animate-fade-in-up">
+    <div className="space-y-6 animate-fade-in-up">
+      <PageHeader title={t('patient.chat.title')} />
+
+      <div className="flex flex-col md:flex-row h-[calc(100vh-18rem)] gap-3 md:gap-6">
       {/* Sidebar - User List */}
       <Card className={`w-full md:w-96 flex flex-col rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50 shadow-xl ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
         <CardHeader>
@@ -247,6 +251,7 @@ const Chat = () => {
             </CardContent>
           </Card>
         )}
+      </div>
       </div>
     </div>
   )

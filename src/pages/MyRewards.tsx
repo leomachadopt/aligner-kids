@@ -10,6 +10,7 @@ import { Gift, ShoppingBag } from 'lucide-react'
 import { RewardDetailModal } from '@/components/RewardDetailModal'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function MyRewards() {
   const { t, i18n } = useTranslation()
@@ -78,30 +79,29 @@ export default function MyRewards() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold text-primary">{t('rewards.title')}</h1>
-          <p className="mt-2 text-muted-foreground">{t('rewards.subtitle')}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline">
-            <Link to="/store">
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              {t('rewards.goToStore')}
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/responsible">
-              <Gift className="mr-2 h-4 w-4" />
-              {t('rewards.approveRedemptions')}
-              {pendingCount > 0 && (
-                <Badge className="ml-2" variant="default">
-                  {pendingCount}
-                </Badge>
-              )}
-            </Link>
-          </Button>
-        </div>
+      <PageHeader
+        title={t('rewards.title')}
+        subtitle={t('rewards.subtitle')}
+      />
+
+      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-3">
+        <Button asChild variant="outline">
+          <Link to="/store">
+            <ShoppingBag className="mr-2 h-4 w-4" />
+            {t('rewards.goToStore')}
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/responsible">
+            <Gift className="mr-2 h-4 w-4" />
+            {t('rewards.approveRedemptions')}
+            {pendingCount > 0 && (
+              <Badge className="ml-2" variant="default">
+                {pendingCount}
+              </Badge>
+            )}
+          </Link>
+        </Button>
       </div>
 
       {loading ? (

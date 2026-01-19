@@ -50,6 +50,7 @@ import {
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
+import { PageHeader } from '@/components/PageHeader'
 
 const adhesionData = [
   { name: 'Seg', uso: 90 },
@@ -169,16 +170,7 @@ const PatientDashboard = () => {
   if (isChild) {
     return (
       <div className="space-y-6 animate-fade-in-up">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl md:text-4xl font-extrabold text-primary break-words">
-            {t('patient.dashboard.title')}
-          </h1>
-          <img
-            src="https://img.usecurling.com/p/100/100?q=smiling%20tooth%20superhero"
-            alt="Mascote"
-            className="h-24 w-24 animate-float"
-          />
-        </div>
+        <PageHeader title={t('patient.dashboard.title')} />
 
         {/* 1) Rastreamento de uso do alinhador (pais pausam/retomam) */}
         <AlignerTracker showNextChange={false} />
@@ -313,7 +305,7 @@ const PatientDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <h1 className="text-2xl md:text-3xl font-bold break-words">{t('patient.dashboard.adultWelcome')}</h1>
+      <PageHeader title={t('patient.dashboard.adultWelcome')} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AlignerTracker showNextChange={false} />

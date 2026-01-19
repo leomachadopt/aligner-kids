@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Camera, Folder, ChevronDown, ChevronUp, Loader2, Info, Maximize2 } from 'lucide-react'
+import { Folder, ChevronDown, ChevronUp, Loader2, Info, Maximize2 } from 'lucide-react'
 import { PhotoUploadModal } from '@/components/PhotoUploadModal'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
 import { PhotoService } from '@/services/photoService'
@@ -19,6 +19,7 @@ import { ptBR, enUS, es } from 'date-fns/locale'
 import type { Locale } from 'date-fns'
 import { normalizeActivePhotoFrame } from '@/utils/photoFrames'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 const Photos = () => {
   const { t, i18n } = useTranslation()
@@ -146,16 +147,10 @@ const Photos = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
-      <div className="flex flex-col items-center text-center">
-        <Camera className="h-16 w-16 text-primary mb-4" />
-        <h1 className="font-display text-4xl font-extrabold text-primary">
-          {t('patient.photos.title')}
-        </h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          {t('patient.photos.subtitle')}
-        </p>
-      </div>
+      <PageHeader
+        title={t('patient.photos.title')}
+        subtitle={t('patient.photos.subtitle')}
+      />
 
       {/* Required Photos Alert */}
       {requiredPhotos.length > 0 && (

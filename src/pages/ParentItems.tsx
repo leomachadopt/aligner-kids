@@ -9,6 +9,7 @@ import { apiClient } from '@/utils/apiClient'
 import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function ParentItems() {
   const { t } = useTranslation()
@@ -56,8 +57,9 @@ export default function ParentItems() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{t('patient.parentZone.title')}</h1>
+      <PageHeader title={t('patient.parentZone.title')} />
+
+      <div className="flex justify-center sm:justify-end">
         <Button onClick={() => setOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t('patient.parentZone.newVoucher')}

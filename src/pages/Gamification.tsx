@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useEffect, useState } from 'react'
 import type { StorySeries, StoryChapterV3 } from '@/types/story'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 const Gamification = () => {
   const { t } = useTranslation()
@@ -98,21 +99,10 @@ const Gamification = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold text-primary">
-            {t('patient.adventures.title')}
-          </h1>
-          <p className="mt-2 text-lg text-muted-foreground">
-            {t('patient.adventures.subtitle')}
-          </p>
-        </div>
-        <img
-          src="https://img.usecurling.com/p/120/120?q=happy%20robot%20mascot"
-          alt="Mascote"
-          className="animate-float hover-wiggle"
-        />
-      </div>
+      <PageHeader
+        title={t('patient.adventures.title')}
+        subtitle={t('patient.adventures.subtitle')}
+      />
 
       {/* Card de História - Criar ou Ver */}
       {!series ? (

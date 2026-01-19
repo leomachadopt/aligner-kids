@@ -9,6 +9,7 @@ import type { CatalogItem } from '@/types/store'
 import { MissionService } from '@/services/missionService.v2'
 import { Coins, Gift, Image as ImageIcon, ShoppingBag } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function Store() {
   const { t } = useTranslation()
@@ -70,25 +71,22 @@ export default function Store() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold text-primary">{t('store.title')}</h1>
-          <p className="mt-2 text-muted-foreground">
-            {t('store.subtitle')}
-          </p>
+      <PageHeader
+        title={t('store.title')}
+        subtitle={t('store.subtitle')}
+      />
+
+      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-3">
+        <div className="flex items-center gap-2 rounded-full bg-yellow-100 px-4 py-2 border">
+          <Coins className="h-5 w-5 text-yellow-700" />
+          <span className="font-bold text-yellow-900">{coins}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full bg-yellow-100 px-4 py-2 border">
-            <Coins className="h-5 w-5 text-yellow-700" />
-            <span className="font-bold text-yellow-900">{coins}</span>
-          </div>
-          <Button asChild variant="outline">
-            <Link to="/my-rewards">
-              <Gift className="mr-2 h-4 w-4" />
-              {t('store.myRewards')}
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline">
+          <Link to="/my-rewards">
+            <Gift className="mr-2 h-4 w-4" />
+            {t('store.myRewards')}
+          </Link>
+        </Button>
       </div>
 
       {loading ? (
