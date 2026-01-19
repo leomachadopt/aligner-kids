@@ -198,6 +198,40 @@ const reward_programs = pgTable('reward_programs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const story_option_templates = pgTable('story_option_templates', {
+  id: varchar('id', { length: 100 }).primaryKey(),
+  type: varchar('type', { length: 20 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  icon: varchar('icon', { length: 20 }).notNull(),
+  color: varchar('color', { length: 50 }).notNull(),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  isDefault: boolean('is_default').default(true).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  metadata: jsonb('metadata').default({}).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const clinic_story_options = pgTable('clinic_story_options', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  templateId: varchar('template_id', { length: 100 }).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }),
+  icon: varchar('icon', { length: 20 }),
+  color: varchar('color', { length: 50 }),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  isActive: boolean('is_active'),
+  sortOrder: integer('sort_order'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -226,7 +260,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options } })
 }
 
 // Health check handler
@@ -769,6 +803,70 @@ app.get('/api/clinic/:clinicId/reward-programs', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching reward programs:', error)
     res.status(500).json({ error: 'Failed to fetch reward programs' })
+  }
+})
+
+// Get clinic story options
+app.get('/api/clinic/:clinicId/story-options', async (req, res) => {
+  try {
+    const { clinicId } = req.params
+    const userId = req.query.userId as string
+
+    if (!clinicId || !userId) {
+      return res.status(400).json({ error: 'clinicId e userId são obrigatórios' })
+    }
+
+    const db = getDb()
+
+    // Check user permission
+    const u = await db.select().from(users).where(eq(users.id, userId))
+    if (u.length === 0) {
+      return res.status(403).json({ error: 'Usuário não encontrado' })
+    }
+    if (u[0].role !== 'orthodontist' && u[0].role !== 'super-admin') {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+    if (u[0].role !== 'super-admin' && u[0].clinicId !== clinicId) {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    // Get templates and overrides
+    const templates = await db
+      .select()
+      .from(story_option_templates)
+      .where(eq(story_option_templates.isActive, true))
+      .orderBy(asc(story_option_templates.type), asc(story_option_templates.sortOrder), asc(story_option_templates.name))
+
+    const overrides = await db.select().from(clinic_story_options).where(eq(clinic_story_options.clinicId, clinicId))
+    const overrideMap = new Map()
+    for (const o of overrides) {
+      overrideMap.set(o.templateId, o)
+    }
+
+    const items = templates.map((t: any) => {
+      const o = overrideMap.get(t.id) || null
+      return {
+        template: t,
+        override: o,
+        effective: {
+          id: t.id,
+          type: t.type,
+          name: o?.name ?? t.name,
+          description: o?.description ?? t.description,
+          icon: o?.icon ?? t.icon,
+          color: o?.color ?? t.color,
+          imageUrl: o?.imageUrl ?? t.imageUrl,
+          isDefault: !!t.isDefault,
+          isActive: o?.isActive === false ? false : true,
+          sortOrder: o?.sortOrder ?? t.sortOrder,
+        },
+      }
+    })
+
+    res.json({ items })
+  } catch (error: any) {
+    console.error('Error fetching clinic story options:', error)
+    res.status(500).json({ error: 'Failed to fetch clinic story options' })
   }
 })
 
