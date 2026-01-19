@@ -984,6 +984,25 @@ app.get('/api/auth/users', async (_req, res) => {
   }
 })
 
+// List pending orthodontists (super-admin)
+// NOTE: This must come BEFORE /users/:id to avoid being caught by the param route
+app.get('/api/auth/users/pending', async (_req, res) => {
+  try {
+    const db = getDb()
+    const all = await db.select().from(users)
+    const pending = all.filter(
+      (u: any) => u.role === 'orthodontist' && u.isApproved === false,
+    )
+
+    // Remove password_hash from all users
+    const usersWithoutPasswords = pending.map(({ password_hash, ...user }: any) => user)
+    res.json({ users: usersWithoutPasswords })
+  } catch (error: any) {
+    console.error('Error fetching pending orthodontists:', error)
+    res.status(500).json({ error: 'Failed to fetch pending orthodontists' })
+  }
+})
+
 // Update user profile
 app.put('/api/auth/users/:id', async (req, res) => {
   try {
