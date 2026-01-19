@@ -28,10 +28,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (user?.preferredLanguage && !isChanging) {
       const lang = user.preferredLanguage as SupportedLanguage
 
-      // Don't sync if we just changed to this language
+      // Don't sync if we're in the middle of changing language
       // This prevents the sync from overwriting a language change in progress
-      if (lastChangedLanguage.current === lang) {
-        console.log(`🌐 Skipping sync - language was just changed to: ${lang}`)
+      if (lastChangedLanguage.current !== null) {
+        console.log(`🌐 Skipping sync - language change in progress (ref: ${lastChangedLanguage.current})`)
         return
       }
 
@@ -47,8 +47,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const changeLanguage = React.useCallback(
     async (lang: SupportedLanguage) => {
       console.log('🌐 [LanguageContext] Changing language to:', lang)
+
+      // IMPORTANT: Mark this language as just changed BEFORE doing anything else
+      // This prevents useEffect from interfering
+      lastChangedLanguage.current = lang
       setIsChanging(true)
-      lastChangedLanguage.current = lang // Mark this language as just changed
 
       try {
         // Change i18n language immediately for better UX
@@ -58,9 +61,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         // If user is logged in, update backend
         if (user) {
           console.log('🌐 [LanguageContext] Updating backend for user:', user.id)
-          await apiClient.put(`/auth/users/${user.id}`, {
+          const response = await apiClient.put(`/auth/users/${user.id}`, {
             preferredLanguage: lang,
           })
+
+          console.log('🌐 [LanguageContext] ✅ Backend response:', response)
+          console.log('🌐 [LanguageContext] Response user preferredLanguage:', response.user?.preferredLanguage)
 
           // Update user in AuthContext
           console.log('🌐 [LanguageContext] Updating AuthContext with new language')
