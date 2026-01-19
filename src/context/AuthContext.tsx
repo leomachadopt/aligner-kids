@@ -154,7 +154,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               token: prev.token,
               expiresAt: AuthService.getCurrentSession()?.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
             }
-            localStorage.setItem('auth_session', JSON.stringify(session))
+            // IMPORTANT: Use the same key as AuthService
+            localStorage.setItem('auth_session_v1', JSON.stringify(session))
             console.log('🔄 [AuthContext] ✅ Session persisted to localStorage. User preferredLanguage:', updatedUser.preferredLanguage)
           } catch (error) {
             console.warn('🔄 [AuthContext] ❌ Failed to persist user update to localStorage:', error)
