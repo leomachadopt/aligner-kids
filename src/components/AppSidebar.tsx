@@ -98,18 +98,10 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
       <div className="flex h-20 items-center justify-center border-b border-border/60 px-6">
         <Link to="/dashboard" className="flex items-center gap-2">
           <img
-            src="https://img.usecurling.com/i?q=angel-aligners&color=azure"
-            alt="Logo"
-            className="h-8 w-auto rounded-lg shadow-sm"
+            src="/kidsaligner.png"
+            alt="Kids Aligner Logo"
+            className="h-12 w-auto"
           />
-          <span
-            className={cn(
-              'text-lg font-bold tracking-tight',
-              isChild && 'font-display text-xl',
-            )}
-          >
-            {t('navigation.appName')}
-          </span>
         </Link>
       </div>
       <nav className="flex-1 space-y-2 p-5">
