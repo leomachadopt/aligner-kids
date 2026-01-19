@@ -72,10 +72,12 @@ const getSuperAdminMenu = (t: any) => [
 
 export const AppSidebar = ({
   userRole,
-  variant = 'desktop'
+  variant = 'desktop',
+  onLinkClick
 }: {
   userRole: UserRole | null
   variant?: 'desktop' | 'mobile'
+  onLinkClick?: () => void
 }) => {
   const location = useLocation()
   const { isChild } = useUserRole()
@@ -118,6 +120,7 @@ export const AppSidebar = ({
           <Link
             key={item.href}
             to={item.href}
+            onClick={onLinkClick}
             className={cn(
               'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
               location.pathname === item.href

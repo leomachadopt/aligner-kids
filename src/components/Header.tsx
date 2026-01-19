@@ -57,6 +57,7 @@ const getChildPageTitles = (t: any): { [key: string]: string } => ({
 export const Header = () => {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { role, isChild } = useUserRole()
   const { user } = useAuth()
   const { t } = useTranslation()
@@ -163,7 +164,7 @@ export const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="md:hidden">
-            <Sheet>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-6 w-6" />
@@ -171,7 +172,7 @@ export const Header = () => {
               </SheetTrigger>
               <SheetContent side="left" className="w-3/4 p-0">
                 <SheetTitle className="sr-only">{t('navigation.menu')}</SheetTitle>
-                <AppSidebar userRole={role} variant="mobile" />
+                <AppSidebar userRole={role} variant="mobile" onLinkClick={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
           </div>
