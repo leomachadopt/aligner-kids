@@ -325,6 +325,42 @@ const reward_programs = pgTable('reward_programs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const patient_reward_programs = pgTable('patient_reward_programs', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  assignedByUserId: varchar('assigned_by_user_id', { length: 255 }),
+  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+})
+
+const reward_program_items = pgTable('reward_program_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  programId: varchar('program_id', { length: 255 }).notNull(),
+  clinicStoreItemId: varchar('clinic_store_item_id', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const parent_store_items = pgTable('parent_store_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).default('real').notNull(),
+  category: varchar('category', { length: 100 }).default('voucher').notNull(),
+  priceCoins: integer('price_coins').notNull(),
+  requiredLevel: integer('required_level').default(1).notNull(),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 const story_option_templates = pgTable('story_option_templates', {
   id: varchar('id', { length: 100 }).primaryKey(),
   type: varchar('type', { length: 20 }).notNull(),
@@ -444,7 +480,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, treatment_phases, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, education_lessons, patient_lesson_progress, store_item_templates, clinic_store_items, reward_programs, patient_reward_programs, reward_program_items, parent_store_items, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1262,6 +1298,193 @@ app.delete('/api/admin/story-option-templates/:id', async (req, res) => {
     res.json({ success: true })
   } catch (error: any) {
     console.error('Error deleting story option template:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// ============================================
+// STORE ENDPOINTS
+// ============================================
+
+// Get store catalog for patient
+app.get('/api/store/catalog/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    // Get user to find clinic
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, patientId))
+      .limit(1)
+
+    if (userResult.length === 0) {
+      return res.status(404).json({ error: 'Paciente não encontrado' })
+    }
+
+    const clinicId = userResult[0].clinicId || null
+    const items: any[] = []
+
+    // Get active program for patient
+    const activeProgramResult = await db
+      .select()
+      .from(patient_reward_programs)
+      .where(
+        and(
+          eq(patient_reward_programs.patientId, patientId),
+          eq(patient_reward_programs.isActive, true)
+        )
+      )
+      .orderBy(desc(patient_reward_programs.assignedAt))
+      .limit(1)
+
+    const programId = activeProgramResult[0]?.programId || null
+
+    // Get program items
+    if (programId) {
+      const programItems = await db
+        .select()
+        .from(reward_program_items)
+        .where(
+          and(
+            eq(reward_program_items.programId, programId),
+            eq(reward_program_items.isActive, true)
+          )
+        )
+        .orderBy(asc(reward_program_items.sortOrder))
+
+      if (programItems.length > 0) {
+        const clinicItemIds = programItems.map(pi => pi.clinicStoreItemId)
+        const clinicItems = await db
+          .select()
+          .from(clinic_store_items)
+          .where(inArray(clinic_store_items.id, clinicItemIds))
+
+        const clinicMap = new Map(clinicItems.map((ci: any) => [ci.id, ci]))
+
+        for (const pi of programItems) {
+          const ci = clinicMap.get(pi.clinicStoreItemId)
+          if (!ci) continue
+          if (clinicId && ci.clinicId !== clinicId) continue
+          if (!ci.isActive) continue
+          if (String(ci.category) === 'avatar') continue
+
+          items.push({
+            kind: 'clinic',
+            catalogItemId: ci.id,
+            name: ci.name,
+            description: ci.description,
+            type: ci.type,
+            category: ci.category,
+            priceCoins: ci.priceCoins,
+            requiredLevel: ci.requiredLevel || 1,
+            imageUrl: ci.imageUrl || null,
+            metadata: ci.metadata || {},
+          })
+        }
+      }
+    }
+
+    // Get parent custom items
+    const parentItems = await db
+      .select()
+      .from(parent_store_items)
+      .where(
+        and(
+          eq(parent_store_items.patientId, patientId),
+          eq(parent_store_items.isActive, true)
+        )
+      )
+      .orderBy(desc(parent_store_items.createdAt))
+
+    for (const pi of parentItems) {
+      items.push({
+        kind: 'parent',
+        catalogItemId: pi.id,
+        name: pi.name,
+        description: pi.description,
+        type: pi.type,
+        category: pi.category,
+        priceCoins: pi.priceCoins,
+        requiredLevel: pi.requiredLevel || 1,
+        imageUrl: null,
+        metadata: pi.metadata || {},
+      })
+    }
+
+    // Get story unlock options (non-default templates)
+    if (clinicId) {
+      const storyTemplates = await db
+        .select()
+        .from(story_option_templates)
+        .where(
+          and(
+            eq(story_option_templates.isActive, true),
+            eq(story_option_templates.isDefault, false)
+          )
+        )
+        .orderBy(
+          asc(story_option_templates.type),
+          asc(story_option_templates.sortOrder),
+          asc(story_option_templates.name)
+        )
+
+      const overrides = await db
+        .select()
+        .from(clinic_story_options)
+        .where(eq(clinic_story_options.clinicId, clinicId))
+
+      const overrideMap = new Map<string, any>()
+      for (const o of overrides) {
+        overrideMap.set(String(o.templateId), o)
+      }
+
+      const priceByType: Record<string, number> = {
+        environment: 140,
+        character: 120,
+        theme: 100,
+      }
+
+      for (const t of storyTemplates) {
+        const o = overrideMap.get(String(t.id)) || null
+        const overrideActive = o?.isActive
+        if (overrideActive === false) continue
+
+        const type = String(t.type)
+        const name = String(o?.name ?? t.name)
+        const description = String(o?.description ?? t.description ?? '')
+        const imageUrl = (o?.imageUrl ?? t.imageUrl ?? null) as any
+
+        const storePriceCoins =
+          (o?.metadata?.storePriceCoins ?? t.metadata?.storePriceCoins ?? priceByType[type] ?? 120) as number
+        const storeRequiredLevel =
+          (o?.metadata?.storeRequiredLevel ?? t.metadata?.storeRequiredLevel ?? 1) as number
+
+        items.push({
+          kind: 'story_option',
+          catalogItemId: String(t.id),
+          name,
+          description,
+          type: 'digital',
+          category: 'story_unlock',
+          priceCoins: storePriceCoins,
+          requiredLevel: storeRequiredLevel,
+          imageUrl,
+          metadata: {
+            storyOptionType: type,
+            storyOptionId: String(t.id),
+          },
+        })
+      }
+    }
+
+    res.json({
+      clinicId,
+      items,
+    })
+  } catch (error: any) {
+    console.error('Error resolving catalog:', error)
     res.status(500).json({ error: String(error?.message || error) })
   }
 })
