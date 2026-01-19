@@ -95,12 +95,12 @@ export const AppSidebar = ({ userRole }: { userRole: UserRole | null }) => {
 
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-border/60 bg-background/80 backdrop-blur-md shadow-[0_15px_50px_-25px_rgba(0,0,0,0.35)] md:flex">
-      <div className="flex h-20 items-center justify-center border-b border-border/60 px-6">
-        <Link to="/dashboard" className="flex items-center gap-2">
+      <div className="flex h-20 items-center justify-center border-b border-border/60 px-4">
+        <Link to="/dashboard" className="w-full">
           <img
             src="/kidsaligner.png"
             alt="Kids Aligner Logo"
-            className="h-12 w-auto"
+            className="w-full h-auto"
           />
         </Link>
       </div>
