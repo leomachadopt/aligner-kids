@@ -7,6 +7,7 @@ import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -232,12 +233,12 @@ export function PhotoViewerModal({
                       </Badge>
                     )}
                   </DialogTitle>
-                  <p className="text-sm text-gray-600 font-medium mt-1">
+                  <DialogDescription className="text-sm text-gray-600 font-medium mt-1">
                     {photo.alignerNumber
                       ? `Alinhador ${photo.alignerNumber}`
                       : 'Fotos Iniciais'}{' '}
                     · {format(new Date(photo.capturedAt), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
+                  </DialogDescription>
                 </div>
               </div>
             </div>

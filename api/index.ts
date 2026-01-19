@@ -1933,7 +1933,10 @@ app.get('/api/photos/patient/:patientId', async (req, res) => {
       }))
       .sort((a, b) => b.period - a.period)
 
-    res.json(periods)
+    res.json({
+      periods,
+      totalPhotos: photos.length
+    })
   } catch (error: any) {
     console.error('Error fetching patient photos:', error)
     res.status(500).json({ error: 'Erro ao buscar fotos do paciente' })
