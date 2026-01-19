@@ -150,6 +150,40 @@ const mission_program_templates = pgTable('mission_program_templates', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const store_item_templates = pgTable('store_item_templates', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  defaultPriceCoins: integer('default_price_coins').notNull(),
+  defaultRequiredLevel: integer('default_required_level').default(1).notNull(),
+  defaultImageUrl: text('default_image_url'),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const clinic_store_items = pgTable('clinic_store_items', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  clinicId: varchar('clinic_id', { length: 255 }).notNull(),
+  sourceType: varchar('source_type', { length: 20 }).notNull(),
+  sourceTemplateId: varchar('source_template_id', { length: 255 }),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  type: varchar('type', { length: 20 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  priceCoins: integer('price_coins').notNull(),
+  requiredLevel: integer('required_level').default(1).notNull(),
+  imageUrl: text('image_url'),
+  metadata: jsonb('metadata').default({}).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -178,7 +212,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items } })
 }
 
 // Health check handler
@@ -671,6 +705,39 @@ app.get('/api/mission-programs/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching mission program:', error)
     res.status(500).json({ error: 'Failed to fetch mission program' })
+  }
+})
+
+// ============================================
+// STORE/REWARDS ENDPOINTS
+// ============================================
+
+// Get store item templates
+app.get('/api/store/templates', async (req, res) => {
+  try {
+    const db = getDb()
+    const templates = await db.select().from(store_item_templates)
+    res.json({ templates })
+  } catch (error: any) {
+    console.error('Error fetching store templates:', error)
+    res.status(500).json({ error: 'Failed to fetch store templates' })
+  }
+})
+
+// Get clinic store items
+app.get('/api/clinic/:clinicId/store/items', async (req, res) => {
+  try {
+    const { clinicId } = req.params
+    const db = getDb()
+    const items = await db
+      .select()
+      .from(clinic_store_items)
+      .where(eq(clinic_store_items.clinicId, clinicId))
+      .orderBy(desc(clinic_store_items.createdAt))
+    res.json({ items })
+  } catch (error: any) {
+    console.error('Error fetching clinic store items:', error)
+    res.status(500).json({ error: 'Failed to fetch clinic store items' })
   }
 })
 
