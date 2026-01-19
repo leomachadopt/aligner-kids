@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser'
 import bcrypt from 'bcryptjs'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
-import { eq, and, desc, asc, or, sql } from 'drizzle-orm'
+import { eq, and, desc, asc, or, sql, inArray } from 'drizzle-orm'
 import { pgTable, text, timestamp, boolean, varchar, integer, jsonb } from 'drizzle-orm/pg-core'
 
 // Schema inline (necessário para serverless)
@@ -75,9 +75,15 @@ const aligners = pgTable('aligners', {
   treatmentId: varchar('treatment_id', { length: 255 }),
   phaseId: varchar('phase_id', { length: 255 }),
   alignerNumber: integer('aligner_number').notNull(),
+  alignerNumberInPhase: integer('aligner_number_in_phase'),
   startDate: varchar('start_date', { length: 10 }),
   endDate: varchar('end_date', { length: 10 }),
+  actualEndDate: varchar('actual_end_date', { length: 10 }),
   status: varchar('status', { length: 50 }).default('upcoming').notNull(),
+  usageHours: integer('usage_hours').default(0),
+  targetHoursPerDay: integer('target_hours_per_day').default(22),
+  changeInterval: integer('change_interval').default(14),
+  notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -152,6 +158,74 @@ const mission_program_templates = pgTable('mission_program_templates', {
   triggerDaysOffset: integer('trigger_days_offset'),
   customPoints: integer('custom_points'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const patient_missions = pgTable('patient_missions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  missionTemplateId: varchar('mission_template_id', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('active').notNull(),
+  progress: integer('progress').default(0),
+  targetValue: integer('target_value').notNull(),
+  trigger: varchar('trigger', { length: 100 }),
+  triggerAlignerNumber: integer('trigger_aligner_number'),
+  triggerDaysOffset: integer('trigger_days_offset'),
+  autoActivated: boolean('auto_activated').default(false),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  expiresAt: timestamp('expires_at'),
+  pointsEarned: integer('points_earned').default(0),
+  customPoints: integer('custom_points'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const progress_photos = pgTable('progress_photos', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }).notNull(),
+  phaseId: varchar('phase_id', { length: 255 }),
+  alignerNumber: integer('aligner_number'),
+  photoType: varchar('photo_type', { length: 50 }).notNull(),
+  photoUrl: text('photo_url').notNull(),
+  thumbnailUrl: text('thumbnail_url'),
+  fileName: varchar('file_name', { length: 255 }),
+  fileSize: integer('file_size'),
+  mimeType: varchar('mime_type', { length: 100 }),
+  capturedAt: timestamp('captured_at').notNull(),
+  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+  clinicianNotes: text('clinician_notes'),
+  hasIssues: boolean('has_issues').default(false),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+const aligner_wear_sessions = pgTable('aligner_wear_sessions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  alignerId: varchar('aligner_id', { length: 255 }).notNull(),
+  treatmentId: varchar('treatment_id', { length: 255 }),
+  phaseId: varchar('phase_id', { length: 255 }),
+  state: varchar('state', { length: 20 }).notNull(),
+  startedAt: timestamp('started_at').notNull(),
+  endedAt: timestamp('ended_at'),
+  createdByUserId: varchar('created_by_user_id', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+const aligner_wear_daily = pgTable('aligner_wear_daily', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  patientId: varchar('patient_id', { length: 255 }).notNull(),
+  alignerId: varchar('aligner_id', { length: 255 }).notNull(),
+  date: varchar('date', { length: 10 }).notNull(),
+  wearMinutes: integer('wear_minutes').default(0).notNull(),
+  targetMinutes: integer('target_minutes').default(0).notNull(),
+  targetPercent: integer('target_percent').default(80).notNull(),
+  isDayOk: boolean('is_day_ok').default(false).notNull(),
+  source: varchar('source', { length: 30 }).default('session').notNull(),
+  reportedByUserId: varchar('reported_by_user_id', { length: 255 }),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
@@ -322,7 +396,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates, mission_programs, mission_program_templates, patient_missions, progress_photos, aligner_wear_sessions, aligner_wear_daily, store_item_templates, clinic_store_items, reward_programs, story_option_templates, clinic_story_options, stories, story_chapters, story_preferences } })
 }
 
 // Health check handler
@@ -1141,6 +1215,311 @@ app.delete('/api/admin/story-option-templates/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting story option template:', error)
     res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// ============================================
+// PATIENT MISSIONS ENDPOINTS
+// ============================================
+
+// Get all missions for a patient
+app.get('/api/missions/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    // Get patient missions
+    const missions = await db
+      .select()
+      .from(patient_missions)
+      .where(eq(patient_missions.patientId, patientId))
+      .orderBy(patient_missions.createdAt)
+
+    // Get active treatment (to expose current aligner for UI filtering)
+    const treatmentResults = await db
+      .select()
+      .from(treatments)
+      .where(
+        and(
+          eq(treatments.patientId, patientId),
+          eq(treatments.overallStatus, 'active')
+        )
+      )
+      .limit(1)
+
+    const currentAlignerOverall = treatmentResults[0]?.currentAlignerOverall ?? null
+
+    // Get unique template IDs
+    const templateIds = [...new Set(missions.map(m => m.missionTemplateId))]
+
+    // Fetch templates
+    let templates: any[] = []
+    if (templateIds.length > 0) {
+      templates = await db
+        .select()
+        .from(mission_templates)
+        .where(inArray(mission_templates.id, templateIds))
+    }
+
+    // Create a map for quick lookup
+    const templateMap = new Map(templates.map(t => [t.id, t]))
+
+    // Attach template to each mission
+    const missionsWithTemplates = missions.map(mission => ({
+      ...mission,
+      template: templateMap.get(mission.missionTemplateId),
+    }))
+
+    res.json({ missions: missionsWithTemplates, currentAlignerOverall })
+  } catch (error: any) {
+    console.error('Error fetching patient missions:', error)
+    res.status(500).json({ error: 'Failed to fetch patient missions' })
+  }
+})
+
+// ============================================
+// PHOTOS ENDPOINTS
+// ============================================
+
+// Check required photos for patient
+app.get('/api/photos/required/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    // Get active treatment
+    const treatmentResults = await db
+      .select()
+      .from(treatments)
+      .where(
+        and(
+          eq(treatments.patientId, patientId),
+          eq(treatments.overallStatus, 'active')
+        )
+      )
+
+    if (treatmentResults.length === 0) {
+      return res.json({
+        success: true,
+        required: false,
+        message: 'Nenhum tratamento ativo'
+      })
+    }
+
+    const treatment = treatmentResults[0]
+    const currentAligner = treatment.currentAlignerOverall
+
+    // Check if there are photo mission templates
+    const photoTemplates = await db
+      .select({ id: mission_templates.id })
+      .from(mission_templates)
+      .where(eq(mission_templates.category, 'photos'))
+
+    const photoTemplateIds = photoTemplates.map(t => t.id)
+    if (photoTemplateIds.length === 0) {
+      return res.json({
+        success: true,
+        required: false,
+        currentAligner,
+        missingTypes: [],
+        existingPhotos: 0,
+        message: 'Nenhuma missão de fotos configurada'
+      })
+    }
+
+    // Check if there's a photo mission for current aligner
+    const hasPhotoMissionForCurrentAligner = await db
+      .select({ id: patient_missions.id })
+      .from(patient_missions)
+      .where(
+        and(
+          eq(patient_missions.patientId, patientId),
+          inArray(patient_missions.missionTemplateId, photoTemplateIds),
+          eq(patient_missions.triggerAlignerNumber, currentAligner)
+        )
+      )
+      .limit(1)
+
+    if (hasPhotoMissionForCurrentAligner.length === 0) {
+      return res.json({
+        success: true,
+        required: false,
+        currentAligner,
+        missingTypes: [],
+        existingPhotos: 0,
+        message: 'Fotos não são necessárias neste alinhador'
+      })
+    }
+
+    // Check existing photos for current aligner
+    const existingPhotos = await db
+      .select()
+      .from(progress_photos)
+      .where(
+        and(
+          eq(progress_photos.patientId, patientId),
+          eq(progress_photos.alignerNumber, currentAligner)
+        )
+      )
+
+    // Check which photo types are missing
+    const photoTypes = ['frontal', 'right', 'left']
+    const existingTypes = new Set(existingPhotos.map(p => p.photoType))
+    const missingTypes = photoTypes.filter(t => !existingTypes.has(t))
+
+    res.json({
+      success: true,
+      required: missingTypes.length > 0,
+      currentAligner,
+      missingTypes,
+      existingPhotos: existingPhotos.length,
+      message: missingTypes.length > 0
+        ? `Faltam ${missingTypes.length} foto(s): ${missingTypes.join(', ')}`
+        : 'Todas as fotos foram enviadas'
+    })
+  } catch (error: any) {
+    console.error('Error checking required photos:', error)
+    res.status(500).json({ error: 'Erro ao verificar fotos pendentes' })
+  }
+})
+
+// ============================================
+// ALIGNER WEAR ENDPOINTS
+// ============================================
+
+// Get wear status for aligner
+app.get('/api/aligners/:alignerId/wear/status', async (req, res) => {
+  try {
+    const { alignerId } = req.params
+    const patientId = String(req.query.patientId || '')
+
+    if (!patientId) {
+      return res.status(400).json({ error: 'patientId é obrigatório' })
+    }
+
+    const db = getDb()
+
+    // Get aligner
+    const alignerResult = await db
+      .select()
+      .from(aligners)
+      .where(eq(aligners.id, alignerId))
+      .limit(1)
+
+    if (alignerResult.length === 0) {
+      return res.status(404).json({ error: 'Alinhador não encontrado' })
+    }
+
+    const aligner = alignerResult[0]
+
+    // Get current open session
+    const openSession = await db
+      .select()
+      .from(aligner_wear_sessions)
+      .where(
+        and(
+          eq(aligner_wear_sessions.alignerId, alignerId),
+          sql`${aligner_wear_sessions.endedAt} is null`
+        )
+      )
+      .orderBy(desc(aligner_wear_sessions.startedAt))
+      .limit(1)
+
+    const currentState = openSession.length > 0 ? openSession[0].state : 'paused'
+
+    // Get today's date
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Get today's wear data
+    const todayWear = await db
+      .select()
+      .from(aligner_wear_daily)
+      .where(
+        and(
+          eq(aligner_wear_daily.alignerId, alignerId),
+          eq(aligner_wear_daily.date, today)
+        )
+      )
+      .limit(1)
+
+    const wearMinutes = todayWear.length > 0 ? todayWear[0].wearMinutes : 0
+    const targetMinutes = aligner.targetHoursPerDay * 60
+    const targetPercent = 80
+
+    res.json({
+      state: currentState,
+      wearMinutesToday: wearMinutes,
+      targetMinutesPerDay: targetMinutes,
+      targetPercent,
+      isDayOk: wearMinutes >= (targetMinutes * targetPercent / 100),
+      session: openSession.length > 0 ? openSession[0] : null
+    })
+  } catch (error: any) {
+    console.error('Error getting wear status:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// Check if aligner can be activated
+app.get('/api/aligners/:id/can-activate', async (req, res) => {
+  try {
+    const alignerId = req.params.id
+    const db = getDb()
+
+    // Get aligner
+    const alignerResult = await db
+      .select()
+      .from(aligners)
+      .where(eq(aligners.id, alignerId))
+
+    if (alignerResult.length === 0) {
+      return res.status(404).json({ error: 'Alinhador não encontrado' })
+    }
+
+    const aligner = alignerResult[0]
+
+    // If already completed, cannot activate
+    if (aligner.status === 'completed') {
+      return res.json({
+        canActivate: false,
+        daysRemaining: 0,
+        nextActivationDate: aligner.startDate,
+        currentStatus: aligner.status
+      })
+    }
+
+    // Check target date
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const targetRaw = aligner.status === 'active' ? aligner.endDate : aligner.startDate
+    if (!targetRaw) {
+      return res.json({
+        canActivate: false,
+        daysRemaining: 0,
+        nextActivationDate: aligner.startDate,
+        currentStatus: aligner.status,
+        message: 'Alinhador sem data alvo (startDate/endDate) definida',
+      })
+    }
+
+    const targetDate = new Date(targetRaw)
+    targetDate.setHours(0, 0, 0, 0)
+
+    const diffTime = targetDate.getTime() - today.getTime()
+    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    const canActivate = daysRemaining <= 0
+
+    res.json({
+      canActivate,
+      daysRemaining: Math.max(0, daysRemaining),
+      nextActivationDate: aligner.startDate,
+      currentStatus: aligner.status
+    })
+  } catch (error: any) {
+    console.error('Error checking aligner activation:', error)
+    res.status(500).json({ error: 'Falha ao verificar ativação' })
   }
 })
 
