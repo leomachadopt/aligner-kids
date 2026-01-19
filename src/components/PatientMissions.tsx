@@ -336,8 +336,8 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                   : 'border-gray-300 bg-white hover:border-primary-child'
               )}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div
                     className={cn(
                       'mt-1 rounded-full p-2',
@@ -355,11 +355,11 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                       />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 flex-wrap">
                       <h4
                         className={cn(
-                          'font-semibold',
+                          'font-semibold break-words',
                           isCompleted && 'line-through text-gray-500'
                         )}
                       >
@@ -371,7 +371,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 break-words">
                       {template.description}
                     </p>
 
@@ -407,7 +407,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                 </div>
 
                 {/* Ação */}
-                <div>
+                <div className="w-full sm:w-auto">
                   {isCompleted ? (
                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                   ) : (
@@ -427,7 +427,7 @@ export function PatientMissions({ patientId, variant = 'full' }: PatientMissions
                           handleCompleteMission(mission.id)
                         }}
                         disabled={completingId === mission.id}
-                        className="hover-bounce whitespace-nowrap"
+                        className="hover-bounce w-full sm:w-auto sm:whitespace-nowrap"
                       >
                         {completingId === mission.id ? (
                           <>
