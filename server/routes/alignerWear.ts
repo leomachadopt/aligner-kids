@@ -8,8 +8,18 @@ router.get('/aligners/:alignerId/wear/status', async (req, res) => {
   try {
     const patientId = String(req.query.patientId || '')
     if (!patientId) return res.status(400).json({ error: 'patientId é obrigatório' })
-    const result = await AlignerWearService.getStatus(patientId, req.params.alignerId)
-    res.json(result)
+
+    // Simplified response without wear session tables
+    // Returns basic structure for compatibility
+    res.json({
+      state: 'paused',
+      wearMinutesToday: 0,
+      targetMinutesPerDay: 22 * 60,
+      targetPercent: 80,
+      isDayOk: false,
+      session: null,
+      message: 'Wear tracking temporarily unavailable'
+    })
   } catch (e: any) {
     console.error('Error wear status:', e)
     res.status(500).json({ error: String(e?.message || e) })

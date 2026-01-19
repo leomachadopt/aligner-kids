@@ -170,7 +170,7 @@ const PatientDashboard = () => {
     return (
       <div className="space-y-6 animate-fade-in-up">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-4xl font-extrabold text-primary">
+          <h1 className="font-display text-2xl md:text-4xl font-extrabold text-primary break-words">
             {t('patient.dashboard.title')}
           </h1>
           <img
@@ -313,7 +313,7 @@ const PatientDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <h1 className="text-3xl font-bold">{t('patient.dashboard.adultWelcome')}</h1>
+      <h1 className="text-2xl md:text-3xl font-bold break-words">{t('patient.dashboard.adultWelcome')}</h1>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AlignerTracker showNextChange={false} />
@@ -340,7 +340,7 @@ const PatientDashboard = () => {
                 </>
               ) : (
                 <>
-                  <p className="text-5xl font-bold text-primary">
+                  <p className="text-3xl md:text-5xl font-bold text-primary break-words">
                     {t('patient.dashboard.daysRemaining', { count: daysRemaining })}
                   </p>
                   <p className="text-muted-foreground">

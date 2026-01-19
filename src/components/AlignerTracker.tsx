@@ -170,7 +170,7 @@ export const AlignerTracker = ({
               </div>
             ) : (
               <div>
-                <p className="text-3xl font-bold text-primary">
+                <p className="text-2xl md:text-3xl font-bold text-primary break-words">
                   {t('patient.aligner.tracker.daysUntilChange', { count: daysUntilChange })}
                 </p>
                 <p className="text-sm text-muted-foreground">
