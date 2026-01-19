@@ -951,6 +951,143 @@ app.get('/api/clinic/:clinicId/story-options', async (req, res) => {
 })
 
 // ============================================
+// ADMIN STORY OPTION TEMPLATES ENDPOINTS
+// ============================================
+
+// List all story option templates (super-admin)
+app.get('/api/admin/story-option-templates', async (_req, res) => {
+  try {
+    const db = getDb()
+    const templates = await db.select().from(story_option_templates)
+    res.json({ templates })
+  } catch (error: any) {
+    console.error('Error fetching story option templates:', error)
+    res.status(500).json({ error: 'Failed to fetch story option templates' })
+  }
+})
+
+// Create story option template (super-admin)
+app.post('/api/admin/story-option-templates', async (req, res) => {
+  try {
+    const {
+      createdByUserId,
+      id,
+      type,
+      name,
+      description,
+      icon = '✨',
+      color = 'bg-purple-500',
+      imageUrl,
+      isDefault = false,
+      isActive = true,
+      sortOrder = 0,
+      metadata = {},
+    } = req.body || {}
+
+    if (!createdByUserId) {
+      return res.status(400).json({ error: 'createdByUserId é obrigatório' })
+    }
+
+    const db = getDb()
+    const u = await db.select().from(users).where(eq(users.id, createdByUserId))
+    if (u.length === 0 || u[0].role !== 'super-admin') {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    if (!id || !type || !name) {
+      return res.status(400).json({ error: 'id, type e name são obrigatórios' })
+    }
+
+    const created = await db
+      .insert(story_option_templates)
+      .values({
+        id,
+        type,
+        name,
+        description: description || null,
+        icon,
+        color,
+        imageUrl: imageUrl || null,
+        isDefault: !!isDefault,
+        isActive: !!isActive,
+        sortOrder: Number(sortOrder) || 0,
+        metadata,
+        createdByUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning()
+
+    res.json({ template: created[0] })
+  } catch (error: any) {
+    console.error('Error creating story option template:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// Update story option template (super-admin)
+app.put('/api/admin/story-option-templates/:id', async (req, res) => {
+  try {
+    const { createdByUserId, ...rest } = req.body || {}
+    if (!createdByUserId) {
+      return res.status(400).json({ error: 'createdByUserId é obrigatório' })
+    }
+
+    const db = getDb()
+    const u = await db.select().from(users).where(eq(users.id, createdByUserId))
+    if (u.length === 0 || u[0].role !== 'super-admin') {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    const updated = await db
+      .update(story_option_templates)
+      .set({ ...rest, updatedAt: new Date() })
+      .where(eq(story_option_templates.id, req.params.id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Template não encontrado' })
+    }
+
+    res.json({ template: updated[0] })
+  } catch (error: any) {
+    console.error('Error updating story option template:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// Delete (soft) story option template (super-admin)
+app.delete('/api/admin/story-option-templates/:id', async (req, res) => {
+  try {
+    const createdByUserId = String(req.query.createdByUserId || '')
+    if (!createdByUserId) {
+      return res.status(400).json({ error: 'createdByUserId é obrigatório' })
+    }
+
+    const db = getDb()
+    const u = await db.select().from(users).where(eq(users.id, createdByUserId))
+    if (u.length === 0 || u[0].role !== 'super-admin') {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    const updated = await db
+      .update(story_option_templates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(story_option_templates.id, req.params.id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Template não encontrado' })
+    }
+
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error deleting story option template:', error)
+    res.status(500).json({ error: String(error?.message || error) })
+  }
+})
+
+// ============================================
 // AUTH/USERS ENDPOINTS
 // ============================================
 
