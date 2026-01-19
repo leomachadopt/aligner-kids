@@ -204,11 +204,15 @@ router.put('/users/:id', async (req, res) => {
     const { id } = req.params
     const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl, responsiblePin } = req.body
 
+    console.log('🔧 [Server] Update user request:', { id, preferredLanguage, body: req.body })
+
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id))
     if (existingUser.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
+
+    console.log('🔧 [Server] Existing user preferredLanguage:', existingUser[0].preferredLanguage)
 
     // Update user
     let responsiblePinHash: string | null | undefined = undefined
@@ -224,25 +228,34 @@ router.put('/users/:id', async (req, res) => {
       }
     }
 
+    const updateData: any = {
+      fullName: fullName || existingUser[0].fullName,
+      email: email || existingUser[0].email,
+      phone: phone !== undefined ? phone : existingUser[0].phone,
+      birthDate: birthDate !== undefined ? birthDate : existingUser[0].birthDate,
+      preferredLanguage: preferredLanguage !== undefined ? preferredLanguage : existingUser[0].preferredLanguage,
+      profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
+      updatedAt: new Date(),
+    }
+
+    if (responsiblePinHash !== undefined) {
+      updateData.responsiblePinHash = responsiblePinHash
+    }
+
+    console.log('🔧 [Server] Update data:', updateData)
+
     const updated = await db
       .update(users)
-      .set({
-        fullName: fullName || existingUser[0].fullName,
-        email: email || existingUser[0].email,
-        phone: phone || existingUser[0].phone,
-        birthDate: birthDate || existingUser[0].birthDate,
-        preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
-        profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
-        ...(responsiblePinHash !== undefined ? { responsiblePinHash } : {}),
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(users.id, id))
       .returning()
+
+    console.log('🔧 [Server] ✅ User updated. New preferredLanguage:', updated[0].preferredLanguage)
 
     const { password_hash, ...userWithoutPassword } = updated[0]
     res.json({ user: userWithoutPassword })
   } catch (error) {
-    console.error('Error updating user:', error)
+    console.error('🔧 [Server] ❌ Error updating user:', error)
     res.status(500).json({ error: 'Failed to update user' })
   }
 })

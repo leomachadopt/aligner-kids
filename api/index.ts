@@ -1204,11 +1204,15 @@ app.put('/api/auth/users/:id', async (req, res) => {
     const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl, responsiblePin } = req.body
     const db = getDb()
 
+    console.log('🔧 [API] Update user request:', { id, preferredLanguage, body: req.body })
+
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id))
     if (existingUser.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
+
+    console.log('🔧 [API] Existing user preferredLanguage:', existingUser[0].preferredLanguage)
 
     // Handle responsiblePin if provided
     let responsiblePinHash: string | null | undefined = undefined
@@ -1224,26 +1228,36 @@ app.put('/api/auth/users/:id', async (req, res) => {
       }
     }
 
+    // Build update object
+    const updateData: any = {
+      fullName: fullName || existingUser[0].fullName,
+      email: email || existingUser[0].email,
+      phone: phone !== undefined ? phone : existingUser[0].phone,
+      birthDate: birthDate !== undefined ? birthDate : existingUser[0].birthDate,
+      preferredLanguage: preferredLanguage !== undefined ? preferredLanguage : existingUser[0].preferredLanguage,
+      profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
+      updatedAt: new Date(),
+    }
+
+    if (responsiblePinHash !== undefined) {
+      updateData.responsiblePinHash = responsiblePinHash
+    }
+
+    console.log('🔧 [API] Update data:', updateData)
+
     // Update user
     const updated = await db
       .update(users)
-      .set({
-        fullName: fullName || existingUser[0].fullName,
-        email: email || existingUser[0].email,
-        phone: phone || existingUser[0].phone,
-        birthDate: birthDate || existingUser[0].birthDate,
-        preferredLanguage: preferredLanguage !== undefined ? preferredLanguage : existingUser[0].preferredLanguage,
-        profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
-        ...(responsiblePinHash !== undefined ? { responsiblePinHash } : {}),
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(users.id, id))
       .returning()
+
+    console.log('🔧 [API] ✅ User updated. New preferredLanguage:', updated[0].preferredLanguage)
 
     const { password_hash, ...userWithoutPassword } = updated[0]
     res.json({ user: userWithoutPassword })
   } catch (error: any) {
-    console.error('Error updating user:', error)
+    console.error('🔧 [API] ❌ Error updating user:', error)
     res.status(500).json({ error: 'Failed to update user' })
   }
 })
