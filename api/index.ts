@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { eq, and, desc, asc, or, sql } from 'drizzle-orm'
-import { pgTable, text, timestamp, boolean, varchar, integer } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, boolean, varchar, integer, jsonb } from 'drizzle-orm/pg-core'
 
 // Schema inline (necessário para serverless)
 const users = pgTable('users', {
@@ -101,6 +101,30 @@ const messages = pgTable('messages', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+const mission_templates = pgTable('mission_templates', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  frequency: varchar('frequency', { length: 50 }).notNull(),
+  completionCriteria: varchar('completion_criteria', { length: 100 }).notNull(),
+  targetValue: integer('target_value'),
+  basePoints: integer('base_points').notNull(),
+  bonusPoints: integer('bonus_points').default(0),
+  iconEmoji: varchar('icon_emoji', { length: 10 }),
+  color: varchar('color', { length: 7 }),
+  alignerInterval: integer('aligner_interval').default(1).notNull(),
+  isActiveByDefault: boolean('is_active_by_default').default(true),
+  requiresManualValidation: boolean('requires_manual_validation').default(false),
+  canAutoActivate: boolean('can_auto_activate').default(true),
+  scheduledStartDate: varchar('scheduled_start_date', { length: 10 }),
+  scheduledEndDate: varchar('scheduled_end_date', { length: 10 }),
+  repetitionType: varchar('repetition_type', { length: 50 }),
+  repeatOn: jsonb('repeat_on'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // Create Express app
 const app = express()
 
@@ -129,7 +153,7 @@ function getDb() {
     throw new Error('DATABASE_URL not configured')
   }
   const sql = neon(process.env.DATABASE_URL)
-  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages } })
+  return drizzle(sql, { schema: { users, clinics, treatments, aligners, patient_points, messages, mission_templates } })
 }
 
 // Health check handler
@@ -564,6 +588,24 @@ app.delete('/api/messages/:messageId', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting message:', error)
     res.status(500).json({ error: 'Erro ao deletar mensagem' })
+  }
+})
+
+// ============================================
+// MISSIONS ENDPOINTS
+// ============================================
+
+// Get all mission templates
+app.get('/api/missions/templates', async (req, res) => {
+  try {
+    const db = getDb()
+    const result = await db.select().from(mission_templates)
+
+    // Return without translations for simplicity in serverless
+    res.json({ templates: result })
+  } catch (error: any) {
+    console.error('Error fetching mission templates:', error)
+    res.status(500).json({ error: 'Failed to fetch mission templates' })
   }
 })
 
