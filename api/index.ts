@@ -1890,6 +1890,56 @@ app.get('/api/missions/patient/:patientId', async (req, res) => {
 // PHOTOS ENDPOINTS
 // ============================================
 
+// Get patient photos organized by period/aligner
+app.get('/api/photos/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const db = getDb()
+
+    // Get all photos for patient, ordered by aligner number
+    const photos = await db
+      .select()
+      .from(progress_photos)
+      .where(eq(progress_photos.patientId, patientId))
+      .orderBy(desc(progress_photos.alignerNumber), desc(progress_photos.capturedAt))
+
+    // Group by aligner number
+    const photosByAligner = photos.reduce((acc, photo) => {
+      const alignerNum = photo.alignerNumber || 0
+      if (!acc[alignerNum]) {
+        acc[alignerNum] = []
+      }
+      acc[alignerNum].push(photo)
+      return acc
+    }, {} as Record<number, typeof photos>)
+
+    // Transform to PhotoPeriod format
+    const periods = Object.entries(photosByAligner)
+      .map(([alignerNum, periodPhotos]) => ({
+        period: parseInt(alignerNum),
+        alignerNumber: parseInt(alignerNum),
+        photos: periodPhotos.map(p => ({
+          id: p.id,
+          patientId: p.patientId,
+          treatmentId: p.treatmentId,
+          alignerNumber: p.alignerNumber,
+          photoType: p.photoType,
+          photoUrl: p.photoUrl,
+          thumbnailUrl: p.thumbnailUrl,
+          capturedAt: p.capturedAt,
+          uploadedAt: p.uploadedAt,
+          clinicianNotes: p.clinicianNotes,
+        }))
+      }))
+      .sort((a, b) => b.period - a.period)
+
+    res.json(periods)
+  } catch (error: any) {
+    console.error('Error fetching patient photos:', error)
+    res.status(500).json({ error: 'Erro ao buscar fotos do paciente' })
+  }
+})
+
 // Check required photos for patient
 app.get('/api/photos/required/:patientId', async (req, res) => {
   try {
