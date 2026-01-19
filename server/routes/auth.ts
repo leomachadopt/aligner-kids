@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express'
-import { db, users, aligners, treatments, stories, story_chapters, story_preferences } from '../db/index'
+import { db, users, aligners, treatments, stories, story_chapters, story_preferences, clinics } from '../db/index'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { RewardProgramAssignmentService } from '../services/rewardProgramAssignmentService'
@@ -33,6 +33,23 @@ router.post('/register', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10)
 
+    // Determine preferred language based on clinic
+    let userLanguage = preferredLanguage || 'pt-BR'
+    if (clinicId && !preferredLanguage) {
+      const clinicResult = await db.select().from(clinics).where(eq(clinics.id, clinicId))
+      if (clinicResult.length > 0) {
+        const clinic = clinicResult[0]
+        // Map country to language
+        const countryLanguageMap: Record<string, string> = {
+          'BR': 'pt-BR',
+          'PT': 'pt-PT',
+          'US': 'en-US',
+          'ES': 'es-ES',
+        }
+        userLanguage = countryLanguageMap[clinic.country] || 'pt-BR'
+      }
+    }
+
     // Create user
     const newUser = await db.insert(users).values({
       id: `user-${Date.now()}`,
@@ -48,7 +65,7 @@ router.post('/register', async (req, res) => {
       guardianPhone: guardianPhone || null,
       cro: cro || null,
       clinicId: clinicId || null,
-      preferredLanguage: preferredLanguage || 'pt-BR',
+      preferredLanguage: userLanguage,
       isApproved: role === 'orthodontist' ? false : true,
     }).returning()
 

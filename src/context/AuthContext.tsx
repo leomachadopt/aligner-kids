@@ -142,10 +142,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = useCallback(
     (updates: Partial<User>) => {
-      setState((prev) => ({
-        ...prev,
-        user: prev.user ? { ...prev.user, ...updates } : null,
-      }))
+      setState((prev) => {
+        const updatedUser = prev.user ? { ...prev.user, ...updates } : null
+
+        // Persist to localStorage if user exists
+        if (updatedUser && prev.token) {
+          try {
+            const session = {
+              user: updatedUser,
+              token: prev.token,
+              expiresAt: AuthService.getCurrentSession()?.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            }
+            localStorage.setItem('auth_session', JSON.stringify(session))
+          } catch (error) {
+            console.warn('Failed to persist user update to localStorage:', error)
+          }
+        }
+
+        return {
+          ...prev,
+          user: updatedUser,
+        }
+      })
     },
     []
   )
