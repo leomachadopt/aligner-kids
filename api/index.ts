@@ -339,6 +339,18 @@ app.get('/api/aligners/patient/:patientId', async (req, res) => {
 // CLINICS ENDPOINTS
 // ============================================
 
+// List all clinics
+app.get('/api/clinics', async (_req, res) => {
+  try {
+    const db = getDb()
+    const allClinics = await db.select().from(clinics)
+    res.json({ clinics: allClinics })
+  } catch (error: any) {
+    console.error('Error fetching clinics:', error)
+    res.status(500).json({ error: 'Failed to fetch clinics' })
+  }
+})
+
 // Get clinic by ID
 app.get('/api/clinics/:id', async (req, res) => {
   try {
@@ -894,6 +906,21 @@ app.get('/api/auth/users/clinic/:clinicId', async (req, res) => {
   }
 })
 
+// List all users (super-admin)
+app.get('/api/auth/users', async (_req, res) => {
+  try {
+    const db = getDb()
+    const all = await db.select().from(users)
+
+    // Remove password_hash from all users
+    const usersWithoutPasswords = all.map(({ password_hash, ...user }) => user)
+    res.json({ users: usersWithoutPasswords })
+  } catch (error: any) {
+    console.error('Error fetching users:', error)
+    res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
 // Update user profile
 app.put('/api/auth/users/:id', async (req, res) => {
   try {
@@ -942,6 +969,86 @@ app.put('/api/auth/users/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error updating user:', error)
     res.status(500).json({ error: 'Failed to update user' })
+  }
+})
+
+// Approve orthodontist
+app.put('/api/auth/users/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDb()
+    const updated = await db
+      .update(users)
+      .set({
+        isApproved: true,
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error: any) {
+    console.error('Error approving orthodontist:', error)
+    res.status(500).json({ error: 'Failed to approve orthodontist' })
+  }
+})
+
+// Reject orthodontist (mark as not approved and inactive)
+app.put('/api/auth/users/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDb()
+    const updated = await db
+      .update(users)
+      .set({
+        isApproved: false,
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error: any) {
+    console.error('Error rejecting orthodontist:', error)
+    res.status(500).json({ error: 'Failed to reject orthodontist' })
+  }
+})
+
+// Deactivate user
+app.put('/api/auth/users/:id/deactivate', async (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDb()
+    const updated = await db
+      .update(users)
+      .set({
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning()
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const { password_hash, ...userWithoutPassword } = updated[0]
+    res.json({ user: userWithoutPassword })
+  } catch (error: any) {
+    console.error('Error deactivating user:', error)
+    res.status(500).json({ error: 'Failed to deactivate user' })
   }
 })
 
