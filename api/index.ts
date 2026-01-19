@@ -1232,7 +1232,7 @@ app.put('/api/auth/users/:id', async (req, res) => {
         email: email || existingUser[0].email,
         phone: phone || existingUser[0].phone,
         birthDate: birthDate || existingUser[0].birthDate,
-        preferredLanguage: preferredLanguage || existingUser[0].preferredLanguage,
+        preferredLanguage: preferredLanguage !== undefined ? preferredLanguage : existingUser[0].preferredLanguage,
         profilePhotoUrl: profilePhotoUrl !== undefined ? profilePhotoUrl : existingUser[0].profilePhotoUrl,
         ...(responsiblePinHash !== undefined ? { responsiblePinHash } : {}),
         updatedAt: new Date(),

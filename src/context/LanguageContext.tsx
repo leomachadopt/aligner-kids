@@ -21,11 +21,20 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation()
   const { user, updateUser } = useAuth()
   const [isChanging, setIsChanging] = React.useState(false)
+  const lastChangedLanguage = React.useRef<SupportedLanguage | null>(null)
 
   // Sync language with user preference on mount and when user changes
   React.useEffect(() => {
-    if (user?.preferredLanguage) {
+    if (user?.preferredLanguage && !isChanging) {
       const lang = user.preferredLanguage as SupportedLanguage
+
+      // Don't sync if we just changed to this language
+      // This prevents the sync from overwriting a language change in progress
+      if (lastChangedLanguage.current === lang) {
+        console.log(`🌐 Skipping sync - language was just changed to: ${lang}`)
+        return
+      }
+
       // Always ensure the language matches user preference
       // This handles cases where i18n might have initialized with wrong language
       if (i18n.language !== lang) {
@@ -33,12 +42,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         i18n.changeLanguage(lang)
       }
     }
-  }, [user?.preferredLanguage, i18n])
+  }, [user?.preferredLanguage, i18n, isChanging])
 
   const changeLanguage = React.useCallback(
     async (lang: SupportedLanguage) => {
       console.log('🌐 [LanguageContext] Changing language to:', lang)
       setIsChanging(true)
+      lastChangedLanguage.current = lang // Mark this language as just changed
+
       try {
         // Change i18n language immediately for better UX
         await i18n.changeLanguage(lang)
@@ -62,8 +73,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
             console.log('🌐 [LanguageContext] ✅ Language saved in localStorage:', parsed?.user?.preferredLanguage)
           }
         }
+
+        // Clear the ref after a delay to allow future syncs
+        setTimeout(() => {
+          lastChangedLanguage.current = null
+        }, 1000)
       } catch (error) {
         console.error('🌐 [LanguageContext] ❌ Error changing language:', error)
+        lastChangedLanguage.current = null
         // Revert to previous language on error
         if (user?.preferredLanguage) {
           await i18n.changeLanguage(user.preferredLanguage as SupportedLanguage)
