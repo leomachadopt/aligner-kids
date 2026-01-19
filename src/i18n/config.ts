@@ -17,11 +17,31 @@ export const resources = {
 export const supportedLanguages = ['pt-BR', 'pt-PT', 'en-US', 'es-ES'] as const
 export type SupportedLanguage = typeof supportedLanguages[number]
 
+// Get initial language from localStorage (from user session)
+function getInitialLanguage(): SupportedLanguage {
+  if (typeof window === 'undefined') return 'pt-BR'
+
+  try {
+    const session = localStorage.getItem('auth_session')
+    if (session) {
+      const parsed = JSON.parse(session)
+      const userLang = parsed?.user?.preferredLanguage
+      if (userLang && supportedLanguages.includes(userLang)) {
+        return userLang as SupportedLanguage
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading language from localStorage:', error)
+  }
+
+  return 'pt-BR' // Default fallback
+}
+
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'pt-BR', // Set initial language to pt-BR
+    lng: getInitialLanguage(), // Load language from user session
     fallbackLng: 'pt-BR',
     defaultNS: 'translation',
     interpolation: {

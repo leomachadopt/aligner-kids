@@ -26,7 +26,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (user?.preferredLanguage) {
       const lang = user.preferredLanguage as SupportedLanguage
+      // Always ensure the language matches user preference
+      // This handles cases where i18n might have initialized with wrong language
       if (i18n.language !== lang) {
+        console.log(`🌐 Syncing language: ${i18n.language} → ${lang}`)
         i18n.changeLanguage(lang)
       }
     }
