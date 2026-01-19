@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react'
+import { Bell, BellOff } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -10,37 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-const notifications = [
-  {
-    id: 1,
-    type: 'chat',
-    sender: 'Dr. Ana',
-    message: 'Sua nova foto foi analisada. Tudo certo!',
-    time: '2 min atrás',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'reminder',
-    message: 'Lembrete: Próxima troca de alinhador amanhã!',
-    time: '1 hora atrás',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'badge',
-    message: 'Parabéns! Você ganhou o selo "Mês de Ouro".',
-    time: '1 dia atrás',
-    read: true,
-  },
-  {
-    id: 4,
-    type: 'alert',
-    message: 'Atenção: Detectamos uma possível inflamação.',
-    time: '2 dias atrás',
-    read: true,
-  },
-]
+// TODO: Integrar com API de notificações real
+const notifications: Array<{
+  id: number
+  type: string
+  sender?: string
+  message: string
+  time: string
+  read: boolean
+}> = []
 
 export const NotificationPanel = () => {
   const unreadCount = notifications.filter((n) => !n.read).length
@@ -62,32 +40,44 @@ export const NotificationPanel = () => {
           <SheetTitle>Notificações</SheetTitle>
         </SheetHeader>
         <div className="mt-4 flex flex-col gap-4">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
-                !notification.read ? 'bg-primary/10' : 'hover:bg-muted'
-              }`}
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src={`https://img.usecurling.com/ppl/thumbnail?seed=${notification.sender}`}
-                />
-                <AvatarFallback>
-                  {notification.sender ? notification.sender.charAt(0) : 'A'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm">{notification.message}</p>
-                <p className="text-xs text-muted-foreground">
-                  {notification.time}
-                </p>
-              </div>
-              {!notification.read && (
-                <div className="h-2 w-2 rounded-full bg-primary self-center" />
-              )}
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <BellOff className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">
+                Nenhuma notificação
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Você está em dia com tudo!
+              </p>
             </div>
-          ))}
+          ) : (
+            notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`flex items-start gap-3 rounded-lg p-3 transition-colors ${
+                  !notification.read ? 'bg-primary/10' : 'hover:bg-muted'
+                }`}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={`https://img.usecurling.com/ppl/thumbnail?seed=${notification.sender}`}
+                  />
+                  <AvatarFallback>
+                    {notification.sender ? notification.sender.charAt(0) : 'A'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm">{notification.message}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {notification.time}
+                  </p>
+                </div>
+                {!notification.read && (
+                  <div className="h-2 w-2 rounded-full bg-primary self-center" />
+                )}
+              </div>
+            ))
+          )}
         </div>
       </SheetContent>
     </Sheet>
