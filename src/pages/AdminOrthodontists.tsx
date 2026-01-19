@@ -20,7 +20,18 @@ import {
   Shield,
   Trash2,
   RotateCcw,
+  Edit,
+  Eye,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { AuthService } from '@/services/authService'
 import { ClinicService } from '@/services/clinicService'
 import type { User } from '@/types/user'
@@ -36,6 +47,14 @@ const AdminOrthodontists = () => {
   const [clinics, setClinics] = useState<Clinic[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [patientCounts, setPatientCounts] = useState<Record<string, number>>({})
+
+  // Modal de visualização/edição
+  const [selectedOrtho, setSelectedOrtho] = useState<User | null>(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editFormData, setEditFormData] = useState<Partial<User>>({})
+  const [isSaving, setIsSaving] = useState(false)
 
   // ============================================
   // LOAD DATA
@@ -63,6 +82,16 @@ const AdminOrthodontists = () => {
       // Carregar clínicas
       const clinicsData = await ClinicService.getAllClinics()
       setClinics(clinicsData)
+
+      // Contar pacientes por clínica
+      const counts: Record<string, number> = {}
+      for (const clinic of clinicsData) {
+        const patientsInClinic = allUsers.filter(
+          (u) => (u.role === 'patient' || u.role === 'child-patient') && u.clinicId === clinic.id
+        )
+        counts[clinic.id] = patientsInClinic.length
+      }
+      setPatientCounts(counts)
     } catch (error) {
       toast.error('Erro ao carregar ortodontistas')
       console.error(error)
@@ -146,6 +175,57 @@ const AdminOrthodontists = () => {
     }
   }
 
+  const handleViewOrthodontist = (ortho: User) => {
+    setSelectedOrtho(ortho)
+    setEditFormData({
+      fullName: ortho.fullName,
+      email: ortho.email,
+      phone: ortho.phone || '',
+      cpf: ortho.cpf || '',
+      cro: ortho.cro || '',
+      birthDate: ortho.birthDate || '',
+    })
+    setIsEditing(false)
+    setIsViewDialogOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedOrtho) return
+
+    try {
+      setIsSaving(true)
+      await AuthService.updateProfile(selectedOrtho.id, {
+        fullName: editFormData.fullName || selectedOrtho.fullName,
+        email: editFormData.email || selectedOrtho.email,
+        phone: editFormData.phone,
+        birthDate: editFormData.birthDate,
+      })
+
+      toast.success('Dados atualizados com sucesso!')
+      setIsViewDialogOpen(false)
+      setIsEditing(false)
+      loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar dados')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    if (selectedOrtho) {
+      setEditFormData({
+        fullName: selectedOrtho.fullName,
+        email: selectedOrtho.email,
+        phone: selectedOrtho.phone || '',
+        cpf: selectedOrtho.cpf || '',
+        cro: selectedOrtho.cro || '',
+        birthDate: selectedOrtho.birthDate || '',
+      })
+    }
+    setIsEditing(false)
+  }
+
   // ============================================
   // HELPERS
   // ============================================
@@ -154,6 +234,11 @@ const AdminOrthodontists = () => {
     if (!clinicId) return 'Sem clínica'
     const clinic = clinics.find((c) => c.id === clinicId)
     return clinic?.name || 'Clínica não encontrada'
+  }
+
+  const getPatientCount = (clinicId?: string) => {
+    if (!clinicId) return 0
+    return patientCounts[clinicId] || 0
   }
 
   const filteredOrthodontists = orthodontists.filter((ortho) =>
@@ -401,15 +486,11 @@ const AdminOrthodontists = () => {
                         </div>
                       </div>
 
-                      {/* Stats (TODO: implementar quando tiver dados) */}
+                      {/* Stats */}
                       <div className="flex gap-4 text-sm pt-2 border-t">
                         <div>
                           <span className="font-semibold">Pacientes:</span>{' '}
-                          <span className="text-muted-foreground">0</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold">Tratamentos:</span>{' '}
-                          <span className="text-muted-foreground">0</span>
+                          <span className="text-muted-foreground">{getPatientCount(ortho.clinicId)}</span>
                         </div>
                         <div>
                           <span className="font-semibold">Último login:</span>{' '}
@@ -425,7 +506,15 @@ const AdminOrthodontists = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewOrthodontist(ortho)}
+                      >
+                        <Eye className="mr-1 h-4 w-4" />
+                        Ver/Editar
+                      </Button>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -485,7 +574,15 @@ const AdminOrthodontists = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewOrthodontist(ortho)}
+                      >
+                        <Eye className="mr-1 h-4 w-4" />
+                        Ver/Editar
+                      </Button>
                       <Button
                         size="sm"
                         variant="default"
@@ -510,6 +607,178 @@ const AdminOrthodontists = () => {
           </div>
         </div>
       )}
+
+      {/* Dialog de Visualização/Edição */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Edit className="h-5 w-5" />
+                  Editar Ortodontista
+                </>
+              ) : (
+                <>
+                  <Eye className="h-5 w-5" />
+                  Dados do Ortodontista
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing ? 'Edite os dados do ortodontista' : 'Visualize os dados do ortodontista'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrtho && (
+            <div className="space-y-4">
+              {/* Status Badges */}
+              <div className="flex gap-2">
+                {selectedOrtho.isApproved ? (
+                  <Badge variant="default" className="bg-green-100 text-green-700">
+                    Aprovado
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                    Pendente
+                  </Badge>
+                )}
+                {selectedOrtho.isActive ? (
+                  <Badge variant="default" className="bg-blue-100 text-blue-700">
+                    Ativo
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Inativo</Badge>
+                )}
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Input
+                    id="fullName"
+                    value={editFormData.fullName || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                    disabled={!isEditing}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editFormData.email || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    disabled={!isEditing}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={editFormData.phone || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      disabled={!isEditing}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="birthDate">Data de Nascimento</Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={editFormData.birthDate || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, birthDate: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF</Label>
+                    <Input
+                      id="cpf"
+                      value={editFormData.cpf || ''}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cro">CRO</Label>
+                    <Input
+                      id="cro"
+                      value={editFormData.cro || ''}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Clínica</Label>
+                  <Input
+                    value={getClinicName(selectedOrtho.clinicId)}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                {/* Info adicional */}
+                <div className="border-t pt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pacientes na clínica:</span>
+                    <span className="font-semibold">{getPatientCount(selectedOrtho.clinicId)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cadastrado em:</span>
+                    <span className="font-semibold">
+                      {format(new Date(selectedOrtho.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                    </span>
+                  </div>
+                  {selectedOrtho.lastLoginAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Último login:</span>
+                      <span className="font-semibold">
+                        {format(new Date(selectedOrtho.lastLoginAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {isEditing ? (
+              <>
+                <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                  Fechar
+                </Button>
+                <Button onClick={() => setIsEditing(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
