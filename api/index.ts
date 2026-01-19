@@ -1553,6 +1553,39 @@ app.get('/api/store/redemptions/patient/:patientId', async (req, res) => {
 })
 
 // ============================================
+// STORIES ENDPOINTS
+// ============================================
+
+// Get patient's story series
+app.get('/api/stories/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params
+    const { treatmentId } = req.query
+    const db = getDb()
+
+    const conditions = [eq(stories.patientId, patientId)]
+    if (treatmentId) {
+      conditions.push(eq(stories.treatmentId, treatmentId as string))
+    }
+
+    const result = await db
+      .select()
+      .from(stories)
+      .where(and(...conditions))
+
+    if (result.length === 0) {
+      // Retorna 200 com story null para evitar 404 ruidoso no front
+      return res.json({ story: null })
+    }
+
+    res.json({ story: result[0] })
+  } catch (error: any) {
+    console.error('Error fetching story:', error)
+    res.status(500).json({ error: 'Failed to fetch story' })
+  }
+})
+
+// ============================================
 // EDUCATION ENDPOINTS
 // ============================================
 
