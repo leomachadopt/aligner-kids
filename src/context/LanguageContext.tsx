@@ -31,14 +31,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       // Don't sync if we're in the middle of changing language
       // This prevents the sync from overwriting a language change in progress
       if (lastChangedLanguage.current !== null) {
-        console.log(`🌐 Skipping sync - language change in progress (ref: ${lastChangedLanguage.current})`)
         return
       }
 
       // Always ensure the language matches user preference
       // This handles cases where i18n might have initialized with wrong language
       if (i18n.language !== lang) {
-        console.log(`🌐 Syncing language: ${i18n.language} → ${lang}`)
         i18n.changeLanguage(lang)
       }
     }
@@ -46,9 +44,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const changeLanguage = React.useCallback(
     async (lang: SupportedLanguage) => {
-      console.log('🌐 [LanguageContext] Changing language to:', lang)
-
-      // IMPORTANT: Mark this language as just changed BEFORE doing anything else
+      // Mark this language as just changed before doing anything else
       // This prevents useEffect from interfering
       lastChangedLanguage.current = lang
       setIsChanging(true)
@@ -56,28 +52,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         // Change i18n language immediately for better UX
         await i18n.changeLanguage(lang)
-        console.log('🌐 [LanguageContext] i18n language changed to:', i18n.language)
 
         // If user is logged in, update backend
         if (user) {
-          console.log('🌐 [LanguageContext] Updating backend for user:', user.id)
-          const response = await apiClient.put(`/auth/users/${user.id}`, {
+          await apiClient.put(`/auth/users/${user.id}`, {
             preferredLanguage: lang,
           })
 
-          console.log('🌐 [LanguageContext] ✅ Backend response:', response)
-          console.log('🌐 [LanguageContext] Response user preferredLanguage:', response.user?.preferredLanguage)
-
           // Update user in AuthContext
-          console.log('🌐 [LanguageContext] Updating AuthContext with new language')
           updateUser({ preferredLanguage: lang })
-
-          // Verify localStorage after update
-          const session = localStorage.getItem('auth_session')
-          if (session) {
-            const parsed = JSON.parse(session)
-            console.log('🌐 [LanguageContext] ✅ Language saved in localStorage:', parsed?.user?.preferredLanguage)
-          }
         }
 
         // Clear the ref after a delay to allow future syncs
@@ -85,7 +68,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           lastChangedLanguage.current = null
         }, 1000)
       } catch (error) {
-        console.error('🌐 [LanguageContext] ❌ Error changing language:', error)
+        console.error('Error changing language:', error)
         lastChangedLanguage.current = null
         // Revert to previous language on error
         if (user?.preferredLanguage) {

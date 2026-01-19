@@ -1204,15 +1204,11 @@ app.put('/api/auth/users/:id', async (req, res) => {
     const { fullName, email, phone, birthDate, preferredLanguage, profilePhotoUrl, responsiblePin } = req.body
     const db = getDb()
 
-    console.log('🔧 [API] Update user request:', { id, preferredLanguage, body: req.body })
-
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id))
     if (existingUser.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
-
-    console.log('🔧 [API] Existing user preferredLanguage:', existingUser[0].preferredLanguage)
 
     // Handle responsiblePin if provided
     let responsiblePinHash: string | null | undefined = undefined
@@ -1243,8 +1239,6 @@ app.put('/api/auth/users/:id', async (req, res) => {
       updateData.responsiblePinHash = responsiblePinHash
     }
 
-    console.log('🔧 [API] Update data:', updateData)
-
     // Update user
     const updated = await db
       .update(users)
@@ -1252,12 +1246,10 @@ app.put('/api/auth/users/:id', async (req, res) => {
       .where(eq(users.id, id))
       .returning()
 
-    console.log('🔧 [API] ✅ User updated. New preferredLanguage:', updated[0].preferredLanguage)
-
     const { password_hash, ...userWithoutPassword } = updated[0]
     res.json({ user: userWithoutPassword })
   } catch (error: any) {
-    console.error('🔧 [API] ❌ Error updating user:', error)
+    console.error('Error updating user:', error)
     res.status(500).json({ error: 'Failed to update user' })
   }
 })
